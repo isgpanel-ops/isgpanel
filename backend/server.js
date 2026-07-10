@@ -202,7 +202,7 @@ const {
   createIseBaslamaFormuPdf,
 } = require("./pdf/iseBaslamaFormu");
 
-const iseGirisTestMod = require("./pdf/iseGirisTest");
+const iseGirisTestMod = require("./pdf/isegirisTest");
 
 const createIseGirisTestPdf =
   iseGirisTestMod.createIseGirisTestPdf ||
