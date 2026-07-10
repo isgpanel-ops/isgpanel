@@ -497,6 +497,8 @@ function RiskTable({
   onMoveUp,
   onMoveDown,
   onDelete,
+  selectedRows = new Set(),
+  onToggleRow,
   preview = false,
   stickyHeader = true,
 }) {
@@ -648,6 +650,15 @@ function RiskTable({
             <tr key={i} className="odd:bg-white even:bg-gray-50">
               <td className="border text-center px-1 py-[6px]">
                 <div className="flex items-center justify-center gap-1">
+                  {!preview && (
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-blue-600"
+                      checked={selectedRows.has(i)}
+                      onChange={() => onToggleRow?.(i)}
+                      title="Satırı seç"
+                    />
+                  )}
                   <span className="min-w-[22px] text-center">{r.no}</span>
                   {!preview && (
                     <div className="flex flex-col gap-[2px] ml-1">
@@ -1669,6 +1680,7 @@ useEffect(() => {
       [arr[i], arr[j]] = [arr[j], arr[i]];
       return renumberFromCurrentStart(arr);
     });
+    setSelectedRows(new Set());
   };
   const onMoveUp = (i) => moveRow(i, -1);
   const onMoveDown = (i) => moveRow(i, +1);
@@ -1677,9 +1689,70 @@ useEffect(() => {
       const arr = prev.slice(0, i).concat(prev.slice(i + 1));
       return renumberFromCurrentStart(arr);
     });
+    setSelectedRows(new Set());
   };
 
   /* Önizleme sayfalama */
+  const [selectedRows, setSelectedRows] = useState(() => new Set());
+  const [bulkMoveTarget, setBulkMoveTarget] = useState("");
+  const selectedRowCount = selectedRows.size;
+  const hasSelectedRows = selectedRowCount > 0;
+
+  useEffect(() => {
+    setSelectedRows((prev) => {
+      const next = new Set([...prev].filter((i) => i >= 0 && i < rows.length));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [rows.length]);
+
+  const toggleRowSelection = (i) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  const clearSelectedRows = () => setSelectedRows(new Set());
+
+  const moveSelectedRowsTo = () => {
+    if (!hasSelectedRows) return;
+    const targetNo = Math.max(1, Math.min(rows.length, Number(bulkMoveTarget) || 1));
+
+    setRows((prev) => {
+      const selected = [...selectedRows].sort((a, b) => a - b);
+      const selectedSet = new Set(selected);
+      const picked = selected.map((i) => prev[i]).filter(Boolean);
+      const rest = prev.filter((_, i) => !selectedSet.has(i));
+      const beforeTarget = selected.filter((i) => i < targetNo - 1).length;
+      const insertAt = Math.max(0, Math.min(rest.length, targetNo - 1 - beforeTarget));
+      const next = [...rest.slice(0, insertAt), ...picked, ...rest.slice(insertAt)];
+      return renumberFromCurrentStart(next);
+    });
+
+    setBulkMoveTarget("");
+    clearSelectedRows();
+  };
+
+  const deleteSelectedRows = () => {
+    if (!hasSelectedRows) return;
+
+    showConfirm({
+      title: "Seçili satırları sil",
+      message: `${selectedRowCount} satır silinecek. Onaylıyor musunuz?`,
+      confirmText: "Sil",
+      cancelText: "Vazgeç",
+      onConfirm: () => {
+        setRows((prev) => {
+          const selectedSet = new Set(selectedRows);
+          return renumberFromCurrentStart(prev.filter((_, i) => !selectedSet.has(i)));
+        });
+        clearSelectedRows();
+      },
+    });
+  };
+
   const PAGE_SIZE = 12;
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -1694,9 +1767,63 @@ useEffect(() => {
 
   /* PDF */
   const printRef = useRef(null);
+  const pdfCacheRef = useRef({ key: "", blob: null, blobUrl: "", fileName: "" });
+  const pdfCacheKey = useMemo(
+    () =>
+      JSON.stringify({
+        rows,
+        firmaAdi,
+        tehlikeSinifi,
+        hazirlamaTarihi,
+        gecerlilikTarihi,
+        revNo,
+        revDate,
+        pageNo,
+        rowStart,
+        logoSrc,
+        sgkSicilNo,
+      }),
+    [rows, firmaAdi, tehlikeSinifi, hazirlamaTarihi, gecerlilikTarihi, revNo, revDate, pageNo, rowStart, logoSrc, sgkSicilNo]
+  );
+
+  useEffect(() => {
+    if (pdfCacheRef.current.blobUrl) URL.revokeObjectURL(pdfCacheRef.current.blobUrl);
+    pdfCacheRef.current = { key: "", blob: null, blobUrl: "", fileName: "" };
+  }, [pdfCacheKey]);
+
+  const getCachedPdfUrl = (blob) => {
+    if (pdfCacheRef.current.blobUrl) return pdfCacheRef.current.blobUrl;
+    const blobUrl = URL.createObjectURL(blob);
+    pdfCacheRef.current.blobUrl = blobUrl;
+    return blobUrl;
+  };
+
+  const downloadPdfBlob = (blob, fileName) => {
+    const blobUrl = getCachedPdfUrl(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
 
   const exportPdf = async (mode = "save") => {
     if (!printRef.current) return null;
+
+    const cached = pdfCacheRef.current;
+    if (cached.key === pdfCacheKey && cached.blob) {
+      if (mode === "open") {
+        window.open(getCachedPdfUrl(cached.blob), "_blank", "noopener");
+        return { blob: cached.blob, blobUrl: getCachedPdfUrl(cached.blob), fileName: cached.fileName };
+      }
+      if (mode === "bloburl") {
+        return { blob: cached.blob, blobUrl: getCachedPdfUrl(cached.blob), fileName: cached.fileName };
+      }
+      downloadPdfBlob(cached.blob, cached.fileName);
+      return { fileName: cached.fileName };
+    }
+
     const { default: html2canvas } = await import("html2canvas");
 
     // unit: pt kullanıyorsun, aynen bırakıyorum.
@@ -1724,10 +1851,12 @@ useEffect(() => {
 
       const canvas = await html2canvas(node, {
         // Netlik: Önizleme ile birebir keskinlik için yüksek ölçek
-        scale: 1.5,
+        scale: 1.12,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: "#ffffff",
-        letterRendering: true,
+        logging: false,
+        removeContainer: true,
         scrollX: 0,
         scrollY: 0,
         width: node.scrollWidth,
@@ -1738,7 +1867,7 @@ useEffect(() => {
 
       node.style.overflow = prevOverflow;
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.8);
+      const imgData = canvas.toDataURL("image/jpeg", 0.72);
 
       return { imgData };
     };
@@ -1750,7 +1879,7 @@ useEffect(() => {
     try {
       for (let p = 1; p <= totalPages; p++) {
         setPage(p);
-        await new Promise((r) => setTimeout(r, 80));
+        await new Promise((r) => setTimeout(r, 35));
 
         const { imgData } = await renderOnePage();
 
@@ -1760,7 +1889,7 @@ useEffect(() => {
         const marginY = 28.346; // 1 cm
         doc.addImage(
           imgData,
-          "PNG",
+          "JPEG",
           marginX,
           marginY,
           pageW - 2 * marginX,
@@ -1780,19 +1909,21 @@ useEffect(() => {
     const safeFirma = (firmaAdi || "Firma").trim() || "Firma";
     const fileName = `${safeFirma} - Risk Değerlendirmesi - ${belgeTarihTr}.pdf`;
 
-    if (mode === "open") {
-      const blobUrl = doc.output("bloburl");
-      window.open(blobUrl, "_blank", "noopener");
-      return { blobUrl, fileName };
-    }
+    const blob = doc.output("blob");
+    pdfCacheRef.current = { key: pdfCacheKey, blob, blobUrl: "", fileName };
 
-    if (mode === "bloburl") {
-      const blob = doc.output("blob");
-      const blobUrl = URL.createObjectURL(blob);
+    if (mode === "open") {
+      const blobUrl = getCachedPdfUrl(blob);
+      window.open(blobUrl, "_blank", "noopener");
       return { blob, blobUrl, fileName };
     }
 
-    doc.save(fileName);
+    if (mode === "bloburl") {
+      const blobUrl = getCachedPdfUrl(blob);
+      return { blob, blobUrl, fileName };
+    }
+
+    downloadPdfBlob(blob, fileName);
     return { fileName };
   };
 
@@ -2240,6 +2371,56 @@ createdByUserId: userObj?._id || userObj?.id,
 </div>
 
 {/* TABLO — DÜZENLEME EKRANI (STICKY BAŞLIK AÇIK) */}
+{rows.length > 0 && (
+  <div className="mt-3 mb-2 flex flex-col gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="font-semibold text-slate-700">Toplu işlem</span>
+      <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700">
+        {selectedRowCount} satır seçili
+      </span>
+      {hasSelectedRows && (
+        <button
+          type="button"
+          className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50"
+          onClick={clearSelectedRows}
+        >
+          Seçimi temizle
+        </button>
+      )}
+    </div>
+
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="text-slate-600">Hedef sıra</label>
+      <input
+        type="number"
+        min="1"
+        max={rows.length}
+        className="h-8 w-24 rounded border border-slate-300 px-2"
+        value={bulkMoveTarget}
+        onChange={(e) => setBulkMoveTarget(e.target.value.replace(/\D/g, ""))}
+        placeholder="örn. 12"
+        disabled={!hasSelectedRows}
+      />
+      <button
+        type="button"
+        className="h-8 rounded bg-slate-900 px-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+        onClick={moveSelectedRowsTo}
+        disabled={!hasSelectedRows}
+      >
+        Taşı
+      </button>
+      <button
+        type="button"
+        className="h-8 rounded border border-red-200 px-3 font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+        onClick={deleteSelectedRows}
+        disabled={!hasSelectedRows}
+      >
+        Seçilileri sil
+      </button>
+    </div>
+  </div>
+)}
+
 <ScaledWrapper maxHeight={STICKY_MAX_HEIGHT}>
         {(w) => (
           <RiskTable
@@ -2264,6 +2445,8 @@ createdByUserId: userObj?._id || userObj?.id,
   onMoveUp={onMoveUp}
   onMoveDown={onMoveDown}
   onDelete={onDelete}
+  selectedRows={selectedRows}
+  onToggleRow={toggleRowSelection}
   preview={false}
   stickyHeader={true}
 />
