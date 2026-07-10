@@ -8,6 +8,7 @@
     "migrate": "node scripts/run-migrations.js"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "axios": "^1.13.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -15,8 +16,11 @@
     "docxtemplater-image-module-free": "^1.1.1",
     "dotenv": "^17.3.1",
     "express": "^4.22.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.5.0",
     "handlebars": "^4.7.8",
     "helmet": "^8.0.0",
+    "hpp": "^0.2.3",
     "html-pdf-node": "^1.0.8",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
