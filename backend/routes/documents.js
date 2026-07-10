@@ -855,7 +855,9 @@ router.get("/:id/download", async (req, res) => {
 
       let externalAbsPath = "";
 
-      if (externalPath.startsWith("/archive-storage/")) {
+      if (path.isAbsolute(externalPath)) {
+        externalAbsPath = externalPath;
+      } else if (externalPath.startsWith("/archive-storage/")) {
         externalAbsPath = path.join(
           __dirname,
           "..",

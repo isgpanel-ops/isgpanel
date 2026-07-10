@@ -109,6 +109,17 @@ async function ensureDirExists(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
+async function fileExists(filePath) {
+  if (!filePath) return false;
+
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeLocalPath(filePath) {
   if (!filePath || typeof filePath !== "string") return "";
 
@@ -116,6 +127,10 @@ function normalizeLocalPath(filePath) {
 
   // URL geldiyse domaini temizle
   p = p.replace(/^https?:\/\/[^/]+/i, "");
+
+  if (p.startsWith("/")) {
+    return p;
+  }
 
   // Baştaki slash temizle
   p = p.replace(/^\/+/, "");
@@ -136,6 +151,41 @@ function normalizeLocalPath(filePath) {
   }
 
   return p;
+}
+
+async function resolveExistingLocalPath(filePath) {
+  const raw = String(filePath || "").trim();
+  if (!raw) return "";
+
+  let clean = raw.replace(/^https?:\/\/[^/]+/i, "");
+  clean = clean.split("?")[0].split("#")[0];
+
+  const withoutSlash = clean.replace(/^\/+/, "");
+  const baseName = path.basename(withoutSlash || clean);
+  const candidates = new Set();
+
+  candidates.add(normalizeLocalPath(clean));
+
+  if (withoutSlash) {
+    candidates.add(path.join("/var/www/backend", withoutSlash));
+    candidates.add(path.join("/var/www/backend/uploads", withoutSlash));
+    candidates.add(path.join("/var/www/backend/uploads/documents", withoutSlash));
+  }
+
+  if (baseName && baseName !== "." && baseName !== "/") {
+    candidates.add(path.join("/var/www/backend/uploads/documents", baseName));
+    candidates.add(path.join("/var/www/backend/uploads", baseName));
+    candidates.add(path.join("/var/www/backend/output", baseName));
+    candidates.add(path.join("/var/www/output", baseName));
+  }
+
+  for (const candidate of candidates) {
+    if (candidate && (await fileExists(candidate))) {
+      return candidate;
+    }
+  }
+
+  return normalizeLocalPath(clean);
 }
 
 function safeSegment(value, fallback = "unknown") {
@@ -185,8 +235,11 @@ router.post("/storage/migrate-documents", async (req, res) => {
       });
     }
 
-    const externalBaseDir =
-      process.env.EXTERNAL_DOCS_DIR || "/mnt/storagebox";
+    const externalBaseDir = path.join(
+      process.env.EXTERNAL_DOCS_DIR || "/mnt/storagebox",
+      "backups",
+      "documents"
+    );
 
     await ensureDirExists(externalBaseDir);
 
@@ -234,7 +287,7 @@ router.post("/storage/migrate-documents", async (req, res) => {
 
     for (const doc of docs) {
       try {
-        const sourcePath = normalizeLocalPath(
+        const sourcePath = await resolveExistingLocalPath(
           doc.storagePath ||
             doc.absoluteUrl ||
             doc.fileUrl ||
@@ -266,7 +319,6 @@ router.post("/storage/migrate-documents", async (req, res) => {
 
         const targetPath = path.join(targetDir, safeFileName);
 
-        await fs.access(sourcePath);
         await fs.copyFile(sourcePath, targetPath);
         await fs.unlink(sourcePath);
 
