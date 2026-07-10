@@ -118,6 +118,14 @@ function safeFileName(name) {
     .trim();
 }
 
+function toUpperTR(value) {
+  return String(value || "").trim().toLocaleUpperCase("tr-TR");
+}
+
+function stableKeyPart(value) {
+  return toUpperTR(value).replace(/[^A-ZÇĞİÖŞÜ0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
 function createEmptyKkdRow() {
   return MALZEMELER.reduce((acc, item) => {
     acc[item.ad] = {
@@ -925,20 +933,27 @@ if (!realFileUrl && !realAbsoluteUrl) {
   throw new Error("Kalıcı PDF URL alınamadı.");
 }
 
-const hazirlayanKisi =
+const hazirlayanKisi = toUpperTR(
   user?.name ||
   user?.adSoyad ||
   user?.fullName ||
   user?.ad ||
   payload?.kisiler?.uzman ||
   payload?.kisiler?.isgUzmaniAdSoyad ||
-  "İSG Uzmanı";
+  "İSG Uzmanı"
+);
 
       const docPayload = {
         firmaId: String(selectedFirm?.id || ""),
         firmaAdi: selectedFirm?.firmaAdi || "",
         category: "talimat",
         subCategory: "kkd",
+        uniqueKey: [
+          "KKD",
+          stableKeyPart(selectedFirm?.id || selectedFirm?._id || ""),
+          stableKeyPart(first?.adSoyad || "PERSONEL"),
+          stableKeyPart(String(first?.bitisTarihi || "").slice(0, 10) || formatTarih(first?.bitisTarihi || "")),
+        ].join(":"),
         belgeTuru: "KKD Teslim Tutanağı",
 tur: "KKD Teslim Tutanağı",
        title: `${first?.adSoyad || "PERSONEL"} - KKD Teslim Tutanağı`,

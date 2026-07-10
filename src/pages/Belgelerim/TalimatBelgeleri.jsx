@@ -92,6 +92,25 @@ const getPreparedBy = (doc) =>
   doc?.userName ||
   "";
 
+const toUpperTR = (value) =>
+  String(value || "").trim().toLocaleUpperCase("tr-TR");
+
+const getPreparedByDisplay = (doc) => toUpperTR(getPreparedBy(doc));
+
+const getDocDurum = (doc) => {
+  const durum = String(doc?.durum || "").trim();
+  if (durum) return durum;
+
+  const status = String(doc?.status || "").toLowerCase().trim();
+  if (status === "arsiv" || status === "archive" || status === "archived") {
+    return "Arşivde";
+  }
+
+  return "Hazır";
+};
+
+const isDocArchived = (doc) => getDocDurum(doc) === "Arşivde";
+
 /* ===================== PERSONEL ADI (EĞİTİM'DEKİ GİBİ SAĞLAM) ===================== */
 const normalizeTR = (s) => String(s || "").toLowerCase().trim();
 
@@ -327,6 +346,54 @@ const buildDownloadName = (doc) => {
   const tur = sanitizeFileName(getTypeLabel(doc) || "Talimat");
   const tarih = sanitizeFileName(toDisplayDate(doc.tarih || doc.createdAt));
   return `${personel} - ${tur} - ${tarih}.pdf`;
+};
+
+const normalizeDocKeyPart = (value) =>
+  String(value || "")
+    .trim()
+    .toLocaleUpperCase("tr-TR")
+    .replace(/\s+/g, " ");
+
+const getSemanticDocKey = (doc) =>
+  [
+    normalizeDocKeyPart(
+      doc?.firmaId?._id ||
+        doc?.firmaId?.id ||
+        doc?.firma?._id ||
+        doc?.firma?.id ||
+        doc?.firmaId ||
+        doc?.firma ||
+        ""
+    ),
+    normalizeDocKeyPart(doc?.category || ""),
+    normalizeDocKeyPart(doc?.subCategory || doc?.tur || doc?.kategori || ""),
+    normalizeDocKeyPart(doc?.title || doc?.baslik || ""),
+    normalizeDocKeyPart(getPersonelAdSoyad(doc)),
+    normalizeDocKeyPart(toIsoDate(doc?.tarih || doc?.createdAt)),
+  ].join("::");
+
+const dedupeDocsPreferServer = (items) => {
+  const byKey = new Map();
+
+  for (const doc of items) {
+    const semanticKey = getSemanticDocKey(doc);
+    const key = semanticKey || String(doc?._id || doc?.id || "").trim();
+
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, doc);
+      continue;
+    }
+
+    const existingIsServer = existing.__source === "server";
+    const docIsServer = doc.__source === "server";
+
+    if (docIsServer && !existingIsServer) {
+      byKey.set(key, doc);
+    }
+  }
+
+  return Array.from(byKey.values());
 };
 
 /* ================== ROLE + TOKEN HELPERS ================== */
@@ -594,10 +661,10 @@ const openPreview = async (doc) => {
 
   const role = getRoleFromStorage();
 
-const allList = [
-  ...serverList.map((d) => ({ ...d, __source: "server" })),
-  ...localList.map((d) => ({ ...d, __source: "local" })),
-];
+const allList = dedupeDocsPreferServer([
+  ...serverList.map((d) => ({ ...d, durum: getDocDurum(d), __source: "server" })),
+  ...localList.map((d) => ({ ...d, durum: getDocDurum(d), __source: "local" })),
+]);
 
   const talimat = allList.filter((d) => {
     const c = String(d?.category || "").toLowerCase();
@@ -653,7 +720,7 @@ const allList = [
   }, [docs]);
 
   const uniqueDurum = useMemo(() => {
-    const d = Array.from(new Set(docs.map((x) => x?.durum).filter(Boolean)));
+    const d = Array.from(new Set(docs.map(getDocDurum).filter(Boolean)));
     return d.length ? d : ["Hazır", "Arşivde"];
   }, [docs]);
 
@@ -687,13 +754,13 @@ const allList = [
 
       if (yilFilter !== "Tüm" && String(getDocYear(d)) !== String(yilFilter)) return false;
       if (turFilter !== "Tüm" && inferTur(d) !== turFilter) return false;
-      if (durumFilter !== "Tüm" && d.durum !== durumFilter) return false;
+      if (durumFilter !== "Tüm" && getDocDurum(d) !== durumFilter) return false;
 
       if (search.trim()) {
         const q = search.toLowerCase();
         const hay = `${getPersonelAdSoyad(d)} ${getTypeLabel(d)} ${toDisplayDate(
           d.tarih || d.createdAt
-        )} ${getPreparedBy(d)}`.toLowerCase();
+        )} ${getPreparedByDisplay(d)}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
 
@@ -730,29 +797,109 @@ const allList = [
 };
 
   const handleArsivle = (doc) => {
-    if (doc.durum === "Arşivde") return;
+    if (isDocArchived(doc)) return;
     openConfirm({
       title: "Uyarı",
       message: "Bu belge arşive alınacak. Devam edilsin mi?",
       confirmText: "Arşivle",
       cancelText: "İptal",
-      onConfirm: () => persist(docs.map((d) => (d.id === doc.id ? { ...d, durum: "Arşivde" } : d))),
+      onConfirm: async () => {
+        const docId = getDocId(doc);
+        const token = getAuthToken();
+
+        if (doc.__source === "server" && docId && token) {
+          try {
+            const res = await fetch(`${API_BASE}/documents/${docId}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ durum: "Arşivde" }),
+            });
+
+            if (!res.ok) {
+              const payload = await res.json().catch(() => ({}));
+              openInfo("Hata", payload?.message || "Belge arşivlenemedi.");
+              return;
+            }
+
+            await fetchDocs();
+            openInfo("Bilgilendirme", "Belge arşivlendi ✅");
+            return;
+          } catch (err) {
+            console.error("Talimat arşivleme hatası:", err);
+            openInfo("Hata", "Belge arşivlenirken bir hata oluştu.");
+            return;
+          }
+        }
+
+        const targetKey = getSemanticDocKey(doc);
+        persist(
+          docs.map((d) =>
+            String(d.id || d._id || "") === String(doc.id || doc._id || "") ||
+            getSemanticDocKey(d) === targetKey
+              ? { ...d, durum: "Arşivde", status: "arsiv" }
+              : d
+          )
+        );
+      },
     });
   };
 
   const handleGeriAl = (doc) => {
-    if (doc.durum !== "Arşivde") return;
+    if (!isDocArchived(doc)) return;
     openConfirm({
       title: "Uyarı",
       message: "Bu belge arşivden geri alınacak. Devam edilsin mi?",
       confirmText: "Geri Al",
       cancelText: "İptal",
-      onConfirm: () => persist(docs.map((d) => (d.id === doc.id ? { ...d, durum: "Hazır" } : d))),
+      onConfirm: async () => {
+        const docId = getDocId(doc);
+        const token = getAuthToken();
+
+        if (doc.__source === "server" && docId && token) {
+          try {
+            const res = await fetch(`${API_BASE}/documents/${docId}`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ durum: "Hazır" }),
+            });
+
+            if (!res.ok) {
+              const payload = await res.json().catch(() => ({}));
+              openInfo("Hata", payload?.message || "Belge geri alınamadı.");
+              return;
+            }
+
+            await fetchDocs();
+            openInfo("Bilgilendirme", "Belge arşivden çıkarıldı ✅");
+            return;
+          } catch (err) {
+            console.error("Talimat geri alma hatası:", err);
+            openInfo("Hata", "Belge geri alınırken bir hata oluştu.");
+            return;
+          }
+        }
+
+        const targetKey = getSemanticDocKey(doc);
+        persist(
+          docs.map((d) =>
+            String(d.id || d._id || "") === String(doc.id || doc._id || "") ||
+            getSemanticDocKey(d) === targetKey
+              ? { ...d, durum: "Hazır", status: "hazir" }
+              : d
+          )
+        );
+      },
     });
   };
 
  const handleSil = (doc) => {
-  if (doc.durum === "Arşivde") return;
+  if (isDocArchived(doc)) return;
 
   const role = getRoleFromStorage();
   const isTicariUser = isTicariRole(role) && !isAdminRole(role);
@@ -940,7 +1087,8 @@ setDocs((prev) =>
             <div className="divide-y divide-gray-100">
               {filteredDocs.map((doc) => {
                 const label = getTypeLabel(doc);
-                const isArchived = doc.durum === "Arşivde";
+                const durum = getDocDurum(doc);
+                const isArchived = isDocArchived(doc);
 
                 const role = getRoleFromStorage();
                 const isTicariUser = isTicariRole(role) && !isAdminRole(role);
@@ -958,11 +1106,11 @@ setDocs((prev) =>
                         {label}
                       </span>
 
-                      {doc.durum && (
+                      {durum && (
                         <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${STATUS_BADGE_CLASS(doc.durum)}`}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${STATUS_BADGE_CLASS(durum)}`}
                         >
-                          {doc.durum}
+                          {durum}
                         </span>
                       )}
                     </div>
@@ -974,7 +1122,7 @@ setDocs((prev) =>
                       </div>
                       <div>
                         <span className="font-medium text-gray-800">Hazırlayan:</span>{" "}
-                        {getPreparedBy(doc) || "-"}
+                        {getPreparedByDisplay(doc) || "-"}
                       </div>
                     </div>
 
@@ -1048,7 +1196,7 @@ setDocs((prev) =>
               <tbody className="divide-y">
                 {filteredDocs.map((doc) => {
                   const label = getTypeLabel(doc);
-                  const isArchived = doc.durum === "Arşivde";
+                  const isArchived = isDocArchived(doc);
 
                   const role = getRoleFromStorage();
                   const isTicariUser = isTicariRole(role) && !isAdminRole(role);
@@ -1072,7 +1220,7 @@ setDocs((prev) =>
                       </td>
 
                       <td className="px-3 py-2 truncate max-w-[120px] sm:max-w-[200px]">
-                        {getPreparedBy(doc) || "-"}
+                        {getPreparedByDisplay(doc) || "-"}
                       </td>
 
                       <td className="px-3 py-2 text-right">
