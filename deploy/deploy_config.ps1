@@ -5,4 +5,4 @@ $DeployUser = "root"
 # Sunucuda proje klasorundeyken `pwd` komutu ile bulunur.
 $RemoteProjectPath = "/var/www"
 
-$RemoteDeployScript = "$RemoteProjectPath/deploy_server.sh"
+$RemoteDeployScript = "$RemoteProjectPath/deploy/deploy_server.sh"

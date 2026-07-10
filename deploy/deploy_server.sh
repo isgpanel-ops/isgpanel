@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_DIR="/var/www"
 FRONTEND_DIR="$PROJECT_DIR"
 BACKEND_DIR="$PROJECT_DIR/backend"
+DEPLOY_KEY="$HOME/.ssh/isgpanel_github"
 
 # PM2 kullaniyorsan bu isimleri kendi process isimlerinle eslestir.
 BACKEND_PM2_NAME="server"
@@ -11,6 +12,9 @@ BACKEND_PM2_NAME="server"
 cd "$PROJECT_DIR"
 
 if [ -d "$PROJECT_DIR/.git" ]; then
+  if [ -f "$DEPLOY_KEY" ]; then
+    export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+  fi
   echo "==> Kod guncelleniyor"
   git pull --ff-only
 else
