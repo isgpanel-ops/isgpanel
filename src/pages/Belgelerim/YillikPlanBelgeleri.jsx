@@ -493,7 +493,14 @@ const yearly = list.filter((d) => {
     const durumlar = Array.from(
       new Set(
         docs
-          .map((d) => d?.durum || (d?.status === "arsivde" ? "Arşivde" : d?.status === "hazir" ? "Hazır" : ""))
+          .map((d) =>
+            d?.durum ||
+            (d?.status === "arsiv" || d?.status === "arsivde"
+              ? "Arşivde"
+              : d?.status === "hazir"
+              ? "Hazır"
+              : "")
+          )
           .filter(Boolean)
       )
     );
@@ -515,7 +522,13 @@ const yearly = list.filter((d) => {
         const t = inferTur(d);
         if (turFilter !== "Tüm" && t !== turFilter) return false;
 
-        const durum = d?.durum || (d?.status === "arsivde" ? "Arşivde" : d?.status === "hazir" ? "Hazır" : "");
+        const durum =
+          d?.durum ||
+          (d?.status === "arsiv" || d?.status === "arsivde"
+            ? "Arşivde"
+            : d?.status === "hazir"
+            ? "Hazır"
+            : "");
         if (durumFilter !== "Tüm" && durum !== durumFilter) return false;
 
         if (search.trim()) {
@@ -611,7 +624,7 @@ const yearly = list.filter((d) => {
   };
 
   const handleArsivle = (doc) => {
-    if ((doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsivde") return;
+    if ((doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsiv" || doc?.status === "arsivde") return;
 
     openConfirm({
       title: "Uyarı",
@@ -636,7 +649,7 @@ const yearly = list.filter((d) => {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ durum: "Arşivde", status: "arsivde" }),
+            body: JSON.stringify({ durum: "Arşivde", status: "arsiv" }),
           });
 
           if (!res.ok) {
@@ -648,7 +661,7 @@ const yearly = list.filter((d) => {
           setDocs((prev) =>
             prev.map((d) =>
               String(d?.id || d?._id) === String(docId)
-                ? { ...d, durum: "Arşivde", status: "arsivde" }
+                ? { ...d, durum: "Arşivde", status: "arsiv" }
                 : d
             )
           );
@@ -666,7 +679,7 @@ const yearly = list.filter((d) => {
   };
 
   const handleGeriAl = (doc) => {
-    if ((doc?.durum || "").toLowerCase() !== "arşivde" && doc?.status !== "arsivde") return;
+    if ((doc?.durum || "").toLowerCase() !== "arşivde" && doc?.status !== "arsiv" && doc?.status !== "arsivde") return;
 
     openConfirm({
       title: "Uyarı",
@@ -721,7 +734,7 @@ const yearly = list.filter((d) => {
   };
 
   const handleSil = (doc) => {
-    const isArchived = (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsivde";
+    const isArchived = (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsiv" || doc?.status === "arsivde";
     if (isArchived) return;
 
     const role = getRoleFromStorage();
@@ -854,9 +867,9 @@ const yearly = list.filter((d) => {
               {filteredDocs.map((doc) => {
                 const type = inferTur(doc) || "-";
                 const durumText =
-                  doc?.durum || (doc?.status === "arsivde" ? "Arşivde" : doc?.status === "hazir" ? "Hazır" : "");
+                  doc?.durum || (doc?.status === "arsiv" || doc?.status === "arsivde" ? "Arşivde" : doc?.status === "hazir" ? "Hazır" : "");
                 const isArchived =
-                  (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsivde";
+                  (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsiv" || doc?.status === "arsivde";
                 const dateText = toDisplayDate(doc?.tarih || doc?.createdAt);
                 const preparedBy = getPreparedBy(doc);
                 const firmaName = doc?.firmaAdi || doc?.firma?.firmaAdi || selectedFirm?.firmaAdi;
@@ -987,7 +1000,7 @@ const yearly = list.filter((d) => {
                 {filteredDocs.map((doc) => {
                   const type = inferTur(doc) || "-";
                   const isArchived =
-                    (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsivde";
+                    (doc?.durum || "").toLowerCase() === "arşivde" || doc?.status === "arsiv" || doc?.status === "arsivde";
                   const dateText = toDisplayDate(doc?.tarih || doc?.createdAt);
                   const preparedBy = getPreparedBy(doc);
                   const firmaName = doc?.firmaAdi || doc?.firma?.firmaAdi || selectedFirm?.firmaAdi;
@@ -1016,11 +1029,11 @@ const yearly = list.filter((d) => {
                               className={
                                 "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold " +
                                 STATUS_BADGE_CLASS(
-                                  doc?.durum || (doc?.status === "arsivde" ? "Arşivde" : "Hazır")
+                                  doc?.durum || (doc?.status === "arsiv" || doc?.status === "arsivde" ? "Arşivde" : "Hazır")
                                 )
                               }
                             >
-                              {doc?.durum || (doc?.status === "arsivde" ? "Arşivde" : "Hazır")}
+                              {doc?.durum || (doc?.status === "arsiv" || doc?.status === "arsivde" ? "Arşivde" : "Hazır")}
                             </span>
                           )}
                         </div>

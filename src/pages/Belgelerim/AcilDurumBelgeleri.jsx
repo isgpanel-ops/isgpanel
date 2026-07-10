@@ -110,6 +110,20 @@ const getPreparedBy = (doc) =>
   doc?.userName ||
   "";
 
+const getDocDurum = (doc) => {
+  const durum = String(doc?.durum || "").trim();
+  if (durum) return durum;
+
+  const status = String(doc?.status || "").toLowerCase().trim();
+  if (status === "arsiv" || status === "arsivde" || status === "archive" || status === "archived") {
+    return "Arşivde";
+  }
+
+  return "Hazır";
+};
+
+const isDocArchived = (doc) => getDocDurum(doc) === "Arşivde";
+
 const sanitizeFileName = (input) => {
   const s = String(input ?? "").trim();
   if (!s) return "belge";
@@ -449,7 +463,11 @@ export default function AcilDurumBelgeleri() {
         );
       });
 
-      const deduped = dedupeDocs(acil);
+      const deduped = dedupeDocs(acil).map((doc) => ({
+        ...doc,
+        durum: getDocDurum(doc),
+        status: String(doc?.status || "").trim() || (getDocDurum(doc) === "Arşivde" ? "arsiv" : "hazir"),
+      }));
       setDocs(deduped);
     } catch (e) {
       console.error("Server acil belgeler çekilemedi:", e);
@@ -485,7 +503,7 @@ export default function AcilDurumBelgeleri() {
   }, [docs]);
 
   const uniqueDurum = useMemo(() => {
-    const durumlar = Array.from(new Set(docs.map((d) => d?.durum).filter(Boolean)));
+    const durumlar = Array.from(new Set(docs.map(getDocDurum).filter(Boolean)));
     if (durumlar.length === 0) return ["Hazır", "Arşivde"];
     return durumlar;
   }, [docs]);
@@ -504,7 +522,7 @@ export default function AcilDurumBelgeleri() {
         const t = inferBelgeTuru(d);
         if (belgeTurFilter !== "Tüm" && t !== belgeTurFilter) return false;
 
-        if (durumFilter !== "Tüm" && d.durum !== durumFilter) return false;
+        if (durumFilter !== "Tüm" && getDocDurum(d) !== durumFilter) return false;
 
         if (search.trim()) {
           const q = search.trim().toLowerCase();
@@ -595,7 +613,7 @@ export default function AcilDurumBelgeleri() {
   };
 
   const handleArsivle = (doc) => {
-    if (doc.durum === "Arşivde" || doc.status === "arsiv") return;
+    if (isDocArchived(doc)) return;
 
     const targetId = String(doc.id || doc._id || "");
     if (!targetId) {
@@ -624,7 +642,7 @@ export default function AcilDurumBelgeleri() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ durum: "Arşivde" }),
+            body: JSON.stringify({ durum: "Arşivde", status: "arsiv" }),
           });
 
           const raw = await res.text().catch(() => "");
@@ -651,7 +669,7 @@ export default function AcilDurumBelgeleri() {
   };
 
   const handleGeriAl = (doc) => {
-    const isArchived = doc.durum === "Arşivde" || doc.status === "arsiv";
+    const isArchived = isDocArchived(doc);
     if (!isArchived) return;
 
     const targetId = String(doc.id || doc._id || "");
@@ -681,7 +699,7 @@ export default function AcilDurumBelgeleri() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ durum: "Hazır" }),
+            body: JSON.stringify({ durum: "Hazır", status: "hazir" }),
           });
 
           const raw = await res.text().catch(() => "");
@@ -708,7 +726,7 @@ export default function AcilDurumBelgeleri() {
   };
 
   const handleSil = (doc) => {
-    const isArchived = doc.durum === "Arşivde" || doc.status === "arsiv";
+    const isArchived = isDocArchived(doc);
     if (isArchived) return;
 
     const role = getRoleFromStorage();
@@ -869,7 +887,8 @@ export default function AcilDurumBelgeleri() {
 
         {filteredDocs.map((doc) => {
           const type = inferBelgeTuru(doc);
-          const isArchived = doc.durum === "Arşivde" || doc.status === "arsiv";
+          const durum = getDocDurum(doc);
+          const isArchived = isDocArchived(doc);
           const dateText = toDisplayDate(doc.tarih || doc.createdAt);
           const preparedBy = getPreparedBy(doc);
           const rowKey =
@@ -894,14 +913,14 @@ export default function AcilDurumBelgeleri() {
                     {type}
                   </span>
 
-                  {doc.durum ? (
+                  {durum ? (
                     <span
                       className={
                         "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold " +
-                        STATUS_BADGE_CLASS(doc.durum)
+                        STATUS_BADGE_CLASS(durum)
                       }
                     >
-                      {doc.durum}
+                      {durum}
                     </span>
                   ) : null}
                 </div>
@@ -996,7 +1015,8 @@ export default function AcilDurumBelgeleri() {
     ) : (
       filteredDocs.map((doc) => {
         const type = inferBelgeTuru(doc);
-        const isArchived = doc.durum === "Arşivde" || doc.status === "arsiv";
+        const durum = getDocDurum(doc);
+        const isArchived = isDocArchived(doc);
         const dateText = toDisplayDate(doc.tarih || doc.createdAt);
         const preparedBy = getPreparedBy(doc);
         const rowKey =
@@ -1019,14 +1039,14 @@ export default function AcilDurumBelgeleri() {
                 </div>
               </div>
 
-              {doc.durum ? (
+              {durum ? (
                 <span
                   className={
                     "inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold " +
-                    STATUS_BADGE_CLASS(doc.durum)
+                    STATUS_BADGE_CLASS(durum)
                   }
                 >
-                  {doc.durum}
+                  {durum}
                 </span>
               ) : null}
             </div>

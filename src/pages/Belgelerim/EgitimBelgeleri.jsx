@@ -896,7 +896,7 @@ export default function EgitimBelgeleri() {
           durum:
             d?.durum ||
             (d?.status === "arsiv" || d?.status === "arsivde" ? "Arşivde" : "Hazır"),
-          status: d?.status || (d?.durum === "Arşivde" ? "arsivde" : "hazir"),
+          status: d?.status || (d?.durum === "Arşivde" ? "arsiv" : "hazir"),
 
           fileUrl:
             d?.fileUrl ||
@@ -1415,7 +1415,7 @@ export default function EgitimBelgeleri() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ durum: "Arşivde", status: "arsivde" }),
+            body: JSON.stringify({ durum: "Arşivde", status: "arsiv" }),
           });
 
           if (!res.ok) {
@@ -1426,7 +1426,7 @@ export default function EgitimBelgeleri() {
           setDocs((prev) =>
             prev.map((d) =>
               String(d?._id || d?.id) === String(docId)
-                ? { ...d, durum: "Arşivde", status: "arsivde" }
+                ? { ...d, durum: "Arşivde", status: "arsiv" }
                 : d
             )
           );
