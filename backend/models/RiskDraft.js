@@ -1,12 +1,13 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const RiskDraftSchema = new mongoose.Schema(
   {
     firmaId: { type: String, required: true, unique: true },
-    firmaAdi: String,
-    payload: Object,
+    firmaAdi: { type: String, default: "" },
+    payload: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("RiskDraft", RiskDraftSchema);
+module.exports =
+  mongoose.models.RiskDraft || mongoose.model("RiskDraft", RiskDraftSchema);

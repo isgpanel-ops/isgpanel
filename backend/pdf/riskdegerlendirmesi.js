@@ -1,10 +1,10 @@
 // backend/pdf/riskdegerlendirmesi.js
-import fs from "fs";
-import path from "path";
-import Handlebars from "handlebars";
-import { chromium } from "playwright";
-import { PDFDocument, rgb } from "pdf-lib";
-import fontkit from "@pdf-lib/fontkit";
+const fs = require("fs");
+const path = require("path");
+const Handlebars = require("handlebars");
+const { chromium } = require("playwright");
+const { PDFDocument, rgb } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
 
 /**
  * Payload beklenen alanlar (frontend -> backend):
@@ -474,7 +474,7 @@ async function placeSignatures(pdfBuffer, payload = {}) {
 }
 
 /** ✅ HTML üret + output klasörüne kaydet */
-export async function riskDegerlendirmesiHtml(req, res) {
+async function riskDegerlendirmesiHtml(req, res) {
   try {
     const payload = req.body || {};
     let html = buildHtmlFromPayload(payload);
@@ -503,7 +503,7 @@ if (isDemoRequest(req, payload)) {
 }
 
 /** ✅ Aynı HTML'den PDF bas (Playwright) */
-export async function riskDegerlendirmesiPdf(req, res) {
+async function riskDegerlendirmesiPdf(req, res) {
   try {
     const payload = req.body || {};
     let html = buildHtmlFromPayload(payload);
@@ -543,3 +543,7 @@ if (isDemoRequest(req, payload)) {
     return res.status(500).json({ message: "PDF üretim hatası", detail: String(err?.message || err) });
   }
 }
+
+module.exports = riskDegerlendirmesiPdf;
+module.exports.riskDegerlendirmesiHtml = riskDegerlendirmesiHtml;
+module.exports.riskDegerlendirmesiPdf = riskDegerlendirmesiPdf;

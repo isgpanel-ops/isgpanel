@@ -1,9 +1,8 @@
-import express from "express";
-import RiskDraft from "../models/RiskDraft.js";
+const express = require("express");
+const RiskDraft = require("../models/RiskDraft");
 
 const router = express.Router();
 
-// GET
 router.get("/risk-assessments/draft/:firmId", async (req, res) => {
   try {
     const draft = await RiskDraft.findOne({ firmaId: req.params.firmId });
@@ -16,7 +15,6 @@ router.get("/risk-assessments/draft/:firmId", async (req, res) => {
   }
 });
 
-// PUT
 router.put("/risk-assessments/draft/:firmId", async (req, res) => {
   try {
     const { payload, firmaAdi } = req.body;
@@ -38,4 +36,4 @@ router.put("/risk-assessments/draft/:firmId", async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
