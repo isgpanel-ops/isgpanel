@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Risk Değerlendirme Ekibi Atama Yazısı</title>
+  </head>
+  <body>
+    <div
+      class="a4-page"
+      style="
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 10mm;
+        box-sizing: border-box;
+        background: #ffffff;
+        font-family: 'Calibri', 'Arial', sans-serif;
+        font-size: 11pt;
+        color: #000000;
+      "
+    >
+      <!-- DIŞ ÇERÇEVE -->
+      <div
+  style="
+     border: 1px solid #000000;
+    box-sizing: border-box;
+    padding: 6mm 0 10mm 0; /* üst 6mm - alt 10mm */
+    min-height: 270mm;     /* dış çerçeveyi aşağı doğru uzatır */
+    display: flex;
+    flex-direction: column;
+  "
+>
+
+        <!-- ÜST SATIR: LOGO - BAŞLIK - TARİH -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #000000;
+            padding: 8px 14px;
+          "
+        >
+          <!-- Logo alanı -->
+          <div style="width: 110px; text-align: left; font-size: 9pt; margin-left: 6mm; margin-top: -2mm;">
+  <img
+    src="{{panel.logoUrl}}"
+    alt="logo"
+    style="max-width: 120px; max-height: 54px;"
+  />
+</div>
+
+
+          <!-- Başlık -->
+          <div
+  style="
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    font-size: 13pt;
+    letter-spacing: 0.05em;
+    margin-right: 20px; /* ORTALAMA DÜZELTME */
+  "
+>
+  RİSK DEĞERLENDİRME EKİBİ ATAMA YAZISI
+</div>
+
+          <!-- Tarih -->
+          <div
+            style="
+              width: 120px;
+              text-align: right;
+              font-size: 9pt;
+              line-height: 1.4;
+            "
+          >
+            <div style="font-weight: bold;">TARİH</div>
+            <div>{{riskEkip.yaziTarihi}}</div>
+          </div>
+        </div>
+
+        <!-- ORTA METİN BLOĞU -->
+        <div
+          style="
+            padding: 14px 20px 4px 20px;
+            font-size: 9pt;
+            line-height: 1.45;
+            text-align: justify;
+          "
+        >
+          <div
+            style="
+              text-align: center;
+              font-weight: bold;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+            "
+          >
+            {{firma.firmaAdi}} RİSK DEĞERLENDİRMESİ EKİP ÜYELERİNİN ATAMASI VE
+            RİSK DEĞERLENDİRME ÇALIŞMALARININ BAŞLATILMASI DUYURUSU
+          </div>
+
+          <div style="margin-top: 4px;">
+            {{firma.firmaAdi}} 6331 sayılı İş Sağlığı ve Güvenliği Kanunu
+            kapsamındaki İş Sağlığı ve Güvenliği Risk Değerlendirmesi
+            Yönetmeliği’ne istinaden, işveren/vekil tarafından aşağıdaki Risk
+            Değerlendirmesi Ekibi üyeleri atanmıştır. Risk Değerlendirmesi
+            Ekibi üyelerinde görev değişikliği olması halinde bu atama duyurusu
+            güncellenerek tekrar ibraz olunur.
+          </div>
+        </div>
+
+        <!-- TABLO -->
+        <div
+          style="
+            padding: 8px 14px 0 14px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+          "
+        >
+          <table
+            style="
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9pt;
+            "
+          >
+            <thead>
+              <tr>
+                <th
+                  style="
+                    border: 1px solid #000000;
+                    padding: 7px 4px;
+                    width: 8%;
+                    text-align: center;
+                    font-weight: bold;
+                    background: #f0f4f7;
+                  "
+                >
+                  NO
+                </th>
+                <th
+                  style="
+                    border: 1px solid #000000;
+                    padding: 7px 4px;
+                    width: 32%;
+                    text-align: center;
+                    font-weight: bold;
+                    background: #f0f4f7;
+                  "
+                >
+                  GÖREV
+                </th>
+                <th
+                  style="
+                    border: 1px solid #000000;
+                    padding: 7px 4px;
+                    text-align: center;
+                    font-weight: bold;
+                    background: #f0f4f7;
+                  "
+                >
+                  AD - SOYAD
+                </th>
+                <th
+                  style="
+                    border: 1px solid #000000;
+                    padding: 7px 4px;
+                    width: 18%;
+                    text-align: center;
+                    font-weight: bold;
+                    background: #f0f4f7;
+                  "
+                >
+                  İMZA
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Satır boylarını A4'e yaymak için min-height efekti -->
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  1
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  İŞVEREN/İŞVEREN VEKİLİ
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.isveren}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  2
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  İŞ GÜVENLİĞİ UZMANI
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.uzman}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  3
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  İŞYERİ HEKİMİ
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.hekim}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  4
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  ÇALIŞAN TEMSİLCİSİ
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.temsilci}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  5
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  DESTEK ELEMANI
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.destek}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+
+              <tr style="height: 18mm;">
+                <td
+                  style="
+                    border: 1px solid #000000;
+                    padding: 6px 4px;
+                    text-align: center;
+                  "
+                >
+                  6
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  BİLGİ SAHİBİ KİŞİ
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;">
+                  {{kisiler.bilgiSahibi}}
+                </td>
+                <td style="border: 1px solid #000000; padding: 6px 4px;"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- İŞVEREN İMZA ALANI -->
+        <div
+          style="
+            padding: 16mm 22mm 14mm 22mm;
+            display: flex;
+            justify-content: flex-end;
+          "
+        >
+          <div style="text-align: center; font-size: 9pt;">
+            <!-- İŞVEREN / VEKİLİ ADI -->
+            <div style="margin-bottom: 6px; font-weight: bold;">
+              {{kisiler.isveren}}
+            </div>
+            <div style="margin-bottom: 18px;">İŞVEREN / İŞVEREN VEKİLİ</div>
+            <div>KAŞE - İMZA</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dipnot istersen
+      <div style="margin-top: 6px; font-size: 7pt; text-align: right;">
+        {{riskEkip.belgeNo}}
+      </div>
+      -->
+    </div>
+  </body>
+</html>

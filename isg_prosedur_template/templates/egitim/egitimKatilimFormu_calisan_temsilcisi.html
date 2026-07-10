@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Eğitim Katılım Formu - Çalışan Temsilcisi</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body{ font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
+
+  table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  td, th{ border:1px solid #000; padding:6px; vertical-align:middle; }
+
+  .center{ text-align:center; }
+  .bold{ font-weight:bold; }
+  .title{ font-size:18px; font-weight:bold; text-align:center; padding:10px 0; }
+  .secHeader{ font-weight:bold; text-align:center; background:#f2f2f2; }
+
+  /* ✅ Logo alanı */
+  .logoWrap{
+    height:55px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .logoImg{
+    max-height:55px;
+    max-width:100%;
+    object-fit:contain;
+    display:block;
+  }
+
+  /* ✅ Eğitim konuları (tek blok) */
+  .topics div{ margin:2px 0; }
+
+  /* ✅ Satır yüksekliği */
+  .rowH{ height:32px; }
+
+  /* ✅ Kolon genişlikleri (5 kolon) */
+  col.c-no{ width:6%; }
+  col.c-tc{ width:20%; }
+  col.c-ad{ width:30%; }
+  col.c-gorev{ width:22%; }
+  col.c-eg{ width:22%; }
+
+  /* Hücre ortalama */
+  .centerCell{
+    text-align:center;
+    vertical-align:middle;
+    word-break:break-word;
+  }
+
+  /* ✅ Sağdaki EĞİTİM/İMZA mini tablo */
+  .mini{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+  }
+  .mini td{
+    border:none;
+    border-top:1px solid #000;
+    padding:2px 1px;
+    font-size:11px;
+  }
+  .mini tr:first-child td{ border-top:none; }
+
+  .miniText{
+    font-size:11px;
+    line-height:12px;
+    white-space:nowrap;
+  }
+
+  /* ✅ Alt imza kutuları */
+  .signHead{
+    font-weight:bold;
+    text-align:center;
+    padding:8px 4px;
+  }
+  .signBox{
+    height:85px;
+    text-align:center;
+    position:relative;
+  }
+  .signNameInBox{
+    position:absolute;
+    top:8px;
+    left:0;
+    right:0;
+    font-size:11px;
+    font-weight:normal;
+  }
+  .signLabel{
+    position:absolute;
+    bottom:8px;
+    left:0;
+    right:0;
+    font-size:11px;
+    font-weight:bold;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ÜST -->
+<table>
+  <tr>
+    <td style="width:25%" class="center">
+      <div class="logoWrap">
+        <img src="{{LOGO_SRC}}" class="logoImg" />
+      </div>
+    </td>
+    <td class="title">ÇALIŞAN TEMSİLCİSİ EĞİTİM KATILIM FORMU</td>
+  </tr>
+</table>
+
+<!-- EĞİTİMİN KONULARI (tek blok) -->
+<table style="margin-top:8px;">
+  <tr>
+    <td class="secHeader">EĞİTİMİN KONULARI</td>
+  </tr>
+  <tr>
+    <td class="topics">
+      <div>a) Çalışan Temsilcisinin Görev Ve Sorumlulukları</div>
+      <div>b) İSG Temel Kavramları</div>
+      <div>c) İş Sağlığı Ve Güvenliği Konularında Ulusal Mevzuat Ve Standartlar</div>
+      <div>d) Acil Durum Önlemleri</div>
+      <div>e) Risk Değerlendirmesi</div>
+    </td>
+  </tr>
+</table>
+
+<!-- FİRMA -->
+<table style="margin-top:8px;">
+  <tr>
+    <td class="bold" style="width:20%;">FİRMA ADI :</td>
+    <td class="bold">{{firmaAdi}}</td>
+  </tr>
+</table>
+
+<!-- PERSONEL TABLOSU -->
+<table style="margin-top:8px;">
+  <colgroup>
+    <col class="c-no">
+    <col class="c-tc">
+    <col class="c-ad">
+    <col class="c-gorev">
+    <col class="c-eg">
+  </colgroup>
+
+  <tr>
+    <td colspan="5" class="secHeader">EĞİTİME KATILAN PERSONELİN</td>
+  </tr>
+
+  <tr class="center bold">
+    <td>NO</td>
+    <td>T.C. NUMARASI</td>
+    <td>ADI SOYADI</td>
+    <td>GÖREVİ</td>
+    <td style="padding:0;">
+      <table class="mini">
+        <tr><td class="center bold miniText">EĞİTİM {{EGITIM_SAAT}} SAAT</td></tr>
+        <tr><td class="center miniText">{{EGITIM_TARIH}}</td></tr>
+        <tr><td class="center bold miniText">İMZA</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <tbody>
+    {{KATILIMCI_ROWS}}
+  </tbody>
+</table>
+
+<!-- ALT İMZA BLOĞU -->
+<table style="margin-top:12px;">
+  <colgroup>
+    <col style="width:33.33%">
+    <col style="width:33.33%">
+    <col style="width:33.33%">
+  </colgroup>
+
+  <tr>
+    <td class="signHead">İŞ GÜVENLİĞİ UZMANI</td>
+    <td class="signHead">İŞYERİ HEKİMİ</td>
+    <td class="signHead">İŞVEREN / İŞVEREN VEKİLİ</td>
+  </tr>
+
+  <tr>
+    <td class="signBox">
+      <div class="signNameInBox">{{UZMAN_ADSOYAD}}</div>
+      <div class="signLabel">İMZA</div>
+    </td>
+    <td class="signBox">
+      <div class="signNameInBox">{{HEKIM_ADSOYAD}}</div>
+      <div class="signLabel">İMZA</div>
+    </td>
+    <td class="signBox">
+      <div class="signNameInBox">{{ISVEREN_ADSOYAD}}</div>
+      <div class="signLabel">İMZA</div>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

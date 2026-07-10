@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DÖF - {{firmaAdi}}</title>
+  </head>
+  <body>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 210mm;
+        height: 297mm;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000;
+        background: #fff;
+      }
+
+      body {
+        font-size: 10px;
+      }
+
+      .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 5.5mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        border: 0.8px solid #000;
+        padding: 4px 5px;
+        vertical-align: middle;
+      }
+
+      .bold {
+        font-weight: 700;
+      }
+
+      .upper {
+        text-transform: uppercase;
+      }
+
+      /* =======================
+         ÜST BAŞLIK
+      ======================= */
+      .top-table {
+        margin-bottom: 4px;
+      }
+
+      .top-table > tbody > tr > td {
+        padding: 0;
+        height: 21mm;
+      }
+
+      .logo-cell {
+        width: 24%;
+      }
+
+      .title-cell {
+        width: 55%;
+        text-align: center;
+        font-weight: 700;
+        font-size: 11px;
+        line-height: 1.28;
+        letter-spacing: 0.2px;
+      }
+
+      .meta-cell {
+        width: 21%;
+        padding: 0;
+        vertical-align: top;
+      }
+
+      .logo-wrap {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .logo-wrap img {
+        max-width: 76%;
+        max-height: 13mm;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+      }
+
+      .meta-table {
+        width: 100%;
+        height: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .meta-table td {
+        font-size: 8.5px;
+        padding: 2.8px 5px;
+        vertical-align: middle;
+        border: 0;
+      }
+
+      .meta-table tr:not(:last-child) td {
+        border-bottom: 0.8px solid #000;
+      }
+
+      .meta-table td:first-child {
+        border-right: 0.8px solid #000;
+      }
+
+      .meta-label {
+        width: 37%;
+        font-weight: 700;
+      }
+
+      .meta-value {
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      /* =======================
+         FİRMA / SGK
+      ======================= */
+      .firma-table {
+        margin-top: 0;
+      }
+
+      .firma-table td {
+        font-size: 9px;
+        padding: 3px 5px;
+        height: 7.5mm;
+      }
+
+      .firma-label {
+        width: 16%;
+        font-weight: 700;
+      }
+
+      .firma-value {
+        width: 46%;
+      }
+
+      .sgk-label {
+        width: 18%;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .sgk-value {
+        width: 20%;
+        font-size: 7.4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
+      }
+
+      /* =======================
+         ORTAK BAŞLIK
+      ======================= */
+      .section-title {
+        font-weight: 700;
+        text-align: center;
+        font-size: 9.8px;
+        padding: 4px 4px;
+        letter-spacing: 0.2px;
+      }
+
+      /* =======================
+         UYGUNSUZLUK VE FAALİYET
+      ======================= */
+      .content-table {
+        margin-top: 5px;
+      }
+
+      .content-block {
+        height: 33mm;
+        vertical-align: top;
+        padding: 5px 7px 6px 7px;
+      }
+
+      .content-block-title {
+        font-size: 9px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 4px;
+        line-height: 1.25;
+        border-bottom: 0.6px solid #000;
+        padding-bottom: 3px;
+      }
+
+      .content-block-text {
+        font-size: 8.8px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow: hidden;
+      }
+
+      /* =======================
+         SORUMLULAR
+      ======================= */
+      .sorumlu-table {
+        margin-top: 5px;
+      }
+
+      .sorumlu-table td,
+      .sorumlu-table th {
+        font-size: 8.8px;
+        padding-top: 3px;
+        padding-bottom: 3px;
+      }
+
+      .s-label {
+        width: 26%;
+        font-weight: 700;
+      }
+
+      .s-value {
+        width: 24%;
+      }
+
+      .d-label {
+        width: 30%;
+        font-weight: 700;
+      }
+
+      .d-value {
+        width: 20%;
+        text-align: center;
+      }
+
+      /* =======================
+         BOŞLUK
+      ======================= */
+      .spacer {
+        flex: 1 1 auto;
+        min-height: 2mm;
+      }
+
+      /* =======================
+         İMZA BLOĞU
+      ======================= */
+      .sign-table {
+        margin-top: 5px;
+      }
+
+      .sign-table th {
+        text-align: center;
+        font-weight: 700;
+        font-size: 9.2px;
+        padding: 5px 4px;
+        letter-spacing: 0.15px;
+      }
+
+      .sign-table td {
+        height: 32mm;
+        vertical-align: top;
+        position: relative;
+        padding: 0;
+      }
+
+      .sign-inner {
+        position: absolute;
+        top: 5mm;
+        left: 0;
+        right: 0;
+        text-align: center;
+        padding: 0 4mm;
+      }
+
+      .sign-name {
+        font-size: 8.8px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      .sign-note {
+        margin-top: 2mm;
+        font-size: 8px;
+      }
+
+      .footer {
+        margin-top: 3px;
+        font-size: 7.8px;
+        line-height: 1.25;
+      }
+    </style>
+
+    <div class="page">
+      <!-- ÜST KISIM -->
+      <table class="top-table">
+        <tr>
+          <td class="logo-cell">
+            <div class="logo-wrap">
+              {{logoHtml}}
+            </div>
+          </td>
+
+          <td class="title-cell">
+            DÜZELTİCİ / ÖNLEYİCİ<br />
+            FAALİYET TALEP<br />
+            FORMU
+          </td>
+
+          <td class="meta-cell">
+            <table class="meta-table">
+              <tr>
+                <td class="meta-label">Tarih</td>
+                <td class="meta-value">{{tarih}}</td>
+              </tr>
+              <tr>
+                <td class="meta-label">No</td>
+                <td class="meta-value upper">{{kayitNo}}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- FİRMA / SGK -->
+      <table class="firma-table">
+        <tr>
+          <td class="firma-label">Firma Adı</td>
+          <td class="firma-value">{{firmaAdi}}</td>
+          <td class="sgk-label">SGK Sicil No</td>
+          <td class="sgk-value">{{sgkSicilNo}}</td>
+        </tr>
+      </table>
+
+      <!-- UYGUNSUZLUK VE FAALİYET BİLGİLERİ -->
+      <table class="content-table">
+        <tr>
+          <th class="section-title">UYGUNSUZLUK VE FAALİYET BİLGİLERİ</th>
+        </tr>
+
+        <tr>
+          <td class="content-block">
+            <div class="content-block-title">Uygunsuzluğun Tanımı</div>
+            <div class="content-block-text">{{tanim}}</div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="content-block">
+            <div class="content-block-title">Uygunsuzluğun Nedeni</div>
+            <div class="content-block-text">{{neden}}</div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="content-block">
+            <div class="content-block-title">Yapılacak Düzeltici / Önleyici Faaliyet</div>
+            <div class="content-block-text">{{faaliyet}}</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- SORUMLULAR VE TARİHLER -->
+      <table class="sorumlu-table">
+        <tr>
+          <th colspan="4" class="section-title">SORUMLULAR VE TARİHLER</th>
+        </tr>
+
+        <tr>
+          <td class="s-label">İşveren / İşveren Vekili</td>
+          <td class="s-value">{{isverenAdi}}</td>
+          <td class="d-label">Tespit Tarihi</td>
+          <td class="d-value">{{tarih}}</td>
+        </tr>
+
+        <tr>
+          <td class="s-label">İş Güvenliği Uzmanı</td>
+          <td class="s-value">{{uzmanAdi}}</td>
+          <td class="d-label">Planlanan Başlangıç Tarihi</td>
+          <td class="d-value">{{planBaslangic}}</td>
+        </tr>
+
+        <tr>
+          <td class="s-label">Planlanan Bitiş Tarihi</td>
+          <td class="s-value">{{planBitis}}</td>
+          <td class="d-label">Gerçekleşen Bitiş Tarihi</td>
+          <td class="d-value">{{gercekBitis}}</td>
+        </tr>
+      </table>
+
+      <div class="spacer"></div>
+
+      <!-- İMZA BLOĞU -->
+      <table class="sign-table">
+        <tr>
+          <th>İŞVEREN / İŞVEREN VEKİLİ</th>
+          <th>İŞ GÜVENLİĞİ UZMANI</th>
+        </tr>
+        <tr>
+          <td>
+            <div class="sign-inner">
+              <div class="sign-name">{{isverenAdi}}</div>
+              <div class="sign-note">İmza</div>
+            </div>
+          </td>
+          <td>
+            <div class="sign-inner">
+              <div class="sign-name">{{uzmanAdi}}</div>
+              <div class="sign-note">Kaşe / İmza</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="footer">
+        <span class="bold">Not:</span>
+        Bu form ile tespit edilen uygunsuzluklara ait düzeltici / önleyici faaliyetler planlanır,
+        uygulanır ve sonuçları kaydedilir.
+      </div>
+    </div>
+  </body>
+</html>

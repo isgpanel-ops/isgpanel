@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yıllık Çalışma Planı</title>
+
+  <style>
+    @page { size: A4 landscape; margin: 6mm; }
+
+    * { box-sizing: border-box; }
+
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      color:#111;
+      margin:0;
+      padding:0;
+    }
+
+    .wrap{ width:100%; }
+
+    .page{
+      min-height:198mm;
+      display:flex;
+      flex-direction:column;
+      page-break-after:always;
+    }
+
+    .page:last-child{
+      page-break-after:auto;
+    }
+
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border:1px solid #000;
+      padding:8px;
+    }
+
+    .logo{
+      width:120px;
+      height:40px;
+      display:flex;
+      align-items:center;
+    }
+
+    .logo img{
+      max-width:120px;
+      max-height:40px;
+    }
+
+    .title{
+      font-size:16px;
+      font-weight:700;
+      letter-spacing:.5px;
+      text-align:center;
+    }
+
+    .meta{
+      text-align:right;
+      font-size:11px;
+      line-height:1.3;
+    }
+
+    .info{
+      border:1px solid #000;
+      border-top:none;
+      padding:6px 8px;
+      display:grid;
+      grid-template-columns:1.4fr 1fr 1fr 1fr;
+      gap:6px;
+    }
+
+    .item{
+      border:1px solid #000;
+      padding:5px;
+    }
+
+    .label{
+      font-size:10px;
+      font-weight:700;
+    }
+
+    .val{
+      font-size:11px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    th,td{
+      border:1px solid #000;
+      padding:3px 4px;
+    }
+
+    th{
+      background:#efefef;
+      font-size:10px;
+    }
+
+    td{
+      font-size:10px;
+    }
+
+    tr, td, th{
+      page-break-inside: avoid;
+    }
+
+    .c{
+      text-align:center;
+      vertical-align:middle;
+    }
+
+    .l{
+      text-align:left;
+    }
+
+    .table-wrap{
+      border-left:1px solid #000;
+      border-right:1px solid #000;
+      border-bottom:1px solid #000;
+      margin-bottom:10px;
+    }
+
+    /* + / - ikon */
+    .pm-icon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:16px;
+      height:16px;
+    }
+
+    .pm-icon svg{
+      width:16px;
+      height:16px;
+    }
+
+    .pm-plus line,
+    .pm-minus line{
+      stroke:#000;
+      stroke-width:3;
+      stroke-linecap:round;
+    }
+
+    /* imza */
+    .foot{
+      margin-top:auto;
+      border:1px solid #000;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      background:#fff;
+    }
+
+        .sign{
+      min-height:85px;
+      padding:8px 8px 6px 8px;
+      border-right:1px solid #000;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      justify-content:flex-start;
+      padding-top:8px;
+    }
+
+    .sign:last-child{
+      border-right:none;
+    }
+
+    .sign .name{
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      line-height:1.1;
+      margin-bottom:1px;
+    }
+
+    .sign .cap{
+      font-size:11px;
+      font-weight:700;
+      line-height:1.1;
+      margin-top:0;
+      margin-bottom:8px;
+    }
+
+    .sign .sign-space{
+      width:100%;
+      height:36px;
+    }
+
+    .sign .muted{
+      margin-top:auto;
+      font-size:10px;
+      color:#444;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- 1. SAYFA -->
+  <div class="page first-page">
+    <div class="header">
+      <div class="logo">
+        {{#logoUrl}}<img src="{{logoUrl}}" />{{/logoUrl}}
+      </div>
+      <div class="title">YILLIK ÇALIŞMA PLANI</div>
+      <div class="meta">
+        <div><b>Yıl:</b> {{yil}}</div>
+        <div><b>Dönem:</b> {{baslangicTr}} - {{bitisTr}}</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="item" style="grid-column:span 2">
+        <div class="label">FİRMA ADI</div>
+        <div class="val">{{firmaAdi}}</div>
+      </div>
+      <div class="item">
+        <div class="label">SGK SİCİL NO</div>
+        <div class="val">{{sgkSicilNo}}</div>
+      </div>
+      <div class="item">
+        <div class="label">TEHLİKE SINIFI</div>
+        <div class="val">{{tehlikeSinifi}}</div>
+      </div>
+    </div>
+
+    {{#firstPage}}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">NO</th>
+            <th style="width:280px; text-align:left">FAALİYET</th>
+            {{#monthHeaders}}<th style="width:55px">{{.}}</th>{{/monthHeaders}}
+          </tr>
+        </thead>
+        <tbody>
+          {{{rowsHtml}}}
+        </tbody>
+      </table>
+    </div>
+    {{/firstPage}}
+
+        <div class="foot">
+      <div class="sign">
+        <div class="name">{{isgUzmaniAdi}}</div>
+        <div class="cap">İŞ GÜVENLİĞİ UZMANI</div>
+        <div class="sign-space"></div>
+      </div>
+      <div class="sign">
+        <div class="name">{{isyeriHekimiAdi}}</div>
+        <div class="cap">İŞYERİ HEKİMİ</div>
+        <div class="sign-space"></div>
+      </div>
+      <div class="sign">
+        <div class="name">{{isverenAdi}}</div>
+        <div class="cap">İŞVEREN / İŞVEREN VEKİLİ</div>
+        <div class="sign-space"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVAM SAYFALARI -->
+  {{#otherPages}}
+  <div class="page">
+    <div class="header">
+      <div class="logo">
+        {{#logoUrl}}<img src="{{logoUrl}}" />{{/logoUrl}}
+      </div>
+      <div class="title">YILLIK ÇALIŞMA PLANI</div>
+      <div class="meta">
+        <div><b>Yıl:</b> {{yil}}</div>
+        <div><b>Dönem:</b> {{baslangicTr}} - {{bitisTr}}</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="item" style="grid-column:span 2">
+        <div class="label">FİRMA ADI</div>
+        <div class="val">{{firmaAdi}}</div>
+      </div>
+      <div class="item">
+        <div class="label">SGK SİCİL NO</div>
+        <div class="val">{{sgkSicilNo}}</div>
+      </div>
+      <div class="item">
+        <div class="label">TEHLİKE SINIFI</div>
+        <div class="val">{{tehlikeSinifi}}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">NO</th>
+            <th style="width:280px; text-align:left">FAALİYET</th>
+            {{#monthHeaders}}<th style="width:55px">{{.}}</th>{{/monthHeaders}}
+          </tr>
+        </thead>
+        <tbody>
+          {{{rowsHtml}}}
+        </tbody>
+      </table>
+    </div>
+
+        <div class="foot">
+      <div class="sign">
+        <div class="name">{{isgUzmaniAdi}}</div>
+        <div class="cap">İŞ GÜVENLİĞİ UZMANI</div>
+        <div class="sign-space"></div>
+      </div>
+      <div class="sign">
+        <div class="name">{{isyeriHekimiAdi}}</div>
+        <div class="cap">İŞYERİ HEKİMİ</div>
+        <div class="sign-space"></div>
+      </div>
+      <div class="sign">
+        <div class="name">{{isverenAdi}}</div>
+        <div class="cap">İŞVEREN / İŞVEREN VEKİLİ</div>
+        <div class="sign-space"></div>
+      </div>
+    </div>
+  </div>
+  {{/otherPages}}
+
+</div>
+</body>
+</html>

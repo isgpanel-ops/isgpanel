@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Genel Çalışma Talimatı</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    /* Sayfa ayarı */
+    @page { margin: 10mm; }
+
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5px;
+      color:#111;
+      margin: 0;
+    }
+
+    /* ================= BAŞLIK ================= */
+    .page-title{
+      width: 100%;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      margin: 15mm 0 8px 0;     /* üstten 2.5 cm */
+      padding: 0 10mm;          /* sağ-sol 1 cm */
+    }
+
+    hr.sep{
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 6px 0 8px;
+    }
+
+    /* ================= GENEL HİZA ================= */
+    .contentPad{
+      padding-left: 10mm;       /* ✅ soldan 1 cm */
+      padding-right: 10mm;      /* ✅ sağdan 1 cm */
+    }
+
+    .sectionTitle{
+      font-weight: 700;
+      margin: 6px 0 4px;
+      font-size: 11px;
+    }
+
+    .muted{
+      color:#444;
+      line-height: 1.3;
+    }
+
+    /* ================= UYGULAMA MADDELERİ ================= */
+    .twoColWrap{
+      column-count: 2;
+      column-gap: 18px;
+      column-rule: 1px solid #cbd5e1;
+    }
+
+    ol.list{
+  margin: 4px 0 0;
+  padding-left: 28px;   /* ✅ hizalama mesafesi */
+}
+ol.list li{
+  margin: 4px 0;        /* ✅ maddeler arası boşluk arttı */
+  line-height: 1.22;    /* ✅ satır aralığı kontrollü */
+  font-size: 11.5px;
+
+  padding-left: 14px;  /* yaslama */
+  text-indent: -14px;
+}
+
+/* ✅ numarayı kalınlaştır */
+ol.list li::marker{
+  font-weight: 700;
+}
+
+
+    /* ================= ONAY ================= */
+    .ack{
+      margin-top: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10mm;        /* ✅ sağ-sol 1 cm */
+    }
+
+    .ackTitle{
+      font-weight: 700;
+      margin: 0 0 6px;
+      font-size: 11px;
+    }
+
+    .ackGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      font-size: 10.5px;
+    }
+
+    .field{
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px;
+      min-height: 28px;
+      display:flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .label{
+      color:#444;
+      font-size: 9.5px;
+      margin-bottom: 2px;
+    }
+
+    .value{
+      font-weight: 700;
+    }
+
+    .sigValue{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 4px 0;
+}
+
+.sigImg{
+  max-width: 180px;
+  max-height: 62px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.verifyBox{
+  margin-top: 8px;
+  margin-left: auto;
+  width: 88px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px;
+  text-align: center;
+  background: #fff;
+}
+
+.verifyTitle{
+  font-size: 7px;
+  font-weight: bold;
+  margin-bottom: 2px;
+  letter-spacing: .3px;
+}
+
+.verifyQr{
+  width: 15mm;
+  height: 15mm;
+  object-fit: contain;
+}
+
+.verifyCode{
+  margin-top: 1px;
+  font-size: 6px;
+  font-weight: bold;
+  letter-spacing: .4px;
+}
+
+    .sigBox{
+      margin-top: 8px;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 55px;
+      font-size: 10.5px;
+    }
+
+    /* ================= FOOTER ================= */
+    .footer{
+      position: fixed;
+      bottom: -7mm;
+      left: 0;
+      right: 0;
+      font-size: 9.5px;
+      color: #475569;
+      display:flex;
+      justify-content: space-between;
+    }
+
+    .pagenum:before {
+      content: counter(page) "/" counter(pages);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- BAŞLIK -->
+  <div class="page-title">GENEL ÇALIŞMA TALİMATI</div>
+
+  <hr class="sep" />
+
+  <!-- AMAÇ -->
+  <div class="contentPad">
+    <div class="sectionTitle">AMAÇ:</div>
+    <div class="muted">{{amac}}</div>
+  </div>
+
+  <!-- KAPSAM -->
+  <div class="contentPad">
+    <div class="sectionTitle">KAPSAM:</div>
+    <div class="muted">{{kapsam}}</div>
+  </div>
+
+  <!-- UYGULAMA -->
+  <div class="contentPad">
+    <div class="sectionTitle">UYGULAMA</div>
+
+    <div class="twoColWrap">
+      <ol class="list">
+        {{#each maddeler}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ol>
+    </div>
+  </div>
+
+  <!-- OKUDUM – ONAYLIYORUM -->
+  <div class="ack">
+    <p class="ackTitle">OKUDUM – ONAYLIYORUM</p>
+
+    <div class="ackGrid">
+      <div class="field">
+        <div class="label">Ad Soyad</div>
+        <div class="value">{{personelAdSoyad}}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">T.C. Kimlik No</div>
+        <div class="value">{{personelTc}}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">Tarih</div>
+        <div class="value">{{tarihTR}}</div>
+      </div>
+
+     <div class="field">
+  <div class="label">İmza</div>
+  <div class="sigValue">
+    {{#if personelImza}}
+      <img src="{{personelImza}}" class="sigImg" />
+    {{else}}
+      &nbsp;
+    {{/if}}
+  </div>
+</div>
+    </div>
+
+    
+  </div>
+
+<div class="verifyBox">
+  <div class="verifyTitle">
+    BELGE DOĞRULAMA
+  </div>
+
+  <img
+    src="{{verifyQr}}"
+    class="verifyQr"
+  />
+
+  <div class="verifyCode">
+    {{verificationCode}}
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+    <div>{{firmaAdi}}</div>
+    <div>Sayfa <span class="pagenum"></span></div>
+  </div>
+
+</body>
+</html>

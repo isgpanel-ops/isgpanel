@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Acil Durum Ekip Listesi Formu</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 6mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #1f2d4d;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-size: 10pt;
+    }
+
+    .page {
+      width: 198mm;
+      margin: 0 auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead {
+      display: table-header-group;
+    }
+
+    tbody {
+      display: table-row-group;
+    }
+
+    tr, td, th {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .box {
+      border: 2px solid #2b3856;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+
+    .header-table td,
+    .header-table th,
+    .firma-table td,
+    .firma-table th,
+    .alt-table td,
+    .alt-table th {
+      border: 1px solid #6f7b91;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+
+    .header-table td {
+      height: 24px;
+    }
+
+    .logo-cell {
+      width: 20%;
+      text-align: center;
+      padding: 10px 8px !important;
+    }
+
+    .logo-cell img {
+      max-width: 110px;
+      max-height: 90px;
+      display: block;
+      margin: 0 auto;
+      object-fit: contain;
+    }
+
+    .title-cell {
+      width: 48%;
+      text-align: center;
+      font-size: 17pt;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #102347;
+      line-height: 1.15;
+    }
+
+    .meta-label {
+      width: 14%;
+      background: #f1f4f8;
+      font-weight: 700;
+      white-space: nowrap;
+      font-size: 8.6pt;
+    }
+
+    .meta-value {
+      width: 18%;
+      text-align: center;
+      white-space: nowrap;
+      font-size: 8.6pt;
+    }
+
+    .section-head {
+      background: #e9eef5;
+      font-weight: 700;
+      text-align: center;
+      font-size: 10.5pt;
+    }
+
+    .firma-label {
+      width: 18%;
+      font-weight: 700;
+      background: #f7f9fc;
+      white-space: nowrap;
+      font-size: 8.8pt;
+    }
+
+    .firma-value {
+      width: 24%;
+      vertical-align: middle;
+      padding: 4px 8px !important;
+    }
+
+    .firma-label-right {
+      width: 20%;
+      font-weight: 700;
+      background: #f7f9fc;
+      white-space: nowrap;
+      font-size: 8.8pt;
+    }
+
+    .firma-value-right {
+      width: 38%;
+      vertical-align: middle;
+      padding: 4px 8px !important;
+      font-size: 8.8pt;
+      line-height: 1.08;
+      overflow: hidden;
+    }
+
+    .firma-adi-fit {
+      font-size: clamp(7.2pt, 1.7vw, 9pt);
+      line-height: 1.08;
+      white-space: normal;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      max-height: 44px;
+    }
+
+    .adres-fit {
+      font-size: clamp(6.8pt, 1.55vw, 8.7pt);
+      line-height: 1.08;
+      white-space: normal;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      max-height: 44px;
+    }
+
+    .sgk-fit {
+      font-size: clamp(7pt, 1.5vw, 8.8pt);
+      white-space: nowrap;
+      overflow: hidden;
+      line-height: 1.05;
+    }
+
+    .firma-row-big td {
+      height: 52px;
+    }
+
+    .ekip-blok {
+      border: 2px solid #2b3856;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      background: #fff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .ekip-table td,
+    .ekip-table th {
+      border: 1px solid #7b879b;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+
+    .icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-red { background: #d92f2f; }
+    .icon-green { background: #17a34a; }
+    .icon-blue { background: #1669d2; }
+
+    .icon-circle svg {
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+
+    .ekip-title-row td {
+      background: #eef2f6;
+      font-weight: 700;
+      font-size: 10pt;
+      color: #1b2744;
+    }
+
+    .ekip-title-inner {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .ekip-title-inner td {
+      border: none !important;
+      background: transparent !important;
+    }
+
+    .ekip-title-left {
+      text-align: left;
+      font-weight: 700;
+      padding: 6px 8px 2px 8px !important;
+      font-size: 9.4pt;
+    }
+
+    .ekip-title-right {
+      text-align: right;
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 6px 8px 2px 8px !important;
+      font-size: 8.6pt;
+    }
+
+    .ekip-aciklama {
+      text-align: left;
+      font-size: 8.4pt;
+      line-height: 1.18;
+      padding: 2px 8px 8px 8px !important;
+    }
+
+    .kolon-baslik {
+      background: #f2f5f8;
+      font-weight: 700;
+      text-align: center;
+      font-size: 8.4pt;
+      padding: 5px 6px !important;
+    }
+
+    .col-no { width: 8%; text-align: center; }
+    .col-ad { width: 28%; text-align: center; }
+    .col-gorev { width: 20%; text-align: center; }
+    .col-tel { width: 22%; text-align: center; }
+    .col-imza { width: 22%; text-align: center; }
+
+    .ekip-table tbody td {
+      height: 30px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 8.5pt;
+      word-break: break-word;
+      line-height: 1.08;
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+
+    .personel-imza-wrap {
+      width: 84px;
+      height: 30px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .personel-imza-wrap img,
+    .ekip-table tbody td img {
+      max-width: 82px;
+      max-height: 28px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .alt-table td,
+    .alt-table th {
+      border: 1px solid #7b879b;
+      padding: 8px 10px;
+      vertical-align: top;
+    }
+
+    .alt-title {
+      background: #eef2f6;
+      font-weight: 700;
+      text-align: center;
+      font-size: 8.8pt;
+    }
+
+    .alt-left {
+      width: 50%;
+      min-height: 130px;
+      font-size: 8.3pt;
+      line-height: 1.3;
+      white-space: pre-line;
+    }
+
+    .alt-right {
+      width: 50%;
+      min-height: 130px;
+      text-align: center;
+    }
+
+    .isveren-unvan {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 8.8pt;
+    }
+
+    .isveren-ad {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 9pt;
+    }
+
+    .imza-box {
+      width: 180px;
+      height: 68px;
+      margin: 0 auto 6px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .imza-box img {
+      max-width: 170px;
+      max-height: 58px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .imza-line {
+      width: 165px;
+      margin: 4px auto 3px auto;
+      border-top: 1px dotted #2b3856;
+      height: 0;
+    }
+
+    .imza-text {
+      font-weight: 700;
+      margin-top: 2px;
+      font-size: 8.5pt;
+    }
+
+    .avoid-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ÜST BAŞLIK -->
+    <div class="box avoid-break">
+      <table class="header-table">
+        <tr>
+          <td class="logo-cell" rowspan="4">
+            <img src="{{kurumsal.logo}}" alt="Firma Logosu" />
+          </td>
+          <td class="title-cell" rowspan="4">
+            ACİL DURUM EKİP LİSTESİ FORMU
+          </td>
+          <td class="meta-label">TARİH</td>
+          <td class="meta-value">{{tarihler.hazirlamaTr}}</td>
+        </tr>
+        <tr>
+          <td class="meta-label">DOKÜMAN NO</td>
+          <td class="meta-value">ADL-2026-001</td>
+        </tr>
+        <tr>
+          <td class="meta-label">REVİZYON</td>
+          <td class="meta-value">00</td>
+        </tr>
+        <tr>
+          <td class="meta-label">SAYFA</td>
+          <td class="meta-value">1 / 1</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- FİRMA BİLGİLERİ -->
+    <div class="box avoid-break">
+      <table class="firma-table">
+        <tr>
+          <th colspan="4" class="section-head">FİRMA BİLGİLERİ</th>
+        </tr>
+
+        <tr class="firma-row-big">
+          <td class="firma-label">FİRMA ADI</td>
+          <td class="firma-value">
+            <div class="firma-adi-fit">{{firma.firmaAdi}}</div>
+          </td>
+          <td class="firma-label-right">SGK SİCİL NO</td>
+          <td class="firma-value-right sgk-fit">{{firma.sgkSicilNo}}</td>
+        </tr>
+
+        <tr class="firma-row-big">
+          <td class="firma-label">ADRES</td>
+          <td class="firma-value">
+            <div class="adres-fit">{{firma.adres}}</div>
+          </td>
+          <td class="firma-label-right">NACE</td>
+          <td class="firma-value-right">{{firma.nace}}</td>
+        </tr>
+
+        <tr>
+          <td class="firma-label">TEHLİKE SINIFI</td>
+          <td class="firma-value">{{firma.tehlikeSinifi}}</td>
+          <td class="firma-label-right">TOPLAM ÇALIŞAN SAYISI</td>
+          <td class="firma-value-right">{{firma.calisanSayisi}}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 1 SÖNDÜRME -->
+    <div class="ekip-blok">
+      <table class="ekip-table">
+        <tr class="ekip-title-row">
+          <td colspan="5" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              <tr>
+                <td style="width:64px; border:none; padding:8px 6px; text-align:center; vertical-align:middle; background:#f7f9fc;">
+                <div class="icon-circle icon-red">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#fff"
+      d="M13.5 2c.5 2-.2 3.4-1.4 4.8-1.1 1.2-2 2.4-2 4.1 0 1.7 1.2 3.1 2.9 3.6-.3-1.8.8-2.9 1.9-4 1-1 1.8-2.1 1.8-3.8 2.2 1.7 3.5 4.1 3.5 6.8 0 4.5-3.6 8-8 8s-8-3.5-8-8c0-3.2 1.8-5.5 4-7.5.2 1.8 1 3 2.3 3.9.2-2.7 1.9-5.1 3-7.9z"/>
+  </svg>
+</div>
+                </td>
+                <td style="border:none; padding:0;">
+                  <table class="ekip-title-inner">
+                    <tr>
+                      <td class="ekip-title-left">1) SÖNDÜRME EKİBİ</td>
+                      <td class="ekip-title-right">Önerilen Kişi Sayısı: {{acilEkip.yanginOneri}}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="ekip-aciklama">
+                        İşyerinde çıkabilecek yangınlara derhal müdahale ederek, yangının kontrol altına alınması ve söndürme faaliyetlerinin yürütülmesinden sorumludur.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <th class="kolon-baslik col-no">NO</th>
+          <th class="kolon-baslik col-ad">ADI SOYADI</th>
+          <th class="kolon-baslik col-gorev">EKİPTEKİ GÖREVİ</th>
+          <th class="kolon-baslik col-tel">İŞ / CEP TEL</th>
+          <th class="kolon-baslik col-imza">İMZA</th>
+        </tr>
+        {{acilEkip.yanginRows}}
+      </table>
+    </div>
+
+    <!-- 2 KURTARMA / TAHLİYE -->
+    <div class="ekip-blok">
+      <table class="ekip-table">
+        <tr class="ekip-title-row">
+          <td colspan="5" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              <tr>
+                <td style="width:64px; border:none; padding:8px 6px; text-align:center; vertical-align:middle; background:#f7f9fc;">
+                  <div class="icon-circle icon-green">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#fff"
+      d="M13 3a2 2 0 1 1 0 4a2 2 0 0 1 0-4zm-2 5l2.2 1.2 1.8-1c.7-.4 1.5.4 1.2 1.2l-1.3 2.3c-.3.5-.8.8-1.3.8h-1v2.2l2 2c.6.6.2 1.8-.8 1.8-.4 0-.7-.2-1-.4l-2.5-2.6c-.4-.4-.6-.8-.6-1.3v-1.7l-1.5 1.4-.7 2.1c-.2.6-.7 1-1.3 1-.8 0-1.4-.8-1.2-1.6l.9-2.8c.1-.3.3-.6.6-.8l2.8-2.6c.6-.5 1.2-.9 1.7-1.2z"/>
+  </svg>
+</div>
+                </td>
+                <td style="border:none; padding:0;">
+                  <table class="ekip-title-inner">
+                    <tr>
+                      <td class="ekip-title-left">2) KURTARMA / TAHLİYE EKİBİ</td>
+                      <td class="ekip-title-right">Önerilen Kişi Sayısı: {{acilEkip.kurtarmaOneri}}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="ekip-aciklama">
+                        Acil durumlarda çalışanların ve ziyaretçilerin güvenli şekilde tahliye edilmesi, arama-kurtarma faaliyetlerinin yürütülmesinden sorumludur.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <th class="kolon-baslik col-no">NO</th>
+          <th class="kolon-baslik col-ad">ADI SOYADI</th>
+          <th class="kolon-baslik col-gorev">EKİPTEKİ GÖREVİ</th>
+          <th class="kolon-baslik col-tel">İŞ / CEP TEL</th>
+          <th class="kolon-baslik col-imza">İMZA</th>
+        </tr>
+        {{acilEkip.kurtarmaRows}}
+      </table>
+    </div>
+
+    <!-- 3 KORUMA / GÜVENLİK -->
+    <div class="ekip-blok">
+      <table class="ekip-table">
+        <tr class="ekip-title-row">
+          <td colspan="5" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              <tr>
+                <td style="width:64px; border:none; padding:8px 6px; text-align:center; vertical-align:middle; background:#f7f9fc;">
+                  <div class="icon-circle icon-green">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#fff"
+      d="M12 2l7 3v5c0 5-3.4 9.5-7 11-3.6-1.5-7-6-7-11V5l7-3z"/>
+  </svg>
+</div>
+                </td>
+                <td style="border:none; padding:0;">
+                  <table class="ekip-title-inner">
+                    <tr>
+                      <td class="ekip-title-left">3) KORUMA / GÜVENLİK EKİBİ</td>
+                      <td class="ekip-title-right">Önerilen Kişi Sayısı: {{acilEkip.korumaOneri}}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="ekip-aciklama">
+                        Acil durum nedeniyle ortaya çıkabilecek panik ve kargaşayı önlemek, toplanma düzenini sağlamak ve acil durum ekipleri arasındaki koordinasyonu yürütmekle görevlidir.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <th class="kolon-baslik col-no">NO</th>
+          <th class="kolon-baslik col-ad">ADI SOYADI</th>
+          <th class="kolon-baslik col-gorev">EKİPTEKİ GÖREVİ</th>
+          <th class="kolon-baslik col-tel">İŞ / CEP TEL</th>
+          <th class="kolon-baslik col-imza">İMZA</th>
+        </tr>
+        {{acilEkip.korumaRows}}
+      </table>
+    </div>
+
+    <!-- 4 İLKYARDIM -->
+    <div class="ekip-blok">
+      <table class="ekip-table">
+        <tr class="ekip-title-row">
+          <td colspan="5" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              <tr>
+                <td style="width:64px; border:none; padding:8px 6px; text-align:center; vertical-align:middle; background:#f7f9fc;">
+                  <div class="icon-circle icon-blue">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#fff"
+      d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>
+  </svg>
+</div>
+                </td>
+                <td style="border:none; padding:0;">
+                  <table class="ekip-title-inner">
+                    <tr>
+                      <td class="ekip-title-left">4) İLKYARDIM EKİBİ</td>
+                      <td class="ekip-title-right">Önerilen Kişi Sayısı: {{acilEkip.ilkyardimOneri}}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" class="ekip-aciklama">
+                        Acil durumdan etkilenen kişilere temel yaşam desteği ve ilkyardım uygulamalarını gerçekleştirmek üzere görevlendirilir.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <th class="kolon-baslik col-no">NO</th>
+          <th class="kolon-baslik col-ad">ADI SOYADI</th>
+          <th class="kolon-baslik col-gorev">EKİPTEKİ GÖREVİ</th>
+          <th class="kolon-baslik col-tel">İŞ / CEP TEL</th>
+          <th class="kolon-baslik col-imza">İMZA</th>
+        </tr>
+        {{acilEkip.ilkyardimRows}}
+      </table>
+    </div>
+
+    <!-- ALT BÖLÜM -->
+    <div class="box avoid-break">
+      <table class="alt-table">
+        <tr>
+          <th class="alt-title">AÇIKLAMA</th>
+          <th class="alt-title">İŞVEREN / İŞVEREN VEKİLİ</th>
+        </tr>
+        <tr>
+          <td class="alt-left">
+Acil durum ekipleri, acil durum planı kapsamında belirlenen görevleri yerine getirmekle yükümlüdür.
+Ekip listesi yılda en az bir kez gözden geçirilir ve güncellenir.
+          </td>
+          <td class="alt-right">
+            <div class="isveren-unvan">İŞVEREN / İŞVEREN VEKİLİ</div>
+            <div class="isveren-ad">{{isveren.adSoyad}}</div>
+
+            <div class="imza-box">
+              {{isveren.imzaHtml}}
+            </div>
+
+            <div class="imza-line"></div>
+            <div class="imza-text">İMZA</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+  </div>
+</body>
+</html>

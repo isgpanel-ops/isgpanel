@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>İnşaat Genel Talimatı</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    @page {
+      size: A4;
+      margin: 25mm 25mm 30mm 25mm;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.18;
+      color:#111;
+    }
+
+    .doc{
+      width: 100%;
+    }
+
+    .page-title{
+      width: 100%;
+      text-align: center;
+      font-size: 15pt;
+      font-weight: 700;
+      letter-spacing: .2px;
+      margin: 0 0 8pt 0;
+      padding: 0;
+    }
+
+    hr.sep{
+      border: none;
+      border-top: 1px solid #cfcfcf;
+      margin: 0 0 10pt 0;
+    }
+
+    .contentPad{
+      padding: 0;
+      margin: 0 0 8pt 0;
+    }
+
+    .sectionTitle{
+      font-weight: 700;
+      margin: 0 0 3pt 0;
+      font-size: 10.5pt;
+    }
+
+    .muted{
+      color:#222;
+      line-height: 1.18;
+      margin: 0;
+      text-align: justify;
+    }
+
+    .listWrap{
+      width: 100%;
+    }
+
+    ol.list{
+      margin: 4pt 0 0 20pt;
+      padding: 0;
+    }
+
+    ol.list li{
+      margin: 0 0 2pt 0;
+      line-height: 1.18;
+      font-size: 10.5pt;
+      text-align: justify;
+    }
+
+    ol.list li::marker{
+      font-weight: 700;
+    }
+
+    .ack{
+      margin-top: 8pt;
+      border: 1px solid #bfc7d1;
+      border-radius: 6px;
+      padding: 8pt;
+    }
+
+    .ackTitle{
+      font-weight: 700;
+      margin: 0 0 6pt 0;
+      font-size: 10.5pt;
+    }
+
+    .ackGrid{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6pt 8pt;
+      font-size: 10pt;
+    }
+
+    .field{
+      border: 1px solid #d8dee6;
+      border-radius: 4px;
+      padding: 5pt 6pt;
+      min-height: 28pt;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .label{
+      color:#444;
+      font-size: 8.5pt;
+      margin-bottom: 2pt;
+    }
+
+    .value{
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+.sigValue{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 4px 0;
+}
+
+.sigImg{
+  max-width: 180px;
+  max-height: 62px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+    .footer{
+      margin-top: 10pt;
+      padding-top: 4pt;
+      border-top: 1px solid #d8dee6;
+      font-size: 9.5px;
+      color: #475569;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pagenum:before {
+      content: counter(page);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="doc">
+
+    <div class="page-title">İNŞAAT GENEL TALİMATI</div>
+    <hr class="sep" />
+
+    <div class="contentPad">
+      <div class="sectionTitle">AMAÇ:</div>
+      <p class="muted">{{amac}}</p>
+    </div>
+
+    <div class="contentPad">
+      <div class="sectionTitle">KAPSAM:</div>
+      <p class="muted">{{kapsam}}</p>
+    </div>
+
+    <div class="contentPad">
+      <div class="sectionTitle">UYGULAMA</div>
+
+      <div class="listWrap">
+        <ol class="list">
+          {{#each maddeler}}
+            <li>{{this}}</li>
+          {{/each}}
+        </ol>
+      </div>
+    </div>
+
+    <div class="ack">
+      <p class="ackTitle">OKUDUM – ONAYLIYORUM</p>
+
+      <div class="ackGrid">
+        <div class="field">
+          <div class="label">Ad Soyad</div>
+          <div class="value">{{personelAdSoyad}}</div>
+        </div>
+
+        <div class="field">
+          <div class="label">T.C. Kimlik No</div>
+          <div class="value">{{personelTc}}</div>
+        </div>
+
+        <div class="field">
+          <div class="label">Tarih</div>
+          <div class="value">{{tarihTR}}</div>
+        </div>
+
+        <div class="field">
+  <div class="label">İmza</div>
+  <div class="sigValue">
+    {{#if personelImza}}
+      <img src="{{personelImza}}" class="sigImg" />
+    {{else}}
+      &nbsp;
+    {{/if}}
+  </div>
+</div>
+      </div>
+    </div>
+
+   
+
+  </div>
+</body>
+</html>

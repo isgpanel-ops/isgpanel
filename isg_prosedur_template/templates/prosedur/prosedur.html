@@ -1,0 +1,2123 @@
+<!-- templates/prosedur/prosedur.html  (TEK DOSYA / 1..19 sayfa burada) -->
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; margin: 10mm 12mm 20mm 12mm; }
+    html, body { margin:0; padding:0; }
+
+    /* A4 yazdırılabilir yükseklik = 297 - (10 üst) - (20 alt) = 267mm */
+    .page{
+      position: relative !important;
+      height: 267mm !important;
+      box-sizing: border-box !important;
+      page-break-after: always;
+      break-after: page;
+      font-family: "Times New Roman", serif;
+      font-size: 11pt;
+    }
+    .page:last-child{
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    /* Footer sabit kalsın diye altta yer aç */
+    .page-content{
+  box-sizing: border-box !important;
+  padding-bottom: 31mm !important;
+
+  width: 100%;
+  max-width: 176mm;   /* A4 iç alan */
+  margin: 15mm auto 0 auto;  /* üst + ortala */
+}
+
+
+    /* ✅ KAYA GİBİ SABİT FOOTER */
+    .page-footer{
+      position: absolute !important;
+      left: 12mm !important;
+      right: 12mm !important;
+      bottom: 3mm !important;         /* ✅ sayfa dibi */
+      height: 26mm !important;        /* footer alanı */
+      box-sizing: border-box !important;
+
+      font-family: "Times New Roman", serif !important;
+      font-size: 5.8pt !important;
+      line-height: 1.05 !important;
+      text-align: center !important;
+    }
+    .page-footer *{
+      font-size: 5.8pt !important;
+      line-height: 1.05 !important;
+    }
+
+    .imza-line{
+      border-top: 1px solid #000;
+      margin: 0 0 1.6mm 0;
+    }
+    .imza-table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .imza-table td{
+      text-align: center;
+      vertical-align: top;
+      padding: 0 1.5mm;
+      white-space: nowrap;
+    }
+    .imza-name{
+      font-size: 5.2pt !important;
+      margin-top: 0.6mm;
+    }
+    .page-no{
+      margin-top: 0.8mm;
+      font-size: 9pt !important;  /* örnekteki gibi */
+      text-align: center;
+    }
+
+    /* tablo satırı bölünmesin */
+    table { border-collapse: collapse; width: 100%; }
+    tr, td, th { break-inside: avoid; page-break-inside: avoid; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================= SAYFA 1 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+      
+    <!-- ÜST BAŞLIK -->
+    <div style="text-align:center; font-weight:bold; font-size:14pt; margin-bottom:4mm;">
+      RİSK DEĞERLENDİRMESİ FORMU
+    </div>
+
+    <!-- NEDENLER TABLOSU -->
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        font-size:10pt;
+        margin-bottom:6mm;
+      "
+      border="1"
+    >
+      <tr>
+        <td style="width:5%; text-align:center; font-weight:bold;">
+          &nbsp;
+        </td>
+        <td style="text-align:center; font-weight:bold;">
+          RİSK DEĞERLENDİRMESİ YAPILMASININ NEDENLERİ
+        </td>
+        <td style="width:5%; text-align:center; font-weight:bold;">
+          &nbsp;
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">1.</td>
+        <td>Daha önce hiç risk değerlendirmesinin yapılmamış olması</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">2.</td>
+        <td>Yeni bir makine ve ekipman alınması</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">3.</td>
+        <td>İş organizasyonunda ve iş akışında değişiklikler yapılması</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">4.</td>
+        <td>Yeni hammadde ve yarı mamul maddelerin üretim sürecine girmesi</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">5.</td>
+        <td>
+          Yeni bir mevzuatın yürürlüğe girmesi veya mevcut mevzuatta değişiklik yapılması
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">6.</td>
+        <td>Yeni tekniklerin geliştirilmesi</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">7.</td>
+        <td>İş kazası veya meslek hastalığı meydana gelmesi</td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">8.</td>
+        <td>
+          İş kazası veya meslek hastalığı ile sonuçlanmasa bile yangın, parlama ve patlama gibi
+          işyerindeki iş sağlığı ve güvenliğini ciddi şekilde etkileyen olayların ortaya çıkması
+        </td>
+        <td>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="text-align:center;">9.</td>
+        <td>Diğerleri</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
+
+    <!-- İŞYERİ BİLGİLERİ TABLOSU -->
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        font-size:10pt;
+      "
+      border="1"
+    >
+      <tr>
+        <td style="width:35%; padding:2mm; font-weight:bold;">İŞYERİNİN UNVANI</td>
+        <td style="padding:2mm;">{{firma.firmaAdi}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞYERİNİN ADRESİ</td>
+        <td style="padding:2mm;">{{firma.adres}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞVERENİN ADI</td>
+        <td style="padding:2mm;">{{kisiler.isveren}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">NACE KODU</td>
+        <td style="padding:2mm;">{{firma.nace}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">
+          YAPILAN İŞ NEDİR? (KISACA AÇIKLAYINIZ)
+        </td>
+        <td style="padding:2mm;">{{firma.faaliyet}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">ÇALIŞAN SAYISI</td>
+        <td style="padding:0;">
+          <table style="width:100%; border-collapse:collapse; font-size:10pt;" border="0">
+            <tr>
+              <td style="width:16%; padding:2mm; border-right:1px solid #000;">ERKEK</td>
+              <td style="width:16%; padding:2mm; border-right:1px solid #000;">KADIN</td>
+              <td style="width:16%; padding:2mm; border-right:1px solid #000;">ÇOCUK</td>
+              <td style="width:16%; padding:2mm; border-right:1px solid #000;">ÇIRAK</td>
+              <td style="width:16%; padding:2mm; border-right:1px solid #000;">ÖĞRENCİ</td>
+              <td style="width:20%; padding:2mm;">TOPLAM</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- DEĞERLENDİRMEYE KATILANLAR BAŞLIĞI -->
+      <tr>
+        <td
+          colspan="2"
+          style="
+            padding:2mm;
+            font-weight:bold;
+            text-align:center;
+          "
+        >
+          DEĞERLENDİRMEYE KATILANLAR
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞVEREN / İŞVEREN VEKİLİ</td>
+        <td style="padding:2mm;">{{kisiler.isveren}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞ GÜVENLİĞİ UZMANI</td>
+        <td style="padding:2mm;">{{kisiler.uzman}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞYERİ HEKİMİ</td>
+        <td style="padding:2mm;">{{kisiler.hekim}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">ÇALIŞAN TEMSİLCİSİ</td>
+        <td style="padding:2mm;">{{kisiler.temsilci}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">DESTEK ELEMANI</td>
+        <td style="padding:2mm;">{{kisiler.destek}}</td>
+      </tr>
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">BİLGİ SAHİBİ KİŞİ</td>
+        <td style="padding:2mm;">{{kisiler.bilgiSahibi}}</td>
+      </tr>
+    </table>
+  </div>
+    </div>
+
+    </section>
+<div style="page-break-before: always;"></div>
+
+  <!-- ================= SAYFA 2 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+    <div style="font-weight:bold; font-size:14pt; margin-bottom:4mm;">
+      GENEL BİLGİLER
+    </div>
+
+    <!-- 1 -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      1-RİSK DEĞERLENDİRMESİNDE AMAÇ:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      İşyerinde; öncelikle çalışanlar ile bölgede bulunan diğer insanları, canlıları, hammadde, ara mamul ve
+      mamul maddeleri ile tüm eşya ve malları, tüm tesisleri tehdit eden; kapsamı belirlenmemiş kaza ve
+      zararların odaklarını bulmak ve değerlendirmek, önlemlerini belirlemek ve bu önlemleri almak,
+      yapılabilecek tasarrufu ve doğabilecek masrafları belirlemek, bir riski önlerken başka riskler
+      oluşturmamaktır.
+    </div>
+
+    <!-- 2 -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      2-RİSK DEĞERLENDİRMESİNİN KAPSAMI:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      Öncelikle işyeri çalışanlarını, işyerinde herhangi bir maksatla bulunan diğer insan ve canlılar ile;
+      çevrenin korunmasını kapsar.<br/>
+      Bir başka ifade ile; tehlikeleri belirlemek, riskleri ortaya çıkarmak, yok etmek veya kabul edilebilir
+      seviyeye indirmek için, sistematik bir yöntemle, nitel ve/veya nicel metotlar kullanılarak yapılan
+      çalışmalardır.
+    </div>
+
+    <!-- 3 -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      3-RİSK DEĞERLENDİRMESİNDE SORUMLULUK KİME AİTTİR:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      Risk değerlendirmesi ile tespit edilen riskler ve bunların giderilmesi ile ilgili olarak birinci derecede
+      işveren ve vekilleri ile; iç talimatlarda güvenlikle ilgili tüm önlem ve uygulamalardan sorumlu
+      personelin sorumlulukları saklı kalmak şartıyla işyeri sorumlu müdürleri sorumludur.<br/><br/>
+
+      Başka bir ifade ile; her işveren; işyerinin, tehlikeli bölgeler ve etkilenme alanı dâhil olmak üzere;
+      yer seçiminden başlayarak, iş ekipmanlarının seçimi ile; iş ekipmanlarının kullanım ömrünün bütün
+      safhalarını; hammadde, yarı mamul, mamul maddeler ile; işin yapım ve yürütüm tekniklerinin tamamını
+      kapsayacak şekilde risk değerlendirmesi yapmak. Ya da uzman kişi veya kuruluşlara yaptırmak; risk
+      değerlendirilmesi sonuçlarını da dikkate alarak; ayrıca bir “İşyeri Sağlık ve Güvenlik Yönergesi”
+      hazırlamakla yükümlüdür.<br/><br/>
+
+      Tüm çalışanlar ise; alınan ve alınacak tüm önlemleri yerine getirmek ve talimatlara uymak
+      zorundadırlar.
+    </div>
+
+    <!-- 4 -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      4-RİSK DEĞERLENDİRMESİ YAPMANIN FAYDALARI:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      Risk değerlendirmesi faaliyetleri aşağıdaki konularda fayda sağlar:<br/><br/>
+      a- Tehlikelerin tanınması,<br/>
+      b- Risklerin önceden belirlenmesi,<br/>
+      c- Çalışanlar için güvenli ortam tesisi,<br/>
+      d- Kazaların önlenmesi ile maddi ve manevi kayıpların azaltılması,<br/>
+      e- Kalite ve verim artışı sağlanması,<br/>
+      f- Uluslararası saygınlık,<br/>
+      g- Proaktif (önleyici) yaklaşım uygulama ve acil durumlara hazır olma,<br/>
+      h- Sorumlulukların belirlenmesi ve görev paylaşımı konularında kesinlikle fayda sağlamaktadır.
+    </div>
+
+    <!-- RİSK ANALİZİ BAŞLIĞI VE İLK PARAGRAFLAR -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      RİSK ANALİZİ VE DEĞERLENDİRİLMESİ NASIL UYGULANMALIDIR:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      İşyerindeki tehlikelerin;<br/><br/>
+      Sistematik bir yolla, gözden geçirilerek belirlenmesine, risklerin doğru olarak tespit ve
+      değerlendirilmesine; imkân veren bir dizi mantık adımı halinde uygulanmalıdır.<br/><br/>
+      Çalışan sayısı ne olursa olsun; işyerlerinin risk haritasının; belirtilen metotları kullanarak
+      çıkarılmaları gerekmektedir.
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      Böylece;
+    </div>
+
+        <div style="text-align:justify; margin-bottom:4mm;">
+      • 1-İş yerindeki mevcut risklerin neler olduğu,<br/>
+      • 2-Nerelerden kaynaklandığı,<br/>
+      • 3-Kimleri etkilediği,<br/>
+      • 4-Kabul edilir olup olmadığı belirlenecek ve önleme faaliyetleri planlanacaktır.
+    </div>
+
+  </div>
+    </div>
+
+   
+  </section>
+<div style="page-break-before: always;"></div>
+
+  <!-- ================= SAYFA 3 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+
+    <!-- Önceki sayfadan devam eden madde listesi -->
+
+
+    <!-- RİSK YÖNETİMİ -->
+    <div style="font-weight:bold; margin-bottom:3mm;">
+      RİSK YÖNETİMİ:
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      <b>a.Analiz süreçleri;</b><br/>
+      • 1-Hedef belirlemek,<br/>
+      • 2-Çalışma grubunu liderini belirlemek ve ekibi oluşturmak,<br/>
+      • 3-Tehlikeleri belirlemek ve "Güvenlik Boyutu ve Risk Değerlendirme Tablosu" oluşturmak,<br/>
+      • 4-Koruma (tolerans) hattını belirlemek,<br/>
+      • 5-Analiz sonuçlarını (başarısını) izlemek, ölçmek ve gereken önlemleri almak,
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      <b>b.Risk yönetiminde öncelik sıralaması:</b><br/>
+      1) Riskleri elimine etmek,<br/>
+      2) Riskleri muhafaza altına almak,<br/>
+      3) Uyarmak,
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      <b>c.Tehlikenin belirlenmesi:</b><br/>
+      1) Maddenin veya prosesin tehlike karakteristiklerini tespit etmek,<br/>
+      2) Yanlış operasyonları belirlemek,<br/>
+      3) Çevrenin etkilerini tespit etmek,<br/>
+      4) Kullanma ve prosesler için önlemler almak,<br/>
+      5) Malın ve fabrikanın ömrünü tespit etmek,
+    </div>
+
+    <div style="text-align:justify; margin-bottom:4mm;">
+      <b>d.Etki değerlendirmesi ve önlemler:</b><br/>
+      1) Riski tespit etmek,<br/>
+      2) Etki değerlendirmesi yapmak,<br/>
+      3) Sorumlu şahıs / birimleri belirlemek ve görevlendirmek,<br/>
+      4) Süreci devam ettirmek,
+    </div>
+
+    <div style="text-align:justify;">
+      <b>e.Risklerin indirgenmesi için alınması gerekli ilave önlemler:</b><br/>
+      1) Risklerin kaynağında yok etmeye çalışmak,<br/>
+      2) Tehlikeli olanı, daha az tehlikeli olanla değiştirmek,<br/>
+      3) Toplu koruma önlemlerini, kişisel koruma önlemlerine tercih etmek,<br/>
+      4) Mühendislik önlemlerini uygulamak,<br/>
+      5) Ergonomik yaklaşımlardan yararlanmak v.s.
+    </div>
+
+    <!-- ÜST BAŞLIK -->
+    <div style="text-align:center; font-weight:bold; margin-top:4mm;">
+      RİSK ANALİZİ VE DEGERLENDİRMESİ BES TEMEL ADIMDAN OLUSUR:
+    </div>
+
+    <!-- === KOMPAKT ŞEKİL BAŞLANGIÇ === -->
+<div
+  style="
+    position:relative;
+    width:100%;
+    height:120mm;
+    margin-bottom:6mm;
+    font-family:'Times New Roman', serif;
+    font-size:10pt;
+  "
+>
+
+  <!-- Küçültülmüş Daire -->
+  <div
+    style="
+      position:absolute;
+      left:10mm;
+      top:10mm;
+      width:95mm;
+      height:95mm;
+      border:1px solid #000;
+      border-radius:50%;
+    "
+  >
+    <!-- Adım 1 -->
+    <div
+      style="
+        position:absolute;
+        top:2mm;
+        left:50%;
+        transform:translateX(-50%);
+        padding:2mm 6mm;
+        border:1px solid #000;
+        background:#fff;
+        font-size:9pt;
+        white-space:nowrap;
+      "
+    >
+      <span style="color:#003399; font-weight:bold;">Adım - 1</span> Tehlikeleri belirleme
+    </div>
+
+    <!-- Adım 3 -->
+    <div
+      style="
+        position:absolute;
+        bottom:12mm;
+        left:60%;
+        transform:translateX(-50%);
+        padding:2mm 6mm;
+        border:1px solid #000;
+        background:#fff;
+        font-size:9pt;
+        white-space:nowrap;
+      "
+    >
+      <span style="color:#003399; font-weight:bold;">Adım - 3</span> Kontrol tedbirlerine karar verilmesi
+    </div>
+  </div>
+
+  <!-- Adım 2 küçültülmüş -->
+  <div
+    style="
+      position:absolute;
+      top:45mm;
+      left:60mm;
+      padding:2mm 6mm;
+      border:1px solid #000;
+      background:#fff;
+      font-size:9pt;
+      white-space:nowrap;
+    "
+  >
+    <span style="color:#003399; font-weight:bold;">Adım - 2</span> Tehlikelerin değerlendirilmesi
+  </div>
+
+  <!-- Adım 4 -->
+  <div
+    style="
+      position:absolute;
+      top:62mm;
+      left:0mm;
+      padding:2mm 6mm;
+      border:1px solid #000;
+      background:#fff;
+      font-size:9pt;
+      white-space:nowrap;
+    "
+  >
+    <span style="color:#003399; font-weight:bold;">Adım - 4</span> Kontrol tedbirlerinin uygulanması
+  </div>
+
+  <!-- Adım 5 -->
+  <div
+    style="
+      position:absolute;
+      top:28mm;
+      left:5mm;
+      padding:2mm 6mm;
+      border:1px solid #000;
+      background:#fff;
+      font-size:9pt;
+      white-space:nowrap;
+    "
+  >
+    <span style="color:#003399; font-weight:bold;">Adım - 5</span> Tedbirlerin izlenmesi ve kontrolü
+  </div>
+
+  <!-- Sağ Üst Kutusu -->
+  <div
+    style="
+      position:absolute;
+      top:20mm;
+      left:105mm;
+      width:72mm;
+      border:1px dashed #000;
+      padding:2mm;
+      font-size:9pt;
+    "
+  >
+    Tanımlanan tehlikelerle ilgili herhangi bir mevzuat, standart, rehber veya malzeme güvenlik veri formu var mı?
+  </div>
+
+  <!-- Evet Yazısı -->
+  <div
+    style="
+      position:absolute;
+      top:55mm;
+      left:138mm;
+      color:#003399;
+      font-weight:bold;
+      font-size:11pt;
+    "
+  >
+    Evet
+  </div>
+
+  <!-- Dikey Çizgi -->
+  <div
+    style="
+      position:absolute;
+      top:38mm;
+      left:135mm;
+      width:0;
+      height:35mm;
+      border-right:1px solid #000;
+    "
+  ></div>
+
+  <!-- Sağ Alt Kutusu -->
+  <div
+    style="
+      position:absolute;
+      top:73mm;
+      left:105mm;
+      width:70mm;
+      border:1px dashed #000;
+      padding:2mm;
+      font-size:9pt;
+      color:#003399;
+    "
+  >
+    Bu konuda bulunan rehber, mevzuat, uygulama kodu veya benzeri standart varsa takip edilmelidir.
+  </div>
+
+</div>
+<!-- === KOMPAKT ŞEKİL BİTİŞ === -->
+
+  </div>
+    </div>
+
+   
+  </section>
+
+
+
+<!-- ================= SAYFA 4 ================= -->
+  <section class="page">
+    <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+        <!-- ALT METİN (tam PDF'e uygun) -->
+    <div style="font-size:11pt; text-align:justify;">
+
+      <span style="color:#003399; font-weight:bold; text-decoration:underline;">
+        1.ADIM: TEHLİKELERİN BELİRLENMESİ:
+      </span><br/><br/>
+
+      İlk olarak; İşyerinde; Çalışanlara, Çevreye, Ürünlere ve; İşyerinde bulunan iş ekipmanlarına; nelerin
+      zarar verebileceği tesisin tüm bölümlerinde belirlenmelidir.<br/><br/>
+
+      <div style="text-align:center; color:#003399; font-weight:bold; text-decoration:underline; margin-bottom:2mm;">
+        A- İŞYERLERİNDEKİ MUHTEMEL TEHLİKE KAYNAKLARI:
+      </div>  
+           
+      <div style="margin-bottom:2mm;">
+        <b>1.1-KAYMA, TAKILMA VE BENZERİ NEDENLERLE DÜŞME;</b>
+        Ölüm ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.2-YÜKSEKTEN DÜŞME;</b>
+        İşitme kaybı gibi fizyolojik ve psikolojik etkiler ve dolayısı ile meslek hastalığı
+      ve maluliyetlere neden olabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.3-YÜKSEKTEN MALZEME DÜŞMESİ;</b>
+        Ölüm ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.4-GÜRÜLTÜ VE TİTREŞİM;</b>
+        Meslek hastalığı maluliyet ve ölüme sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.5-UYGUN OLMAYAN DURUŞ VE ÇALIŞMA ŞEKİLLERİ;</b>
+        Meslek hastalığı maluliyet ve ölüme sonuçlanabilir.
+      </div>
+      
+      <div style="margin-bottom:2mm;">
+        <b>1.6-RADYASYON VE ULTRAVİYOLE IŞINLAR;</b>
+        Meslek hastalığı maluliyet ve ölüme sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.7-SEYYAR EL ALETLERİNİN UYGUNSUZ KULLANIMI;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.8-SABİT MAKİNA VE TEZGAHLARIN ERGONOMİK KULLANILMAMASI;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.9-HAREKETLİ ERİŞİM EKİPMANLARININ (MERDİVENLER, PLATFORMLAR) UYGUN OLMADIĞI
+        HALDE KULLANILMASI;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.10-MEKANİK KALDIRMA ARAÇLARININ UYGUNSUZLUĞU;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.11-ELLE TAŞIMA İŞLERİNDE DİKKATSİZLİK;</b>
+        Meslek hastalığı maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.12-BASINÇLI KAPLARIN MUHAFAZA ALTINA ALINMAMASI VE KONTROLSÜZLÜĞÜ;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.13-AYDINLATMANIN UYGUNSUZLUĞU;</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.14-TEMEL KONFOR KOŞULLARI (SICAKLIK, NEM VE HAVALANDIRMA)’NIN UYGUNSUZLUĞU;</b>
+        Meslek hastalığı maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.15-KİMYASAL FAKTÖRLER (TOKSİK GAZ VE BUHARLAR, ORGANİK SOLVENTLER VE TOZLAR);</b>
+        Meslek hastalığı maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.16-BİYOLOJİK AJANLAR (MİKROORGANİZMALAR, BAKTERİLER, VİRÜSLER);</b>
+        Kan veya hava yoluyla yayılan Hepatit B ve başka virüsler; hastalıklara ve dolayısı ile iş gücü kaybına
+        neden olabilir. Meslek hastalığı maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.17-İSTENMEYEN İNSAN DAVRANIŞLARI (DİKKATSİZLİK, YORGUNLUK, ALDIRMAZLIK,
+        ANLAMA GÜÇLÜĞÜ, ÖFKE, KAVGA ETMEK);</b>
+        Maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.18-KİŞİSEL KORUYUCULARIN KULLANILMAMASI:</b>
+        Ölüm ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.19-ELEKTRİKLE İLGİLİ TEDBİRSİZLİKLER:</b>
+        Ölüm ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.20-ERGONOMİ KURALLARINA UYMAMA:</b>
+        Ölüm ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.21-PATLAYICI VE YANICI MADDELERİN UYGUN DEPOLANMAMASI VE KULLANILMAMASI:</b>
+        Ölüm, maluliyet ve büyük çaplı maddi hasarla sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.22-SİVRİ NOKTALAR, UÇLAR VE KESKİN KÖŞELER, AĞIRLIK, DÖNEN AKSAMLAR, KOPAN,
+        FIRLAYAN PARÇA VE MALZEMELERİN OLMASI: (Mekanik Tehlikeler):</b>
+        Ağır yaralanmalar, maluliyet ve ölümle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.23-ISI VE SICAKLIK:</b>
+        Çok sıcak ve çok soğuk çalışma ortamları; travmatik durumlar ve hastalıklarla sonuçlanabilir.
+      </div>
+
+      
+    </div>
+
+  </div>
+
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 5 ================= -->
+  <section class="page">
+    <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+    <div style="text-align:justify;">
+
+       <div style="margin-bottom:2mm;">
+        <b>1.24-ÇUKURLAR, TÜMSEKLER VE BOŞLUKLAR:</b>
+        Tökezlenme ile ağır yaralanmalar ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.25-İLK YARDIM İMKÂNLARININ SAĞLANMAMASI:</b>
+        Beklenmeyen ölümler ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.26-DUŞLAR, TUVALETLER, LAVABOLAR, SOYUNMA YERLERİ VE DOLAPLARIN OLMAMASI:</b>
+        Motivasyon bozuklukları sonucu ağır ve hafif yaralanmalarla sonuçlanabilir.
+      </div>
+      
+      <div style="margin-bottom:2mm;">
+        <b>1.27-MESAİ SAATLERİNE UYULMAMASI:</b>
+        Motivasyon bozuklukları sonucu ağır ve hafif yaralanmalarla sonuçlanır.
+      </div>
+
+      <div>
+        <b>1.28-ÜCRETLERİN ZAMANINDA ÖDENMEMESİ:</b>
+        Verimsiz bir çalışma ile motivasyon bozuklukları sonucu ağır ve hafif yaralanmalarla
+        sonuçlanabilir.
+      </div>
+
+            <div style="margin-bottom:2mm;">
+        <b>1.29-SAĞLIK RAPORLARININ ALINMAMASI;</b>
+        Beklenmeyen ölümler ve maluliyetle sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.30-BASINÇLI ORTAMLARDA TEDBİR ALINMAMASI;</b>
+        Yüksek basınç; hidrolik ve pnömatik sistemlerde; patlamalara ve dolayısı ile iş kazalarına,
+        meslek hastalıklarına ve maluliyetlere neden olabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.31-RADYASYON KARŞI TEDBİR ALINMAMASI;</b>
+        Yüksek ve orta gerilim hatlarına yakın çalışma; yetersiz yalıtım, hasarlı iletim hatları ve ekipmanlar;
+        yıldırım düşmesi, statik yük boşalmaları radyasyon yoluyla hastalık yapabileceği gibi temas sonucu
+        ağır yaralanmalar ve ölümlere neden olabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.32-İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİNİN OLMAMASI;</b>
+        Bilinçsiz ve bilgiden yoksun bir çalışma; meslek hastalığı, ölüm ve maluliyete sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.33-YANGIN EKİBİ VE EĞİTİMİNİN OLMAMASI;</b>
+        Ölüm, maluliyet ve büyük çaplı maddi hasarla sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.33-HAVALANDIRMA VE ASPİRASYON SİSTEMLERİNİN OLMAMASI YA DA YETERLİ
+        SEVİYEDE OLMAMASI;</b>
+        Verimsiz bir çalışma ile motivasyon bozuklukları sonucu ağır ve hafif yaralanmalar, ölüm ve meslek
+        hastalığı ile sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.34-ELEKTRİK TESİSATI VE PERİYODİK TOPRAKLAMA KONTROLLERİNİN YAPILMAMASI VE
+        KAÇAK AKIM ROLERİNİN OLMAMASI;</b>
+        Ağır yaralanma, ölüm ve maddi hasarla sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.35-KALDIRMA ARAÇLARI PERİYODİK KONTROLLERİNİN YAPILMAMASI;</b>
+        Ağır yaralanma, ölüm ve maddi hasarla sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.36-BASINÇLI KAPLARIN PERİYODİK KONTROLLERİNİN YAPILMAMASI;</b>
+        Ağır yaralanma, ölüm ve maddi hasarla sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.37-GAZ’LI ORTAMLARDA GAZ DEDEKTÖRLERİNİN OLMAMASI;</b>
+        Yangın, şiddetli parlama ve patlamalara sebebiyet sonucu, yüksek maddi hasar ve ölümlerle
+        sonuçlanabilir.
+      </div>
+
+      <div style="margin-bottom:2mm;">
+        <b>1.38-TEHLİKELİ KİMYASALLARIN MALZEME GÜVENLİK BİLGİ FORMLARI (MSDS)’NIN
+        OLMAMASI;</b>
+        Yangın, şiddetli parlama ve patlamalara sebebiyet sonucu, yüksek maddi hasar, ciddi yanıklar ve
+        hasarlarla ölümlerle sonuçlanabilir.
+      </div>
+
+      <div
+        style="
+          text-align:center;
+          font-weight:bold;
+          color:#0000ff;
+          margin:4mm 0 2mm 0;
+        "
+      >
+        B - TEHLİKEYE MARUZ KALABİLECEKLER;
+      </div>
+
+      1. Akademik personel,<br/>
+      2. Teknik personel,<br/>
+      3. Büro personeli,<br/>
+      4. Temizleme personeli,<br/>
+      5. Acil durum personeli,<br/>
+      6. Bakım personeli,<br/>
+      7. Denetim personeli,<br/>
+      8. Tüm çalışanlar,<br/>
+      9. Yükleniciler (Taşeronlar),<br/>
+      10. Ziyaretçiler,<br/>
+      11. Diğerleri; (Özel tıbbi rahatsızlığı olanlar, engelliler, işe yeni başlamış olanlar, çocuklar, çıraklar vb.)
+
+      
+
+    </div>
+
+  </div>
+    </div>
+
+   
+  </section>
+<div style="page-break-before: always;"></div>
+
+
+<!-- ================= SAYFA 6 ================= -->
+  <section class="page">
+    <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+    <div style="text-align:justify;">
+       
+
+     <div
+        style="
+          text-align:center;
+          font-weight:bold;
+          color:#0000ff;
+          margin-top:4mm;
+        "
+      >
+        C - MEVCUT KONTROL ÖNLEMLERİ NELER OLMALIDIR;
+      </div>
+
+      <div style="margin-top:2mm;">
+        1. Lokal havalandırma ve aydınlanma yapılması,<br/>
+        2. Makina koruyucularının kullanılması,<br/>
+        3. Tehlikeli kimyasalların güvenli şekilde kullanılması,<br/>
+	4. Tehlikeli kimyasalların işaretlenmesi ve etiketleme işlemlerinin yapılması,<br/>
+	5. Tehlikeli kimyasalların malzeme güvenlik bilgi formlarının (MSDS) hazırlanması,<br/>
+	6. Tehlikeli kimyasalların depolanması ile ilgili tedbirler,<br/>
+	7. Tehlikeli kimyasalların dolumu ve boşaltılmasında uygulanacak tedbirler,<br/>
+	8. Kişisel koruyucuların kullanımı,<br/>
+	9. Yangına karşı eğitim ve koruma tedbirlerinin alınması,<br/>
+	10. Mevcut acil durum planları yada yeni duruma göre hazırlanıp devreye sokulması,<br/>
+        11. Statik elektrikle ilgili tedbirler, (Göve topraklamaları)
+	12. Tüm elektrik panolarında kaçak akım sigortalarının konulması,<br/>
+	13. Tüm elektrik tesisatı ile topraklama kontrollerinin periyodik yapılması,<br/>
+	14. Ergonomik koşulların araştırılması ve uygunluğu,<br/>
+	15. Çalışanların psikolojik durumlarının araştırılması ve tespiti,<br/>
+	16. Basınçlı kaplar ve kaldırma araçlarının kontrollerinin periyodik olarak yapılması,<br/>
+	17. Tüm personelin İSG ve Mesleki yönden eğitilip eğitilmediği,<br/>
+	18. İşyerinde kaza ve meslek hastalığına sebep olabilecek tehlikeli durum ve davranışların sık sık
+        tespitinin yapılması,<br/>
+      </div>
+
+      <!-- Başlık -->
+      <div
+        style="
+          text-align:center;
+          font-weight:bold;
+          color:#0000ff;
+          margin:4mm 0 3mm 0;
+        "
+      >
+        D - İŞYERİNDE TEHLİKELERİN BELİRLENMESİ AŞAMASINDA;
+      </div>
+
+      <div style="margin-bottom:3mm;">
+        AŞAĞIDAKİ HUSUSLARA DİKKAT EDİLMEMİŞ İSE; TEHLİKELER MUHTEMELEN EKSİK
+        BELİRLENMİŞTİR.
+      </div>
+
+      <!-- a -->
+      <div style="margin-bottom:3mm;">
+        <b>a- İSTİŞARE</b><br/>
+        <i>Tehlikelerin tanımlanması aşamasında;</i> İşçilerin, yönetimin, işyeri hekiminin, iş sağlığı ve
+        güvenliği uzmanının, işyeri iş sağlığı ve güvenliği işçi temsilcisinin, iş sağlığı ve güvenliği kurulu
+        üyelerinin, katılımı sağlanmış mı?
+      </div>
+
+      <!-- b -->
+      <div style="margin-bottom:3mm;">
+        <b>b- KAZA VE MESLEK HASTALIĞI İSTATİSTİKLERİ:</b><br/>
+        İşyerinde meydana gelen; önemli ya da önemsiz tüm iş kazalarının kayda alınmış mı?<br/>
+        Bu kazaların oluşmasındaki neden sonuç ilişiklerinde araştırılması yapılmış mı?
+      </div>
+
+      <!-- c -->
+      <div style="margin-bottom:3mm;">
+        <b>c- KİMYASAL MALZEME GÜVENLİK BİLGİ FORMLARI:</b><br/>
+        Kullanılan kimyasal maddelerin malzeme güvenlik bilgi formları var mı?<br/>
+        Bu formlar Türkçeleştirilip gerekli personele iletilip kullanılması sağlanmış mı?
+      </div>
+
+      <!-- d -->
+      <div style="margin-bottom:3mm;">
+        <b>d- PERİYODİK KONTROLLER VE İSTENİLEN BELGELER:</b><br/>
+
+        • Ağır ve tehlikeli işlere ait sağlık raporları<br/>
+        • Sağlık dosyası<br/>
+        • İşyeri sağlık ve güvenlik birimin yıllık faaliyet raporu<br/>
+        • İşyeri iş sağlığı ve güvenliği yıllık değerlendirme raporu<br/>
+        • İş güvenliği ve işyeri ana gıda içinde çalışanların tamamının biyolojik eğitimleri<br/>
+        • İş sağlığı ve güvenliği eğitimlerine ait yangın eğitim programları<br/>
+        • İşyerinin tüm eğitimleri eğitici ve eğitilenlerin imzalarını içeren eğitim belgeleri<br/>
+        • Yıllık eğitim raporları<br/>
+        • Muayene formu kontrollü<br/>
+        • Motorlu araç muayene raporu<br/>
+        • Basınçlı kapların kontrol ve deney raporu<br/>
+        • Kaldırma araçları deney raporu<br/>
+        • Basınçlı kapların kontrol raporları<br/>
+        • Elektrik tesisatı topraklama raporları<br/>
+        • Acil durum tatbikat raporları<br/>
+        • Acil durum planlarının hazırlanması<br/>
+       
+       
+      </div>
+
+    </div>
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 7 ================= -->
+  <section class="page">
+    <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+<div style="text-align:justify;">
+
+      <!-- Üst kısım maddeler -->
+      
+        • Sağlık güvenlik işaretleri envanteri<br/>
+        • Yangın tatbikat raporları<br/>
+        • Yangın söndürme cihazlarının periyodik raporları<br/>
+        • İş kazası meslek hastalığı bildirimleri<br/>
+	• İçme suyunun kullanılabilir olduğuna dair belge<br/>
+        • İşyeri hekimliği sertifikası<br/>
+        • İş sağlığı ve güvenliği uzmanlığı sözleşmesi ve sertifikası,<br/>
+        • İş Sağlığı ve Güvenliği kuruluları<br/>
+        • İşyeri hemşireliği veya sağlık memuru sözleşmesi ve sertifikası<br/>
+        • Sorumlu müdür sözleşmesi ve sertifikası<br/>
+        • Kişisel ilk yardım paketi yönergesi<br/>
+        • Yapı işlerinde güvenlik planı<br/>
+        • Patlamadan koruma dokümanı<br/>
+        • Kazancı ehliyeti<br/>
+        • Kaynakçı ehliyetleri (sertifikaları)<br/>
+	• Kaldırma makinelerini ve vinçleri kullananların “operatör” belgesi<br/>
+        • Yangın hortumları<br/>
+        • Aspiryasyon tesisatı<br/>
+        • Emniyet supapları<br/>
+        • Basınçlı asit kaplarının kontrol belgeleri<br/>
+      • Topraklama tesisatı<br/>
+      • Boru tesisatı<br/>
+      • Sıvı tank ve depoları<br/>
+      • Taban ve asma katlar<br/>
+      • Kişisel koruyucular ve zimmet belgeleri,<br/>
+      • Yangın tatbikat belgeleri<br/>
+      • Emzirme odaları ve çocuk kreşleri<br/>
+      • İşçi yatakhaneleri,<br/>
+      • Fırın ve ocaklar<br/>
+      • Elektrikli el aletleri<br/>
+      • Elektrik kaynak makineleri<br/>
+      • Tam yalıtılmış elektrik cihazları<br/>
+      • Aydınlatma ve elektrik devresi<br/>
+      • Yıldırımdan tesisat (paratoner)<br/>
+
+      <!-- Başlık -->
+      <div style="font-weight:bold; margin-top:4mm; margin-bottom:3mm;">
+        e- DİĞER KAYIT, BELGE, BAŞVURU VB.LERİ:
+      </div>
+
+      <!-- Liste devamı -->
+      • Etiketler ve Levhalar<br/>
+      • Ecza dolabı<br/>
+      • Asansör kabinlerinde taşıyabilecekleri en çok yükü gösteren levhalar<br/>
+      • Motopompların kontrol tarihleri yazılı etiket<br/>
+      • Seyyar yangın söndürme cihazlarının kontrol tarihleri<br/>
+      • Zımpara taşı etiketi<br/>
+      • Kazan üzerindeki levha<br/>
+      • Kompresörlerin etiketi<br/>
+      • Parlayıcı, patlayıcı, tehlikeli ve zararlı maddeler bulunan kap ve ambalajların etiketi<br/>
+      • Yangın söndürme cihazlarının kontrol tarihleri<br/>
+      • Basınçlı gaz tüplerine dair dokümanlar<br/>
+
+      
+      
+
+    </div>
+
+    </div>
+  </div>
+    </div>
+
+   
+  </section>
+<div style="page-break-before: always;"></div>
+
+
+<!-- ================= SAYFA 8 ================= -->
+  <section class="page">
+   <div
+   style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+<div style="text-align:justify;">
+      <div style="font-weight:bold; margin-top:4mm; margin-bottom:3mm;">
+        1.LİTERATÜR ARAŞTIRMASI
+      </div>
+      Risk konusunda bir tüzük, yönetmelik standart endüstriyel rehber var mı?<br/>
+      Bu rehberler tehlikelerin tanımlanması aşamasında kullanılmış mı?<br/><br/>
+
+      <b>KİMYASAL MADDELERLE YAPILAN ÇALIŞMALARA İLİŞKİN BAŞLICA MEVZUAT</b><br/>
+      <b>MEVZUAT / STANDART:</b>&nbsp;&nbsp;&nbsp;&nbsp; <b>R.G. TAR / SAYI:</b><br/><br/>
+
+      Binaların Yangından Korunması Hakkında Yönetmelik&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 26.07.2002 / 24827<br/>
+      Güvenlik ve Sağlık İşaretleri Yönetmeliği&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 23/12/2003 / 25325<br/>
+      Kim. Md. Çal. Sağ. ve Güv. Ön. Hk. Yön.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 26/12/2003 / 25328 (Değ. 19/10/2005/25971)<br/>
+      Patlayıcı Ortamların Tek. Çalışmaların Korun. Hak. Yön.&nbsp;&nbsp; 26/12/2003 / 25328<br/>
+      Asbestle Çal. Sağ. ve Güv. Önlemleri hk. Yön.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 26/12/2003 / 25328 (Değ.17/2/2004/25376)<br/>
+      Kişisel Koruyucu Donanımların işyerlerinde Kullan.Hk.Yön.&nbsp;&nbsp;&nbsp;&nbsp; 11/2/2004 / 25370<br/>
+      Tehlikeli Kimyasallar Yönetmeliği&nbsp;&nbsp; 11/07/1993/ 21634 (Değ. 06/11/2001/ 34755)<br/>
+      Güvenlik Bilgi Formlarının Düzen. Us. Usul ve Esas. Tebliği&nbsp; 11/03/2002 / 24692<br/>
+      Muht.Pat.Ort.Kul.Tec. ve Kor.Sistemler ile ilgili Yön.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (94/9/AT) 27/10/2002/24919<br/>
+      Tehlikeli Atıkların Kontrolü Yönetmeliği&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 14/03/2005 / 25755<br/>
+      Organik Peroksit Maddelerinin Depolanması, Genel Kurallar&nbsp;&nbsp;&nbsp;&nbsp; TS 10976<br/>
+      Gaz Oksitleyici Maddelerin Depolanması&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TS 11369<br/>
+      Sıvılaştırılmış petrol gazları ile ilgili kurallar&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; TS 11939<br/><br/>
+      
+       <b>2. ADIM: TEHLİKELERİN DEĞERLENDİRİLMESİ:</b><br/><br/>
+
+      2. adımda oluşturulan tehlike listelerinin değerlendirilmesi ile; hangileri için ne tür önlemler alınacağı ve; hangileri için risk değerlendirilmesi yapılmasına karar verilir.<br/><br/>
+
+      Bu aşamada;<br/><br/>
+
+      • Tüm görevler belirlenmeli ve analiz edilmelidir<br/>
+      • Mevcut veya muhtemel tehlikeler belirlenmelidir<br/>
+      • Bu tehlikelere maruz kalabilecekler belirlenmelidir<br/>
+
+      • Bu tehlikelerden kaynaklanan yaralanmalar veya kayıp riski analiz edilmelidir.<br/>
+      • Riskin uygun şekilde kontrol edilip edilmediği değerlendirilmelidir. (Gözlem ve Gözden Geçir)<br/><br/>
+
+
+      <b>3. ADIM: RİSKLERİ ÖNLEMEK VEYA AZALTMAK İÇİN KONTROL TEDBİRLERİNE KARAR VERİLMESİ:</b><br/><br/>
+
+      2. adımda belirlenen ve riskleri derecelendirilen ve, ağırlığına göre tespit edilen riskler; Öncelik sıralamasına tabi tutulur.<br/><br/>
+    
+      <b>4. ADIM: KONTROL TEDBİRLERİNİN UYGULANMASI:</b><br/><br/>
+
+      2. ve 3. adımda alınmasına karar verilen önlemlerden hemen ortadan kaldırılabilecek tehlikeler için gerekli önlemler
+      alınır ve; tekrarlanmaması için kontrol aralıkları belirlenir. Belirli bir zaman ve maliyet gerektiren ve acil olmayan
+      önlemler içinde uygulama planları yapılarak; uygulamaya hemen başlanır.<br/><br/>
+
+      
+
+
+    </div>
+
+  </div>
+
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 9 ================= -->
+  <section class="page">
+    <div
+   style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+     <b>5. ADIM: ALINAN TEDBİRLERİN ETKİNLİĞİNİN DENETİMİ, İZLENMESİ VE KONTROL EDİLMESİ:</b><br/><br/>
+
+      İşyerinde gerçekleştirilen risk yönetiminin tüm safhaları; uygulaması sistemli ve düzenli olarak denetlenir, izlenir ve;
+      varsa aksayanlar yeniden gözden geçirilir.<br/><br/>
+
+      Örneğin: Tehlike kaynağı olarak;<br/><br/>
+
+      1- Asma kat platformunda korkuluk yoksa<br/>
+      <span style="color:red;"><b>Riski:</b></span> Yüksekten düşmedir.<br/>
+      <span style="color:red;"><b>Tehlikesi:</b></span> Ağır yaralanma veya ölümdür.<br/>
+      <span style="color:blue;"><b>Önlemi:</b></span> Korkuluk yapılmasıdır. Sonrada yapılan iş kontrol edilip testten geçirilmelidir.<br/><br/>
+
+      2- Birkaç yerde elektrik prizi kırık ise;<br/>
+      <span style="color:red;"><b>Riski:</b></span> Elektrik çarpmasıdır, kısa devredir.<br/>
+      <span style="color:red;"><b>Tehlikesi:</b></span> Ağır yaralanma, ölüm veya maddi hasarlı yangındır.<br/>
+      <span style="color:blue;"><b>Önlemi:</b></span> Kırık prizlerin derhal değiştirilmesidir. Sonrada yapılan iş kontrol edilip testten geçirilecektir.<br/><br/>
+
+      3- Çalışanların sağlık muayeneleri yapılmıyorsa;<br/>
+      <span style="color:red;"><b>Riski:</b></span> Meslek hastalığı ve beklenilmeyen mualliyet ve ölümlerin oluşmasıdır.<br/>
+      <span style="color:red;"><b>Tehlikesi:</b></span> Meslek hastalığı ve beklenilmeyen mualliyet ve ölümlerin oluşmasıdır.<br/>
+      <span style="color:blue;"><b>Önlemi:</b></span> İşe girişte ve periyodik olarak sağlık muayenesinden geçirilmesi ve yıllık muayenelerinin yapılmasıdır.
+      Sonrada yapılan iş kontrol edilip testten geçirilecektir.<br/><br/>
+
+      <b>DOKÜMAN HAZIRLAMA;</b><br/><br/>
+
+      Risk değerlendirmesi çalışmaları sırasında takip edilen işlemler ve elde edilen sonuçlar;<br/><br/>
+
+      Her kademede uygun ve yeterli detayları içerecek şekilde dokümana haline getirilmelidir.<br/><br/>
+
+      Bu nedenle küçük ve büyük çaplı tüm kazalar; tüm detayları ile tespit edilip kayıt altına alınmalı ve
+      irdelenerek tekrar edilmemesi için; tüm tedbirler gözden geçirilerek uygulanmalıdır.<br/><br/>
+
+      <b>RİSK ANALİZİ ÇALIŞMALARI ESNASINDA KAYITLARIN ÖNEMİ:</b><br/><br/>
+
+      a- Konunun; sağlık ve güvenliği hususunda hüküm verilmesine,<br/><br/>
+
+      b- Risk değerlendirme çalışmaları için gerekli bilgilerin temin edilmesine,<br/><br/>
+
+      c- Risk azaltması çalışmalarına yön verilmesine,<br/><br/>
+
+      d- İşyer “Sağlık ve Güvenlik Yönergesi” hazırlanmasında kullanılmasına,
+      İmkan sağlayacak şekilde tutulmalıdır.<br/><br/>
+
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 10 ================= -->
+  <section class="page">
+    <div
+   style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+    <div style="text-align:center; font-weight:bold; margin-bottom:4mm;">
+        RİSK DEĞERLENDİRME ŞABLONU;
+      </div>
+
+      İşyerinde risk değerlendirme çalışmaları aşağıdaki iş ve işlemlere (şablona) uygun olarak yürütülmelidir.<br/><br/>
+
+      <b>Risk Değerlendirilmesi</b><br/><br/>
+
+      <b>1- Risk Analizi;</b><br/>
+      a- Tehlikelerin Belirlenmesi,<br/>
+      &nbsp;&nbsp;&nbsp;1- İnceleme,<br/>
+      &nbsp;&nbsp;&nbsp;2- Tespit,<br/><br/>
+
+      <b>b- Risk Hesaplanması,</b><br/>
+      &nbsp;&nbsp;&nbsp;1- Risk Tahmini,<br/>
+      &nbsp;&nbsp;&nbsp;2- Risk Kıymetlendirmesi,<br/><br/>
+
+      <b>2- Risk Kontrolü,</b><br/>
+      &nbsp;&nbsp;&nbsp;1- Riskin Önlenmesi,<br/>
+      &nbsp;&nbsp;&nbsp;2- Riskin Azaltılması,<br/><br/>
+
+      <div style="text-align:center; font-weight:bold; margin:6mm 0 3mm 0;">
+        TEHLİKELERİN BELİRLENMESİ
+      </div>
+
+      İşyerinde tehlike belirleme çalışmaları; Üyeleri aşağıda sayılan ve <b>“Tehlike Belirleme Takımı” (T.B.T.)</b> adı verilen ekip tarafından yapılmalıdır.<br/><br/>
+
+      <b>Bu takım;</b><br/><br/>
+
+      1- İşveren veya temsilcileri,<br/>
+      2- İşyeri Mesleki Sağlık ve Güvenlik Uzmanı,<br/>
+      3- İşyeri Hekimi,<br/>
+      4- Çalışanlar ya da temsilcileri ile,<br/>
+      5- Dışarıdan uzman kişi ve kuruluşlardan hizmet alınması durumunda, bu kişi ya da kuruluş elemanlarından oluşur.<br/><br/>
+
+      <div style="text-align:center; font-weight:bold; margin:6mm 0 3mm 0;">
+        ÖN HAZIRLIK YAPILMASI:
+      </div>
+
+      İnceleme çalışmalarına başlanmadan önce; Tehlike Belirleme Takımı (TBT) tarafından aşağıdaki ön hazırlıklar yapılmalıdır.<br/><br/>
+
+      a- İncelemede takip edilecek usul ve yöntemler belirlenmelidir.<br/>
+      b- İncelemede rehber olarak kullanılmak üzere kontrol listeleri hazırlanmalıdır.<br/>
+      c- İncelemeye katılacak kişiler işyerinin özelliklerine göre dikkatlice belirlenmelidir.<br/>
+      d- İnceleme çalışmaları yapılmadan önce aşağıdaki veriler toplanarak değerlendirilmelidir ve inceleme ve tespit çalışmalarında kullanılmak üzere hazırlanmalıdır.<br/>
+
+      1- Kullanılan kimyasal ve biyolojik ajanların (materyallerin) listelenmesi<br/>
+      2- İş aktivitelerinin gözden geçirilmesi<br/>
+      3- Ortam ölçüm raporlarının incelenmesi<br/>
+      4- Kaza ve hadise raporlarının incelenmesi<br/>
+      5- Literatür taraması<br/>
+      6- İmalatçı verilerinin değerlendirilmesi<br/>
+      7- Uzman görüşlerinden yararlanma<br/>
+      8- Teknik periyodik kontrol raporları<br/>
+      9- İSG Kurulu yıllık faaliyet raporlarının değerlendirilmesi, (50 kişiden fazla olan işyerlerinde)<br/>
+      10- Uluslararası kuruluş ve organizasyonların veri tabanları ve kayıt sistemlerinden faydalanılması.<br/>
+      11- Diğer veri ve kayıtlar<br/><br/>
+
+   
+
+      
+
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 11 ================= -->
+  <section class="page">
+   <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+    
+    <div style="text-align:center; font-weight:bold; margin:5mm 0 3mm 0;">
+        RİSK DEĞERLENDİRMESİNDE GENEL ESASLAR ve TANIMLAR:
+      </div>
+
+      <b>A- TEHLİKE VE RİSK TANIMLARI:</b><br/><br/>
+
+      <b>Tehlike:</b> Çalışma çevresinin; Fiziki kusurları ve İnsanların hatalı davranışları gibi, çalışma ortam ve şartlarında var olan,
+      ya da dışarıdan gelebilecek kapsamı belirlenmemiş, maruz kimselere, işyerine ve çevreye zarar ya da hasar verme potansiyeline,
+      <b>Tehlike</b> denir.<br/><br/>
+
+      <b>Risk:</b> İşyerinde; meydana gelebilecek, Maruz kimselere veya çalışma çevresine zarar ya da hasar verici nitelikteki bir olayın meydana gelme ihtimali ile zarar verme derecesinin bileşkesine, <b>Risk</b> denilmektedir.<br/><br/>
+
+      Birkaç örnekleme yaparsak:<br/><br/>
+
+      1- Yüksekte çalışma; Tehlikelidir.<br/>
+      <span style="color:red;"><b>Riski ise;</b></span> Kişinin yükseklikten düşmesi ve malzeme düşmesidir.<br/><br/>
+
+      2- Kanla bulaşan hastalıklar; Tehlikelidir.<br/>
+      <span style="color:red;"><b>Riski ise;</b></span> Kan nakli ile hastalık bulaşmasıdır.<br/><br/>
+
+      <b>Tehlikeli Durum:</b> Maruz kimselerin, çalışma ortam ve koşulları ya da çevreden gelebilecek tehlike veya tehlikelerden
+      etkilenebileceği herhangi bir durumdur.<br/><br/>
+
+      <b>Tehlikeli Davranış:</b> Tehlikeli durum ile zaman ve mekân birliği gerçekleştiğinde kazaya sebep olabilen her türlü dikkatsiz ve tedbirsiz davranışlardır.
+      Çalışanlardan kaynaklanan iş güvenliği uygunsuzluklarıdır. Çalışanlar yapılmaması gereken unsurlardır.<br/><br/>
+
+      <b>Kaza:</b> Ölümle, hastalıkla yaralanmaya, hasara veya diğer kayıplara sebebiyet veren istenmeyen olaydır.<br/><br/>
+
+      <b>İş Kazası:</b> İşin yapımı ve yürütümü sırasında meydana gelen Tehlikeli durum ve Tehlikeli davranışların zaman ve mekân şartlarında bir araya gelmesinden oluşan,
+      <b>Ölüm, Hastalık, Yaralanma, Zarar veya Hasara</b> sebebiyet veren istenmeyen olaydır.<br/><br/>
+
+      <b>Olay (Vaka) – Hadise / Ham Kaza:</b> Oluşum tarzı itibariyle bir kaza olmasına rağmen Sonuçları itibariyle Yaralanma, Zarar veya Hasarın meydana gelmediği durumdur.<br/><br/>
+
+      <b>B- RİSK DEĞERLENDİRMESİNİ KİM YAPACAK?</b><br/><br/>
+
+      1- İşveren sağlık ve güvenlik risklerini önlemek ve koruyucu hizmetleri yürütmek üzere işyerinden bir veya birden fazla kişiyi görevlendirir.
+      2- İşverence bu görevleri yürütmek üzere yetkin nitelikte personel bulunulamaması halinde, işveren dışarıdan yetkili belgesi olan uzman kişi veya kuruluşlardan hizmet alır.<br/><br/>
+      3- İşverenin yeterli <b>mesleki bilgi, beceri ve donanıma sahip olması</b> halinde, işyerinin büyüklüğü, işin niteliği ve işçi sayısı dikkate alınarak
+      sağlık ve güvenlik risklerini önlemek ve koruyucu hizmetleri yürütülmesi işin kendisi istenebilir.<br/><br/>
+
+      <b>NOT:</b> Bu kişilerin görevlendirilmesi işverenin genel yükümlülüklerini ortadan kaldırmaz.<br/><br/>
+
+      <b>C- İŞYERLERİNDE RİSK ANALİZLERİ KİMLER TARAFINDAN YAPILIR:</b><br/><br/>
+
+      Risk değerlendirmesi ekibi<br/>
+      a) İşveren veya işveren vekili.<br/>
+      b) İşyerinde sağlık ve güvenlik hizmetini yürüten iş güvenliği uzmanları ile işyeri hekimleri.<br/>
+      c) İşyerindeki çalışan temsilcileri.<br/>
+      d) İşyerindeki destek elemanları<br/><br/>
+
+      </div> 
+
+  </div>
+    </div>
+
+   
+  </section>
+<div style="page-break-before: always;"></div>
+
+
+<!-- ================= SAYFA 12 ================= -->
+  <section class="page">
+    <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+
+    <div style="text-align:justify;">
+
+     <b>Ç- İŞYERLERİNE GÖRE ÖNEMLİ KAZALAR:</b><br/><br/>
+
+      1- Yangın, sonucu meydana gelenler,<br/>
+      2- Patlama, sonucu meydana gelenler,<br/>
+      3- Kimyasal maddelerin çevreye yayılması, sonucu meydana gelenler,<br/>
+      4- Kimyasal maddelere maruz kalma sonucu meydana gelenler,<br/>
+      5- Elektrik kaçakları sonucu meydana gelenler,<br/>
+      6- Yüksekten düşme ve yüksekten malzeme düşmesi sonucu meydana gelenler,<br/>
+      7- Makine ve ekipmanların sıkıştırması ya da çarpması sonucu meydana gelenler,<br/>
+      8- Tercübesizlik ve dikkatsizlik sonucu meydana gelenler,<br/>
+      9- Bakım, onarım ve tamiratlar sırasında meydana gelenler,<br/>
+      10- Yükleme ve boşaltma sırasında meydana gelenler,<br/>
+      11- Koruyucu ekipmanın kullanmama ya da yanlış kullanma sonucu meydana gelenler,<br/><br/>
+
+      şeklinde belirtilir.<br/><br/>
+
+      <b>D- KAZANIN MEYDANA GELME OLASILIK DERECELERİ (İHTİMALLER):</b><br/><br/>
+
+      <b>1. Çok seyrek</b> — 2 yılda bir kez &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Çarpan: 1)<br/>
+      <b>2. Seyrek</b> — Yılda bir &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Çarpan: 2)<br/>
+      <b>3. Orta sıklıkta</b> — Yılda 1 ve 3 arası &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Çarpan: 3)<br/>
+      <b>4. Yüksek</b> — Yılda 3 ve 5 arası &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Çarpan: 4)<br/>
+      <b>5. Çok yüksek</b> — Yılda 5 defadan daha fazla &nbsp;&nbsp; (Çarpan: 5)<br/><br/>
+
+      <b>Not:</b> Yukarıdaki kaza tekerrür (oluş) değerleri işyerinin riski ve işverenin hassasiyetine göre düşürülebilir ya da yükseltilebilir.<br/><br/>
+      
+      <b>E- HASAR BOYUTLARI KATEGORİSİ (HASARIN ŞİDDETİ YA DA DERECESİ):</b><br/><br/>
+
+      <b>I - Çok hafif</b> — Yaralanma ve maddi hasar var &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Şiddeti: 1</b><br/>
+      <b>II - Hafif</b> — Küçük çaplı yaralanmalar, maddi hasar &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Şiddeti: 2</b><br/>
+      <b>III - Orta</b> — Orta ve ağır yaralanmalar, maddi hasar &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Şiddeti: 3</b><br/>
+      <b>IV - Ciddi</b> — Ölüm ve ağır yaralanmalar, maddi hasar &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Şiddeti: 4</b><br/>
+      <b>V - Facia</b> — Birden fazla ölüm ve çok ağır yaralanmalar, maddi hasar &nbsp;&nbsp;&nbsp;&nbsp; <b>Şiddeti: 5</b><br/><br/>
+
+      <b>RİSK ANALİZLERİNDE:</b><br/><br/>
+
+    Aşağıdaki formülle göre hesaplama yapılır ve çıkan değerin büyüklüğüne göre risk tespiti yapılır.
+    Çıkan risk değerinin büyüklüğüne göre öncelikle tedbirler alınır ve uygulanır.<br/><br/>
+
+    <b>Risk = Kaza olasılığı</b> (D’deki değerler) <b>X Hasarın boyutu</b> (E’deki değerler)<br/><br/>
+
+    <b>Örneğin:</b><br/><br/>
+
+    Yılda 1 ve 3 arası bir ölümle sonuçlanan kazanın risk değeri = 3 × 4 = 12’dir.<br/><br/>
+
+    Yılda 5 defa birden fazla ölümle sonuçlanan kazanın risk değeri = 5 × 5 = 25’dir.<br/><br/>
+
+    Çıkan değerlere göre öncelikle 25 rakamı daha büyük olması nedeni ile kazanın olduğu mahaldeki insan, makine ve alet ile
+    birlikte öldürücü olabilecek tedbirlerin alınması ve kaza riskinin asgariye indirilmesi ve hatta yok edilmesi zorunludur.<br/><br/>
+
+    <b>Kabul edilebilir risk:</b> Kamu kaynakları ile işletmenin kendi “İş Sağlığı ve Güvenliği Politikası” dikkate alındığında;
+    kabul edilebilecek düzeye indirilmiş risktir.<br/><br/>
+
+    </div>
+
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 13 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+  style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+     Aşağıdaki matriste ihtimal ve ciddiyet oranları 5 puan üzerinden hesaplanmıştır.<br/><br/>
+
+    • 2–6 puan arası riskler <b>tolerans edilebilen risklerdir.</b><br/>
+    • 8–12 puan aralığındaki riskler <b>dikkate değer risklerdir.</b><br/>
+
+    Bunlarla ilgili olarak iyileştirme faaliyetleri planlanmalıdır.<br/><br/>
+
+    • 12–20 puan arası çıkan riskler ciddi riskler olup <b>öncelikle ve derhal iyileştirilmelidir.</b><br/>
+
+    • 25 puan çıkan riskler ise kabul edilemeyen riskler olup bunlarla ilgili acil iyileştirme faaliyetleri uygulanmalıdır.
+      Risk tamamen ortadan kaldırılmalıdır.<br/>
+
+    <b>Not:</b> Bu matrislere göre 6 veya daha düşük puan seviyesi uygulanmalıdır.<br/><br/>
+
+     <!-- RİSK MATRİSİ -->
+    <table
+      style="
+        border-collapse:collapse;
+        width:100%;
+        table-layout:fixed;
+        font-size:9pt;
+        margin-bottom:6mm;
+      "
+      border="1"
+    >
+      <!-- Başlık satırı -->
+      <tr>
+        <td rowspan="7"
+            style="width:6%; text-align:center; font-weight:bold;
+                   writing-mode:vertical-rl; transform:rotate(180deg);">
+          OLASILIK
+        </td>
+        <td colspan="5" style="text-align:center; font-weight:bold;">
+          ŞİDDET
+        </td>
+        <td rowspan="7" style="width:2%; border:none;"></td>
+        <td colspan="2" style="text-align:center; font-weight:bold;">
+          RİSK SEVİYESİ
+        </td>
+      </tr>
+
+
+            <!-- OLASILIK = 1 -->
+      <tr>
+        <td style="text-align:center; font-weight:bold;">5</td>
+        <td style="text-align:center; font-weight:bold;">4</td>
+        <td style="text-align:center; font-weight:bold;">3</td>
+        <td style="text-align:center; font-weight:bold;">2</td>
+        <td style="text-align:center; font-weight:bold;">1</td>
+        <td style="width:10%; background:#ff00ff; text-align:center; font-weight:bold;">
+          25
+        </td>
+        <td style="background:#ff00ff; padding:2mm;">
+          Tolere Edilemez, İş Geçici Olarak Durdurulmalı
+        </td>
+
+      </tr>     
+
+      <!-- OLASILIK = 5 -->
+      <tr>
+        <td style="text-align:center; background:#ff00ff;">25</td>
+        <td style="text-align:center; background:#ff0000;">20</td>
+        <td style="text-align:center; background:#ff0000;">15</td>
+        <td style="text-align:center; background:#ffff00;">10</td>
+        <td style="text-align:center; background:#00b050;">5</td>
+        <td style="background:#ff0000; text-align:center; font-weight:bold;">
+          15–20
+        </td>
+        <td style="background:#ff0000; padding:2mm;">
+          Belirgin Risk. İş, Risk Azaltılmadan Başlatılamaz
+        </td>
+      </tr>
+
+      <!-- OLASILIK = 4 -->
+      <tr>
+        <td style="text-align:center; background:#ff0000;">20</td>
+        <td style="text-align:center; background:#ff0000;">16</td>
+        <td style="text-align:center; background:#ffff00;">12</td>
+        <td style="text-align:center; background:#ffff00;">8</td>
+        <td style="text-align:center; background:#00b050;">4</td>
+        <td style="background:#ffff00; text-align:center; font-weight:bold;">
+          8–12
+        </td>
+        <td style="background:#ffff00; padding:2mm;">
+          Dikkate Değer (Orta Seviyede) Risk
+        </td>
+      </tr>
+
+      <!-- OLASILIK = 3 -->
+      <tr>
+        <td style="text-align:center; background:#ff0000;">15</td>
+        <td style="text-align:center; background:#ffff00;">12</td>
+        <td style="text-align:center; background:#ffff00;">9</td>
+        <td style="text-align:center; background:#00b0f0;">6</td>
+        <td style="text-align:center; background:#00b050;">3</td>
+        <td style="background:#00b0f0; text-align:center; font-weight:bold;">
+          4–6
+        </td>
+        <td style="background:#00b0f0; padding:2mm;">
+          Tolere Edilebilir Risk. Ek Kontroller Gerekiyor
+        </td>
+      </tr>
+
+      <!-- OLASILIK = 2 -->
+      <tr>
+        <td style="text-align:center; background:#ffff00;">10</td>
+        <td style="text-align:center; background:#ffff00;">8</td>
+        <td style="text-align:center; background:#00b0f0;">6</td>
+        <td style="text-align:center; background:#00b0f0;">4</td>
+        <td style="text-align:center; background:#00b050;">2</td>
+        <td style="background:#00b050; text-align:center; font-weight:bold;">
+          1–3
+        </td>
+        <td style="background:#00b050; padding:2mm;">
+          Çok Hafif Risk: Faaliyet Gerektirmiyor
+        </td>
+      </tr>
+     
+          <tr>
+        <td style="text-align:center; background:#00b050;">5</td>
+        <td style="text-align:center; background:#00b0f0;">4</td>
+        <td style="text-align:center; background:#00b0f0;">3</td>
+        <td style="text-align:center; background:#00b050;">2</td>
+        <td style="text-align:center; background:#00b050;">1</td>
+        
+      </tr>
+
+    </table>
+
+    <!-- TABLO ALTI METİNLER -->
+    <div style="text-align:justify;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        TEHLİKE İNCELEMESİ;
+      </div>
+
+      Risk değerlendirmesi yapılacak işyeri; madde 14. paragraf uyarınca yapılan ön hazırlıklardan elde edilen veri,
+      bilgi ve birikimler ışığında belirli bir plan dâhilinde baştan sona gezilerek incelenecektir.<br/><br/>
+
+      <b>a- Genel İnceleme;</b> İşyerinin; iş akışı, yerleşim planı vb. uyarınca baştan sona gezilerek incelenmesini,<br/>
+      <b>b- Özel İnceleme;</b> İşyerinin belirli bir kısmının iş kazası, olay, şikayet, İ.S.G. Kurulu kararı vb. durumlar
+      sonucunda incelenmesini kapsar.<br/><br/>
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        RİSK ALTINDAKİ İNSANLARIN BELİRLENMESİ;
+      </div>
+
+      <div style="margin-left:8mm; margin-bottom:3mm;">
+        ➤ Aktivite ile doğrudan ilgili işgücü<br/>
+        ➤ Diğer işverenlerin personeli<br/>
+        ➤ Ziyaretçiler<br/>
+        ➤ Halktan kişiler<br/>
+        ➤ Genç işçiler<br/>
+        ➤ Yalnız çalışanlar<br/>
+        ➤ Çocuklar<br/>
+        ➤ Hamile kadınlar
+      </div>
+    
+     </div>
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 14 ================= -->
+  <section class="page">
+   <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+
+    <div style="text-align:justify;">
+
+    <div style="font-weight:bold; margin-bottom:2mm;">
+        RİSK ANALİZİ NETİCESİNDE ALINMIŞ ÖNLEMLERİN DEĞERLENDİRİLMESİ;
+      </div>
+
+      Risk değerlendirmesinde kullanılan birçok yöntem vardır. <b>Bu yöntemler;</b> analizi yapılacak tesisin; üretim şekli ve
+      metotları, analizi yapan kişilerin bilgi birikimi, tecrübesi ve kişisel tercihlerine göre değişiklik gösterir.<br/>
+
+      <b>Yürürlükteki Mevzuatta;</b> İşverenin hangi yöntemi ve metodu seçeceği konusunda herhangi bir bağlayıcı hüküm yoktur.<br/>
+
+      İSG açısından asıl amaç; işyerlerinde tehlikelerin belirlenmesi ve gerekli önlemlerin alınmasıdır. Diğer taraftan
+      işveren, risk analizinde kullandığı yöntemi ticari gerekçelerle açıklamayabilir.<br/><br/>
+
+    </div>
+      <div style="font-weight:bold; margin-bottom:3mm;">
+      RİSK ANALİZİ NETİCESİNDE ALINMIŞ ÖNLEMLERİN KONTROLÜ;
+    </div>
+
+    1) Risk analizi neticesinde alınan önlemlerin işyeri ortamında uygulanabilirliği ve etkinliği<br/>
+    2) İSG yönünden işyerinde risk analizinde göz önünde bulundurulmayan güvenlik önlemleri<br/>
+    3) Tamamlanmış tehlikelerin etkin bir biçimde ortadan kaldırılıp kaldırılmadığı<br/>
+    4) Ortadan kaldırılamayan tehlikeler için hangi önlemlerin alındığı<br/>
+    5) Bu önlemlerin tehlikeye maruziyeti ne kadar azalttığı<br/>
+    6) Alınan önlemler konusunda çalışanların bilgilendirilip bilgilendirilmediği<br/>
+    7) Alınan önlemlerin çalışanlar tarafından uygulanabilirliği<br/>
+    8) Bu önlemlerin yeni tehlikeler doğurup doğurmadığının tespit edilmesi<br/>
+    9) Tehlikelerin önleme aşamasında aşağıdaki yöntemlerin hangisinin kullanıldığı;<br/>
+    &nbsp;&nbsp;&nbsp;Bu yöntemlerin geçerliliği ve tehlikelerin önlenmesi aşamasındaki etkinliği<br/>
+    &nbsp;&nbsp;&nbsp;A) İkame<br/>
+    &nbsp;&nbsp;&nbsp;B) Tekrar Tasarım<br/>
+    &nbsp;&nbsp;&nbsp;C) İzolasyon<br/>
+    10) İdari önlemlerin uygulanabilirliği<br/>
+   
+
+    <div style="text-align:center; font-weight:bold; margin-top:2mm;">
+      İŞ SAĞLIĞI VE GÜVENLİĞİ RİSK DEĞERLENDİRMESİ YÖNETMELİĞİ
+    </div>
+    <div style="text-align:center; font-weight:bold; margin-top:1mm;">
+      BİRİNCİ BÖLÜM
+    </div>
+    <div style="text-align:center; margin-top:2mm; margin-bottom:1mm;">
+      Amaç, Kapsam, Dayanak ve Tanımlar
+    </div>
+
+    <div style="font-weight:bold; margin-bottom:1mm;">Amaç</div>
+    MADDE 1 – (1) Bu Yönetmeliğin amacı, işyerlerinde iş sağlığı ve güvenliği yönünden yapılacak risk
+    değerlendirmesinin usul ve esaslarını düzenlemektir.<br/>
+
+    <div style="font-weight:bold; margin-bottom:1mm;">Kapsam</div>
+    MADDE 2 – (1) Bu Yönetmelik, 20/6/2012 tarihli ve 6331 sayılı İş Sağlığı ve Güvenliği Kanunu
+    kapsamındaki işyerlerini kapsar.<br/>
+
+    <div style="font-weight:bold; margin-bottom:1mm;">Dayanak</div>
+    MADDE 3 – (1) Bu Yönetmelik, İş Sağlığı ve Güvenliği Kanununun 10 uncu ve 30 uncu maddelerine
+    dayanılarak hazırlanmıştır.<br/>
+
+    <div style="font-weight:bold; margin-bottom:1mm;">Tanımlar</div>
+    MADDE 4 – (1) Bu Yönetmelikte geçen;<br/>
+    a) Bakanlık: Çalışma ve Sosyal Güvenlik Bakanlığını,<br/>
+    b) Kabul edilebilir risk seviyesi: Yasal yükümlülükler ve işverenin önleme politikası sonucunda, kayıp
+    veya yaralanma oluşturmayacak risk seviyesini,<br/>
+    c) Kanun: 20/6/2012 tarihli ve 6331 sayılı İş Sağlığı ve Güvenliği Kanununu,<br/>
+    ç) Kontrol tedbiri: İşyerinde yürütülen işlerin bütün safhalarında iş sağlığı ve güvenliği ile ilgili
+    riskleri ortadan kaldırmak veya azaltmak için alınan tedbirlerin tümünü,<br/>
+    d) Ramak kala olay: İşyerinde meydana gelen; çalışan, işyeri ya da iş ekipmanını zarara uğratma potansiyeli olduğu halde
+    zarara uğratmayan olayı,<br/>
+
+    e) Risk: Tehlikeden kaynaklanacak kayıp, yaralanma ya da başka zararlı sonuç meydana gelme ihtimalini,<br/>
+
+    f) Risk değerlendirmesi: İşyerinde var olan ya da dışarıdan gelebilecek tehlikelerin belirlenmesi, bu tehlikelerin riske
+    dönüşmesine yol açan faktörler ile tehlikelerden kaynaklanan risklerin analiz edilerek derecelendirilmesi ve kontrol
+    tedbirlerinin kararlaştırılması amacıyla yapılması gerekli çalışmaları,<br/>
+
+    g) Tehlike: İşyerinde var olan ya da dışarıdan gelebilecek, çalışan veya işyerini etkileyebilecek zarar veya hasar verme
+    potansiyelini,<br/>
+    ifade eder.<br/>
+    </div>
+
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 15 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+  
+    <div style="text-align:center; font-weight:bold; margin-top:3mm; margin-bottom:3mm;">
+      İKİNCİ BÖLÜM
+    </div>
+    <div style="text-align:center; font-weight:bold; margin-bottom:1mm;">
+      İşveren Yükümlülüğü ve Risk Değerlendirmesi Ekibi
+    </div>
+
+    <div style="font-weight:bold; margin-bottom:1mm;">
+      İşveren yükümlülüğü
+    </div>
+
+    MADDE 5 – (1) İşveren; çalışma ortamının ve çalışanların sağlık ve güvenliğini sağlama, sürdürme ve geliştirme amacı ile iş
+    sağlığı ve güvenliği yönünden risk değerlendirmesi yapar veya yaptırır.<br/>
+
+    (2) Risk değerlendirmesinin gerçekleştirilmiş olması; işverenin, işyerinde iş sağlığı ve güvenliğinin sağlanması
+    yükümlülüğünü ortadan kaldırmaz.<br/>
+
+    (3) İşveren, risk değerlendirmesi çalışmalarında görevlendirilen kişi veya kişilere risk değerlendirmesi ile ilgili ihtiyaç
+    duydukları her türlü bilgi ve belgeyi temin eder.<br/><br/>
+
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Risk değerlendirmesi ekibi
+    </div>
+
+    MADDE 6 – (1) Risk değerlendirmesi, işverenin oluşturduğu bir ekip tarafından gerçekleştirilir. Risk değerlendirmesi ekibi
+    aşağıdakilerden oluşur.<br/>
+
+    a) İşveren veya işveren vekili.<br/>
+    b) İşyerinde sağlık ve güvenlik hizmetini yürüten iş güvenliği uzmanları ile işyeri hekimleri.<br/>
+    c) İşyerindeki çalışan temsilcileri.<br/>
+    ç) İşyerindeki destek elemanları.<br/>
+    d) İşyerindeki bütün birimleri temsil edecek şekilde belirlenen ve işyerinde yürütülen çalışmaları, mevcut veya muhtemel
+    tehlike kaynaklarını ile riskler konusunda bilgi sahibi çalışanlar.<br/>
+
+    (2) İşveren, ihtiyaç duyulduğunda bu ekibe destek olmak üzere işyeri dışından kişi ve kuruluşlardan hizmet alabilir.<br/>
+
+    (3) Risk değerlendirmesi çalışmalarının koordinasyonu işveren veya işveren tarafından ekip içinden görevlendirilen bir kişi
+    tarafından da sağlanabilir.<br/>
+
+    (4) İşveren, risk değerlendirmesi çalışmalarında görevlendirilen kişi veya kişilerin görevlerini yerine getirmeleri amacıyla
+    araç, gereç, mekân ve zaman gibi gerekli bütün ihtiyaçlarını karşılar, görevlerini yürütmeleri sebebiyle hak ve yetkilerini
+    kısıtlamaz.<br/>
+
+    (5) Risk değerlendirmesi çalışmalarında görevlendirilen kişi veya kişiler işveren tarafından sağlanan bilgi ve belgeleri gizli
+    tutar.<br/><br/>
+
+    <div style="text-align:center; font-weight:bold; margin-top:3mm; margin-bottom:3mm;">
+      ÜÇÜNCÜ BÖLÜM
+    </div>
+    <div style="text-align:center; font-weight:bold;">
+      Risk Değerlendirmesi Aşamaları
+    </div>
+
+    <b>MADDE 7 –</b> (1) Risk değerlendirmesi; tüm işyerleri için tasarım veya kuruluş aşamasından başlamak üzere
+    tehlikeleri tanımlama, riskleri belirleme ve analiz etme, risk kontrol tedbirlerini kararlaştırılması, dokümantasyon,
+    yapılan çalışmaların güncellenmesi ve gerektiğinde yenileme aşamaları izlenerek gerçekleştirilir.<br/>
+
+    (2) Çalışanların risk değerlendirmesi çalışması yapılırken ihtiyaç duyulan her aşamada sürece katkılar görüşlerinin
+    alınması sağlanır.<br/><br/>
+
+    <b>Tehlikelerin tanımlanması</b><br/>
+
+    <b>MADDE 8 –</b> (1) Tehlikeler tanımlanırken çalışma ortamı, çalışanlar ve işyerine ilişkin ilgisine göre asgari olarak
+    aşağıda belirtilen bilgiler toplanır.<br/>
+
+    a) İşyerini bina ve eklentileri.<br/>
+    b) İşyerinde yürütülen faaliyetler ile iş ve işlemler.<br/>
+    c) Üretim süreç ve teknikleri.<br/>
+    ç) Kullanılan maddeler.<br/>
+    d) Artık ve atıklarla ilgili işlemler.<br/>
+    e) Organizasyon ve hiyerarşik yapı, görev, yetki ve sorumluluklar.<br/>
+    f) Çalışanların tecrübe ve düşünceleri.<br/>
+    g) İşe başlamadan önce ilgili mevzuat gereği alınacak çalışma izin belgeleri.<br/>
+    h) Çalışanların eğitim, yaş, cinsiyet ve benzeri özellikleri ile sağlık gözetimi kayıtları.<br/>
+    
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 16 ================= -->
+  <section class="page">
+   <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+
+    ı) Genç, yaşlı, engelli, gebe veya emziren çalışanlar gibi özel politika gerektiren gruplar ile kadın çalışanların durumu.<br/>
+    i) İşyerinin teftiş sonuçları.<br/>
+    j) Meslek hastalığı kayıtları.<br/>
+    k) İş kazası kayıtları.<br/>
+    l) İşyerinde meydana gelen ancak yaralanma veya ölüme neden olmadığı halde işyeri ya da iş ekipmanını zarara uğratma
+    potansiyeli taşıyan olaylara ilişkin kayıtlar.<br/>
+    m) Ramak kala olay kayıtları.<br/>
+    n) Malzeme güvenlik bilgi formları.<br/>
+    o) Ortam ve kişisel maruziyet düzeyi ölçüm sonuçları.<br/>
+    ö) Varsa daha önce yapılmış risk değerlendirmesi çalışmaları.<br/>
+    p) Acil durum planları.<br/>
+    r) Sağlık ve güvenlik planı ve patlamadan korunma dokümanı gibi belirli işyerlerinde hazırlanması gereken dokümanlar.<br/><br/>
+
+    (2) Tehlikelerle ilişkin bilgiler toplanırken aynı üretim, yöntem ve teknikleri ile üretim yapılan benzer işyerlerinde meydana gelen
+    iş kazaları ve ortaya çıkan meslek hastalıkları da değerlendirilir.<br/><br/>
+
+    (3) Toplanan bilgiler ışığında; iş sağlığı ve güvenliği ile ilgili mevzuatta yer alan hükümler de dikkate alınarak,
+    çalışma ortamında bulunan fiziksel, kimyasal, biyolojik, psikososyal, ergonomik ve benzeri tehlike kaynaklarından oluşan,
+    bunların etkileşimi sonucu ortaya çıkabilecek tehlikeler belirlenir ve kayda alınır. Bu belirleme yapılırken aşağıdaki
+    hususlar, bu hususlardan etkilenecekler ve ne şekilde etkilenecekleri göz önünde bulundurulur.<br/><br/>
+
+    a) İşletmenin yeri nedeniyle ortaya çıkabilecek tehlikeler.<br/>
+    b) Seçilen alanlarda işin ve eklentilerinin plana uygun yerleştirilmemesi veya planda olmayan ilavelerin yapılmasından kaynaklanabilecek tehlikeler.<br/>
+    c) Yapılacak işle ilgisi olmayan yer ve yapım tarzı ile seçilen yapı malzemelerinden kaynaklanabilecek tehlikeler.<br/>
+    Ç) Bakım ve onarım işleri ile acil işyerinde yürütülecek her türlü faaliyet esnasında çalışma usulleri,
+    vardiya düzeni, ekip çalışması, organizasyon, nezaret sistemi, hiyerarşik düzen, ziyaretçi veya işyeri çalışanı
+    olmayan diğer kişiler gibi faktörlerden kaynaklanabilecek tehlikeler.<br/>
+    d) İşin yürütümü, üretim teknikleri, kullanılan maddeler, makine ve ekipman, araç ve gereçler ile bunların
+    çalışanların fiziksel özelliklerine uygun tasarlanmaması veya kullanılmamasından kaynaklanabilecek tehlikeler.<br/>
+    e) Kuvvetli akım, aydınlatma, paratoner, topraklama gibi elektrik tesisatının bileşenleri ile ısıtma,
+    havalandırma, atmosferik ve çevresel şartlardan koruma, drenaj, arıtma, yangın önleme ve mücadele tesisatları ile benzeri
+    yardımcı tesisat ve donanımlardan kaynaklanabilecek tehlikeler.
+    f) İşyerinde yanma, parlama veya patlama ihtimali olan maddelerin işlenmesi, kullanılması, taşınması,
+        depolanması ya da imha edilmesinden kaynaklanabilecek tehlikeler<br/>
+    g) Çalışma ortamına ilişkin biyolojik koşullar ile çalışanların kişisel hijyen alışkanlıklarından
+        kaynaklanabilecek tehlikeler.<br/>
+    ğ) Çalışanın işyeri içerisindeki ulaşım yollarını kullanmasından kaynaklanabilecek tehlikeler.<br/>
+    h) Çalışanın iş sağlığı ve güvenliği ile ilgili yeterli eğitim almaması, bilgilendirilmemesi, çalışanlara
+        uygun talimat verilememesi veya çalışma izni prosedürü gereken durumlarda bu izin olmaksızın çalışılmasından
+        kaynaklanabilecek tehlikeler.<br/><br/>
+
+    
+    (4) Çalışma ortamında bulunan fiziksel, kimyasal, biyolojik, psikososyal, ergonomik ve benzeri tehlike
+        kaynaklarının neden olabileceği tehlikeler ile işin içerisinde yer alma, işin yapılma yöntemi, çalışma süresi ve
+        koşullarının çalışan üzerindeki etkisi; daha önce kontrol, ölçüm, inceleme ve araştırma yapılmış ise risk değerlendirmesi
+        ekibi tarafından gözden geçirilir.<br/><br/>
+
+    
+              
+
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 17 ================= -->
+ <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+        <b>Risklerin belirlenmesi ve analizi</b><br/>
+   
+       <b>MADDE 9 –</b> 1) espit edilmiş olan tehlikelerin her biri ayrı ayrı dikkate alınarak bu tehlikelerden
+        kaynaklanabilecek risklerin hangi sıklıkta oluşabileceği ve bu risklerden kimlerin, nelerin, ne şekilde ve hangi
+        şiddette zarar görebileceği belirlenir. Bu belirleme yapılırken mevcut kontrol tedbirlerinin etkisi de göz önünde
+        bulundurulur.<br/><br/>
+
+        2) Toplanan bilgi ve veriler ışığında belirlenen riskler; işletmenin faaliyetine ilişkin özellikleri,
+        işyerindeki tehlike veya risklerin nitelikleri ve işyerinin kısıtları gibi faktörler ya da ulusal veya uluslararası
+        standartlar esas alınarak seçilen yöntemlerden biri veya birkaçı bir arada kullanılarak analiz edilir.<br/>
+        
+
+        3) İşyerinde birbirinden farklı işlerin yürütüldüğü bölümlerin bulunması halinde birinci ve ikinci
+        fıkralardaki hususlar her bir bölüm için tekrarlanır.<br/>
+
+        4) Analizin ayrı ayrı bölümlere için yapılması halinde bölümlerin etkileşimleri de dikkate alınarak bir
+        bütün olarak ele alınır ve sonuçlandırılır.<br/>
+
+        5) Analiz edilen riskler, kontrol tedbirlerine karar vermek üzere önemine göre en yüksek risk seviyesine
+        sahip olandan başlanarak sıralanır ve böylece önceliklendirilir.<br/>
+
+   <b>Risk kontrol adımları</b><br/>
+   
+       <b>MADDE 10 – </b> 1) Risklerin kontrolünde şu adımlar uygulanır:<br/><br/>
+
+        a) Planlama:  Analiz edilen risklerin önem derecesine göre büyüklüklerine ve önemine göre sıralı hale
+        getirilen risklerin kontrolü amacıyla bir planlama yapılır.<br/>
+
+        b) Risk kontrol tedbirlerinin kararlaştırılması: Analiz edilen risklerin önem derecesine göre büyüklüklerine ve önemine göre sıralı hale
+        getirilen risklerin kontrolü amacıyla bir planlama yapılır.<br/>
+
+        1) Tehlike veya tehlike kaynaklarının ortadan kaldırılması.<br/>
+
+        2) Tehlikeli olanın, tehlikeli olmayanla veya daha az tehlikeli olanla değiştirilmesi.<br/>
+        
+        3) Riskler ile kaynağında mücadele edilmesi.<br/>
+        c) Risk kontrol tedbirlerinin uygulanması: Kararlaştırılan tedbirlerin iş ve işlem basamakları, işlemi yapacak kişi ya da işyeri bölümü, sorumlu kişi ya da işyeri bölümü, başlama ve bitiş tarihi ile benzeri bilgileri içeren planlar hazırlanır. Bu planlar işverence uygulamaya konulur.<br/>
+        ç) Uygulamaların izlenmesi: Hazırlanan planların uygulama adımları düzenli olarak izlenir, denetlenir ve aksayan yönler tespit edilerek gerekli düzeltici ve önleyici işlemler tamamlanır.<br/>
+        2) Risk kontrol adımları uygulanırken toplu korunma önlemlerine, kişisel korunma önlemlerine göre öncelik verilmesi ve uygulanacak önlemlerin yeni risklere neden olmaması sağlanır.<br/>
+        3) Belirlenen risk için kontrol tedbirlerinin hayata geçirilmesinden sonra yeniden risk seviyesi tespiti yapılır. Yeni seviye, kabul edilebilir risk seviyesinin üzerinde ise bu maddedeki adımlar tekrarlanır.<br/><br/>
+        <b>Dokümantasyon</b><br/>
+
+       <b>MADDE 11 – </b> 1) Risk değerlendirmesi asgarî aşağıdaki hususları kapsayacak şekilde dokümante edilir.<br/><br/>
+       a) İşyerinin unvanı, adresi ve işverenin adı.<br/>
+       b) Gerçekleştiren kişilerin isim ve unvanları ile bunlardan iş güvenliği uzmanı ve işyeri hekimi olanların Bakanlıkça verilmiş belge bilgileri.<br/>
+       c) Gerçekleştirildiği tarih ve geçerlilik tarihi.<br/>
+       ç) Risk değerlendirmesi işyerindeki farklı bölümler için ayrı ayrı yapılmışsa her birinin adı.<br/>
+       d) Belirlenen tehlike kaynakları ile tehlikeler.<br/>
+       e) Tespit edilen riskler.<br/>
+       f) Risk analizinde kullanılan yöntem veya yöntemler.<br/>
+       g) Tespit edilen risklerin önem ve öncelik sırasını da içeren analiz sonuçları.<br/>
+       ğ) Düzeltici ve önleyici kontrol tedbirleri, gerçekleştirilme tarihleri ve sonrasında tespit edilen risk seviyesi.<br/>
+       2) Risk değerlendirmesi dokümanının sayfaları numaralandırılarak; gerçekleştiren kişiler tarafından her sayfası paraflanıp, son sayfası imzalanır ve işyerinde saklanır.<br/>
+       3) Risk değerlendirmesi dokümanı elektronik ve benzeri ortamlarda hazırlanıp arşivlenebilir.<br/><br/>
+       
+             
+
+    </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 18 ================= -->
+  <div class="page-content">
+      <div
+    style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+    <b>MADDE 12 – </b>1) Yapılmış olan risk değerlendirmesi; tehlike sınıfına göre çok tehlikeli, tehlikeli ve az tehlikeli işyerlerinde sırasıyla en geç iki, dört ve altı yılda bir yenilenir.</b></b>
+       2) Aşağıda belirtilen durumlarda ortaya çıkabilecek yeni risklerin, işyerinin tamamını veya bir bölümünü etkiliyor olması göz önünde bulundurularak risk değerlendirmesi tamamen veya kısmen yenilenir.</b>
+       a) İşyerinin taşınması veya binalarda değişiklik yapılması.<br/>
+       b) İşyerinde uygulanan teknoloji, kullanılan madde ve ekipmanlarda değişiklikler meydana gelmesi.<br/>
+       c) Üretim yönteminde değişiklikler olması.<br/>
+       ç) İş kazası, meslek hastalığı veya ramak kala olay meydana gelmesi.<br/>
+       d) Çalışma ortamına ait sınır değerlere ilişkin bir mevzuat değişikliği olması.<br/>
+       e) Çalışma ortamı ölçümü ve sağlık gözetim sonuçlarına göre gerekli görülmesi.<br/>
+       f) İşyeri dışından kaynaklanan ve işyerini etkileyebilecek yeni bir tehlikenin ortaya çıkması.<br/>
+    <div style="text-align:center; font-weight:bold; margin-top:6mm; margin-bottom:3mm;">
+      DÖRDÜNCÜ BÖLÜM
+    </div>
+    <div style="text-align:center; font-weight:bold; margin-bottom:5mm;">
+      Çeşitli ve Son Hükümler
+    </div>
+
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Büyük kaza önleme politika belgesi veya güvenlik raporu hazırlanması gereken işyerlerinde risk değerlendirmesi
+    </div>
+
+    MADDE 13 – (1) Kanunun 29 uncu maddesi gereğince büyük kaza önleme politika belgesi veya güvenlik raporu hazırlanan işyerlerinde; bu belge ve raporlarda değerlendirilmiş riskler, bu Yönetmeliğe göre yapılacak risk değerlendirmesinde dikkate alınarak kullanılır.<br/>
+
+    (2) Risk değerlendirmesinin gerçekleştirilmiş olması; işverenin, işyerinde iş sağlığı ve güvenliğinin sağlanması
+    yükümlülüğünü ortadan kaldırmaz.<br/>
+
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Birden fazla işveren olması durumunda risk değerlendirmesi çalışmaları
+    </div>
+
+    MADDE 14 – (1) Aynı çalışma alanını birden fazla işverenin paylaşması durumunda, yürütülen işler için diğer işverenlerin yürüttüğü işler de göz önünde bulundurularak ayrı ayrı risk değerlendirmesi gerçekleştirilir. İşverenler, risk değerlendirmesi çalışmalarını, koordinasyon içinde yürütür, birbirlerini ve çalışan temsilcilerini tespit edilen riskler konusunda bilgilendirir<br/>
+
+    (2) Birden fazla işyerinin bulunduğu iş merkezleri, iş hanları, sanayi bölgeleri veya siteleri gibi yerlerde, işyerlerinde ayrı ayrı gerçekleştirilen risk değerlendirmesi çalışmalarının koordinasyonu yönetim tarafından yürütülür. Yönetim; bu koordinasyonun yürütümünde, işyerlerinde iş sağlığı ve güvenliği yönünden diğer işyerlerini etkileyecek tehlikeler hususunda gerekli tedbirleri almaları için ilgili işverenleri uyarır. Bu uyarılara uymayan işverenleri Bakanlığa bildirir.<br/>
+
+    (3) İşveren, risk değerlendirmesi çalışmalarında görevlendirilen kişi veya kişilere risk değerlendirmesi ile ilgili ihtiyaç
+    duydukları her türlü bilgi ve belgeyi temin eder.<br/><br/>
+
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Asıl işveren ve alt işveren ilişkisinin bulunduğu işyerlerinde risk değerlendirmesi
+    </div>
+
+    MADDE 15 – (1) Bir işyerinde bir veya daha fazla alt işveren bulunması halinde:<br/>
+
+    a) Her alt işveren yürüttükleri işlerle ilgili olarak, bu Yönetmelik hükümleri uyarınca gerekli risk değerlendirmesi çalışmalarını yapar veya yaptırır.<br/>
+    b) Alt işverenlerin risk değerlendirmesi çalışmaları konusunda asıl işverenin sorumluluk alanları ile ilgili ihtiyaç duydukları bilgi ve belgeler asıl işverence sağlanır.<br/>
+    c) Asıl işveren, alt işverenlerce yürütülen risk değerlendirmesi çalışmalarını denetler ve bu konudaki çalışmaları koordine eder.<br/>
+    (2) Alt işverenler hazırladıkları risk değerlendirmesinin bir nüshasını asıl işverene verir. Asıl işveren; bu risk değerlendirmesi çalışmalarını kendi çalışmasıyla bütünleştirerek, risk kontrol tedbirlerinin uygulanıp uygulanmadığını izler, denetler ve uygunsuzlukların giderilmesini sağlar.<br/>
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Çalışanların bilgilendirilmesi
+    </div>
+
+    <b>MADDE 16 – </b>(1) İşyerinde çalışanlar, çalışan temsilcileri ve başka işyerlerinden çalışmak üzere gelen çalışanlar ve bunların işverenleri; işyerinde karşılaşılabilecek sağlık ve güvenlik riskleri ile düzeltici ve önleyici tedbirler hakkında bilgilendirilir.<br/>
+
+      
+  </div>
+    </div>
+
+   
+  </section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ================= SAYFA 19 ================= -->
+  <section class="page">
+    <div class="page-content">
+      <div
+   style="
+        font-family:'Times New Roman', serif;
+        font-size:11pt;
+        margin:10mm;
+        text-align:justify;
+        text-align-last:left;
+      "
+    >
+    
+        <div style="font-weight:bold; margin-bottom:2mm;">
+      Risk değerlendirmesi rehberleri
+    </div>
+  
+    <b>MADDE 17 – </b>(1)İşverenlere, risk değerlendirmesi ile ilgili yükümlülükleri bakımından yardımcı olmak veya yol göstermek amacıyla risk değerlendirmesi rehberleri hazırlanabilir. Rehberler işyerinde çalışan sayısı ve işyerinin bulunduğu tehlike sınıfı göz önüne alınarak; sektör, meslek veya yapılan işlere özgü olabilir. <br/>
+    
+    (2) Kamu kurum ve kuruluşları, kamu kurumu niteliğindeki meslek kuruluşları, işçi-işveren ve memur sendikaları ile kamu yararına çalışan sivil toplum kuruluşları faaliyet gösterdikleri sektörde rehber çalışmalarında bulunabilir. Bakanlıkça, bu Yönetmelik hükümlerine uygunluğu yönünden değerlendirilerek onaylanan taslaklar, Bakanlık tarafından sektör, meslek veya yapılan işlere özgü risk değerlendirmesi uygulama rehberleri olarak yayımlanır.<br/><br/>
+    
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Geçiş hükmü
+    </div>
+
+    <b>GEÇİCİ MADDE 1 – </b>(1) 6 ncı madde uyarınca oluşturulacak risk değerlendirmesi ekibinde, mezkûr maddenin birinci fıkrasının (b) bendinde sayılanların bulundurulma zorunluluğu Kanunun 38 inci maddesinde belirtilen sürelere uygun olarak aranır.<br/><br/>
+    
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      Yürürlük
+    </div>
+
+    <b>MADDE 18 – </b>(1) Bu Yönetmelik 30/12/2012 tarihinde yürürlüğe girer.<br/><br/>
+
+     <div style="font-weight:bold; margin-bottom:2mm;">
+      Yürütme
+    </div>   
+ 
+    <b>MADDE 19 – </b>(1) Bu Yönetmelik hükümlerini Çalışma ve Sosyal Güvenlik Bakanı yürütür.<br/><br/>
+
+  </div>
+    </div>
+
+   
+  </section>
+
+</body>
+</html>

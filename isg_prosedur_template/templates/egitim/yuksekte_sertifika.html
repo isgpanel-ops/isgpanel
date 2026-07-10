@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>YÜKSEKTE ÇALIŞMA EĞİTİM BELGESİ</title>
+
+  <style>
+    @page { size: A4 landscape; margin: 8mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: "Times New Roman", Times, serif;
+      color: #111;
+    }
+
+    :root{
+      --brand:#1f4e79;
+      --brand2:#2f75b5;
+      --outer:#8fb1d6;
+      --line:#b8c6d8;
+      --soft:#f3f7fb;
+      --scale:0.95;
+    }
+
+    .sheet{
+      width:277mm;
+      height:190mm;
+      border:1px solid var(--outer);
+      margin:0 auto;
+      position:relative;
+      background:#fff;
+      overflow:hidden;
+    }
+
+    .page{
+      width:277mm;
+      height:190mm;
+      padding:5mm;
+      position:absolute;
+      top:0;
+      left:50%;
+      transform:translateX(-50%) scale(var(--scale));
+      transform-origin:top center;
+      padding-bottom:16mm;
+    }
+
+    .header{
+      position:relative;
+      padding:2.4mm 3mm;
+      border:1px solid var(--line);
+      background:linear-gradient(90deg,#fff,var(--soft));
+      min-height:18mm;
+    }
+
+    .logoWrap{
+      position:absolute;
+      left:3mm;
+      top:50%;
+      transform:translateY(-50%);
+    }
+
+    .logoWrap img{
+      max-height:10mm;
+      max-width:48mm;
+      object-fit:contain;
+    }
+
+    .headerCenter{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      text-align:center;
+      width:100%;
+      padding:0 58mm;
+    }
+
+    .belgeAdi{
+      font-size:18pt;
+      font-weight:900;
+      color:var(--brand2);
+      letter-spacing:.5px;
+    }
+
+    .contentGrid{
+      margin-top:4mm;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:5mm;
+    }
+
+    .boxTitle{
+      font-size:10.3pt;
+      font-weight:900;
+      color:var(--brand);
+      padding:1.7mm 2.3mm;
+      border:1px solid var(--line);
+      background:var(--soft);
+    }
+
+    .tblWrap{
+      border:1px solid var(--line);
+      border-top:none;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      font-size:9.6pt;
+    }
+
+    td{
+      border:1px solid #222;
+      padding:1.8mm 2mm;
+      vertical-align:top;
+      word-break:break-word;
+    }
+
+    .left td.label{
+      width:30%;
+      font-weight:900;
+      text-align:center;
+      vertical-align:middle;
+    }
+
+    .left td.value{
+      width:70%;
+      vertical-align:middle;
+    }
+
+    .left td.half,
+    .left td.halfV{
+      width:50% !important;
+      text-align:center;
+      font-weight:900;
+    }
+
+    .left td.halfV{
+      height:12mm;
+      max-height:12mm;
+      overflow:hidden;
+      font-size:9pt;
+      line-height:1.1;
+      word-break:break-word;
+    }
+
+    .paragraph{
+      font-size:9.4pt;
+      line-height:1.15;
+      padding:2.4mm;
+    }
+
+    .signSpace{
+      height:12mm;
+    }
+
+    .signImgWrap{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    .signImg{
+      max-width:150px;
+      max-height:60px;
+      object-fit:contain;
+      object-position:center;
+      display:block;
+    }
+
+    .egitimVerenGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:3mm;
+      padding:2.2mm;
+    }
+
+    .egitimVerenCard{
+      border:1px solid #222;
+    }
+
+    .egitimVerenCard .hdr{
+      font-weight:900;
+      text-align:center;
+      border-bottom:1px solid #222;
+      padding:1.6mm;
+    }
+
+    .egitimVerenCard .body{
+      padding:2mm;
+      min-height:18mm;
+      font-size:9.6pt;
+    }
+
+    .egitimVerenCard .name{
+      font-weight:900;
+    }
+
+    .egitimVerenCard .sign{
+      border-top:1px solid #222;
+      min-height:18mm;
+      padding:1.2mm;
+      font-size:9pt;
+    }
+
+    .cardSignWrap{
+      width:100%;
+      min-height:12mm;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      margin-top:1mm;
+    }
+
+    .cardSignImg{
+      max-width:150px;
+      max-height:60px;
+      object-fit:contain;
+      object-position:center;
+      display:block;
+    }
+
+    .topicHead{
+      display:grid;
+      grid-template-columns:1.5fr 1fr 1fr;
+      font-weight:900;
+      margin-bottom:1mm;
+    }
+
+    .topicHead .tright{
+      text-align:right;
+    }
+
+    .topicItem{
+      font-size:9.2pt;
+      margin:.6mm 0;
+      padding-left:3mm;
+    }
+
+    .belgeNo{
+      margin-top:2mm;
+      padding:1.6mm 2.2mm;
+      border:1px solid var(--line);
+      background:var(--soft);
+      text-align:right;
+      font-weight:900;
+      font-size:10pt;
+    }
+  </style>
+</head>
+
+<body>
+<div class="sheet">
+<div class="page">
+
+  <div class="header">
+    <div class="logoWrap">
+      <img src="{{logoUrl}}" alt="Logo" onerror="this.remove();" />
+    </div>
+    <div class="headerCenter">
+      <div class="belgeAdi">YÜKSEKTE ÇALIŞMA EĞİTİM BELGESİ</div>
+    </div>
+  </div>
+
+  <div class="contentGrid">
+
+    <div>
+      <div class="boxTitle">Katılımcı</div>
+      <div class="tblWrap">
+        <table class="left">
+          <tr>
+            <td class="label">Adı Soyadı</td>
+            <td class="value">{{personelAdSoyad}}</td>
+          </tr>
+          <tr>
+            <td class="label">Görevi</td>
+            <td class="value">{{gorevi}}</td>
+          </tr>
+          <tr>
+            <td colspan="2" class="paragraph">
+              Yukarıda adı geçen çalışan, İş Sağlığı ve Güvenliği eğitimlerini
+              başarıyla tamamlamıştır.
+            </td>
+          </tr>
+          <tr>
+            <td class="label half">Eğitimi Veren Kurum / Kuruluş</td>
+            <td class="halfV autoFont">{{kurumFirma}}</td>
+          </tr>
+          <tr>
+            <td class="label half">Çalışanın Eğitim Aldığı İşyerinin Unvanı</td>
+            <td class="halfV autoFont">{{firmaAdi}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="boxTitle" style="margin-top:3mm;">İşveren / İşveren Vekili</div>
+      <div class="tblWrap">
+        <table class="left">
+          <tr>
+            <td class="label">Adı Soyadı</td>
+            <td class="value">{{isverenAdSoyad}}</td>
+          </tr>
+          <tr>
+            <td class="label">İmza</td>
+            <td class="value signSpace">
+              <div class="signImgWrap">
+                {{ISVEREN_IMZA}}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">Unvanı</td>
+            <td class="value">İŞVEREN / İŞVEREN VEKİLİ</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="boxTitle" style="margin-top:3mm;">Eğitim Veren(ler)</div>
+      <div class="tblWrap">
+        <div class="egitimVerenGrid">
+          <div class="egitimVerenCard">
+            <div class="hdr">İş Güvenliği Uzmanı</div>
+            <div class="body">
+              <div class="name clean-slash">{{uzmanAdSoyad}}</div>
+              <div class="roleText">{{uzmanUnvan}}</div>
+            </div>
+            <div class="sign">
+              <div>İmza</div>
+              <div class="cardSignWrap">
+                {{UZMAN_IMZA}}
+              </div>
+            </div>
+          </div>
+
+          <div class="egitimVerenCard">
+            <div class="hdr">İşyeri Hekimi</div>
+            <div class="body">
+              <div class="name clean-slash">{{hekimAdSoyad}}</div>
+              <div class="roleText">{{hekimUnvan}}</div>
+            </div>
+            <div class="sign">
+              <div>İmza</div>
+              <div class="cardSignWrap">
+                {{HEKIM_IMZA}}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="boxTitle">Yüksekte Çalışma Eğitim Konuları</div>
+      <div class="tblWrap">
+        <table>
+          <tr>
+            <td>
+              <div class="topicHead">
+                <div>1. Genel Konular</div>
+                <div class="tright">Tarih: {{egitimTarih}}</div>
+                <div class="tright">Süre: {{egitimSure}} Saat</div>
+              </div>
+
+              <div class="topicItem">a) Yüksekte çalışmanın tanımı ve ilgili mevzuat</div>
+              <div class="topicItem">b) Yüksekte çalışmalarda tehlikeler ve riskler</div>
+              <div class="topicItem">c) Toplu korunma önlemleri (korkuluk, ağ, platform vb.)</div>
+              <div class="topicItem">ç) KKD kullanımı (emniyet kemeri, bağlantı elemanları, yaşam hattı)</div>
+              <div class="topicItem">d) İskele, merdiven ve geçiş güvenliği</div>
+              <div class="topicItem">e) Acil durum, kurtarma ve tahliye prensipleri</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="belgeNo">Belge No: {{belgeNo}}</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  function autoFitText(el) {
+    let maxFont = 10;
+    let minFont = 6;
+
+    el.style.fontSize = maxFont + "pt";
+
+    while (el.scrollHeight > el.clientHeight && maxFont > minFont) {
+      maxFont -= 0.3;
+      el.style.fontSize = maxFont + "pt";
+    }
+  }
+
+  function cleanSlashNames() {
+    const elements = document.querySelectorAll(".clean-slash");
+    elements.forEach((el) => {
+      const raw = (el.textContent || "").trim();
+      if (!raw) return;
+      el.textContent = raw.split("/")[0].trim();
+    });
+  }
+
+  function runAll() {
+    cleanSlashNames();
+    const elements = document.querySelectorAll(".autoFont");
+    elements.forEach(autoFitText);
+  }
+
+  window.onload = runAll;
+})();
+</script>
+
+</body>
+</html>

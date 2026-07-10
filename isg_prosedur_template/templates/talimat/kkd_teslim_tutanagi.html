@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>KKD Teslim Tutanağı</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      color: #111;
+      background: #fff;
+      font-size: 10.2px;
+    }
+
+    .page {
+      width: 100%;
+      padding: 4.5mm 5mm;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .bordered,
+    .bordered td,
+    .bordered th {
+      border: 1px solid #444;
+    }
+
+    .header-table td {
+      height: 20mm;
+      vertical-align: middle;
+    }
+
+    .logo-box {
+      width: 24%;
+      text-align: center;
+      padding: 3px 4px;
+    }
+
+    .logo-box img {
+      max-width: 100%;
+      max-height: 16mm;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .title-box {
+      width: 76%;
+      text-align: center;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.15;
+      letter-spacing: 0.2px;
+      text-decoration: underline;
+      padding: 4px 8px;
+    }
+
+    .spacer {
+      height: 4mm;
+    }
+
+    .text-box {
+      padding: 6px 8px;
+      min-height: auto;
+    }
+
+    .madde-line {
+      font-weight: 700;
+      font-size: 12.5px;
+      line-height: 1.2;
+      margin: 0 0 5px 0;
+    }
+
+.madde-inline {
+  font-weight: 700;
+  font-size: 12.5px;
+  margin-right: 4px;
+}
+
+    .firma-line {
+      font-weight: 700;
+      letter-spacing: 0.15px;
+    }
+
+    .paragraph {
+      font-size: 10.4px;
+      line-height: 1.3;
+      text-align: justify;
+      margin: 0 0 6px 0;
+    }
+
+    .kkd-table {
+      margin-top: 6px;
+      table-layout: fixed;
+    }
+
+    .kkd-table th,
+    .kkd-table td {
+      border: 1px solid #444;
+      padding: 3px 4px;
+      font-size: 9.2px;
+      line-height: 1.15;
+      vertical-align: middle;
+    }
+
+    .kkd-table thead th {
+      text-align: center;
+      font-weight: 700;
+      padding: 4px 4px;
+    }
+
+    .col-no {
+      width: 6%;
+      text-align: center;
+    }
+
+    .col-malzeme {
+      width: 45%;
+      font-weight: 700;
+    }
+
+    .col-standart {
+      width: 23%;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    .col-adet {
+      width: 8%;
+      text-align: center;
+    }
+
+    .col-imza {
+      width: 18%;
+      text-align: center;
+    }
+
+    .kkd-table tbody tr {
+      height: 6.8mm;
+    }
+
+    .signature-cell {
+      padding: 1px 2px !important;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .signature-cell img {
+      max-width: 100%;
+      width: 100%;
+      max-height: 11mm;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .bottom-wrap {
+      margin-top: 0.8mm;
+    }
+
+    .bottom-table {
+      table-layout: fixed;
+    }
+
+    .bottom-table td,
+    .bottom-table th {
+      border: 1px solid #444;
+      padding: 2px 4px;
+      font-size: 10px;
+      vertical-align: middle;
+    }
+
+    .bottom-table th {
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .bottom-label {
+      font-weight: 700;
+      display: inline-block;
+      min-width: 74px;
+    }
+
+ .bottom-sign-box {
+  height: 18mm;
+  text-align: center;
+  vertical-align: middle;
+  padding: 1px !important;
+}
+
+.bottom-sign-box img {
+  max-width: 100%;
+  max-height: 16mm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+    .muted {
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <table class="bordered header-table">
+      <tr>
+        <td class="logo-box">
+          {{#if logoSrc}}
+            <img src="{{logoSrc}}" alt="Logo" />
+          {{/if}}
+        </td>
+        <td class="title-box">
+          KİŞİSEL KORUYUCU DONANIM<br />
+          (KKD) TESLİM TUTANAĞI
+        </td>
+      </tr>
+    </table>
+
+    <div class="spacer"></div>
+
+    <table class="bordered">
+      <tr>
+        <td class="text-box">
+          <div class="madde-line">
+            1. <span class="firma-line">{{teslimAldimFirmaAdi}}</span>
+          </div>
+
+          <p class="paragraph">
+            İşyerinde İşçi Sağlığı ve İş Güvenliği Kanunu ve Yönetmeliği ile Kişisel Koruyucu
+            Donanımların İş Yerlerinde Kullanılması Hakkında Yönetmelik gereği, kullanılmak
+            üzere tarafıma teslim edilen Kişisel Koruyucu Donanımları (KKD) sağlam olarak
+            <strong>{{teslimAldimTarih}}</strong> tarihinde teslim aldım.
+          </p>
+
+
+          <p class="paragraph">
+  <span class="madde-inline">2.</span>
+           Bu KKD’lerin nerede, ne zaman ve nasıl kullanılacağı konusunda bilgilendirildim. İşim ile ilgili verilen bu Kişisel Koruyucu Donanımları yaptığım işin gereği olarak kullanacağımı, bakımını yapacağımı, usulüne uygun şekilde muhafaza edeceğimi kabul ederim.
+
+Kişisel Koruyucu Donanımların kullanılmaması halinde; iş sağlığı ve güvenliği açısından risk oluşabileceği, işveren tarafından iş sağlığı ve güvenliği mevzuatı ile iş yeri disiplin prosedürleri kapsamında gerekli işlemlerin uygulanabileceği tarafıma bildirilmiştir.
+
+Teslim edilen ekipmanların kasıtlı veya ağır ihmal sonucu zarar görmesi ya da kaybolması durumunda, yürürlükteki mevzuat hükümleri doğrultusunda işlem yapılabileceğini kabul ederim.
+          </p>
+
+          <table class="kkd-table">
+            <thead>
+              <tr>
+                <th class="col-no">S.NO</th>
+                <th class="col-malzeme">MALZEMENİN CİNSİ</th>
+                <th class="col-standart">STANDARDI</th>
+                <th class="col-adet">ADET</th>
+                <th class="col-imza">İMZA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each rows}}
+              <tr>
+                <td class="col-no">{{no}}</td>
+                <td class="col-malzeme">{{malzeme}}</td>
+                <td class="col-standart">{{standart}}</td>
+                <td class="col-adet">{{adet}}</td>
+                <td class="col-imza signature-cell">
+                  {{#if imzaSrc}}
+                    <img src="{{imzaSrc}}" alt="İmza" />
+                  {{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+
+          <div class="bottom-wrap">
+            <table class="bottom-table">
+              <tr>
+                <th style="width: 35%;">TESLİM EDEN</th>
+                <th style="width: 15%;">İMZA</th>
+                <th style="width: 35%;">TESLİM ALAN</th>
+                <th style="width: 15%;">İMZA</th>
+              </tr>
+              <tr>
+                <td>
+                  <div><span class="bottom-label">Ad Soyad:</span> {{isverenAdSoyad}}</div>
+                </td>
+                <td class="bottom-sign-box">
+                  {{#if isverenImza}}
+                    <img src="{{isverenImza}}" alt="İşveren İmza" />
+                  {{/if}}
+                </td>
+                <td>
+                  <div><span class="bottom-label">Ad Soyad:</span> {{teslimAlanAdSoyad}}</div>
+                  <div style="margin-top: 4px;"><span class="bottom-label">TC Kimlik No:</span> {{teslimAlanTc}}</div>
+                </td>
+                <td class="bottom-sign-box">
+                  {{#if teslimAlanImza}}
+                    <img src="{{teslimAlanImza}}" alt="Teslim Alan İmza" />
+                  {{/if}}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

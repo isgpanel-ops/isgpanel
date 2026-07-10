@@ -1,0 +1,3018 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+
+  <style>
+    /* Prosedür ile aynı yazdırma alanı */
+    @page { size: A4 landscape; margin: 0; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Times New Roman", serif;
+      font-size: 11pt;
+    }
+
+    /* Her sayfa */
+    .page {
+      width: 100%;
+      height: 190mm; /* içerik yüksekliği (footer JS için boşluk kalır) */
+      box-sizing: border-box;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    /* İçerik alanı */
+    .page-content {
+      padding: 12mm 14mm 0 14mm;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    /* tablo taşmasın */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    tr, td, th {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================= SAYFA 1 ================= -->
+  <section class="page">
+     <div class="page-content">
+      <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+     <!-- ÜST BAŞLIK -->
+    <div style="text-align:center; font-weight:bold; font-size:14pt; margin-bottom:4mm;">
+      ACİL DURUM PLANI
+    </div>
+
+    <!-- 1. İŞYERİ BİLGİLERİ -->
+    <div style="font-weight:bold; margin-bottom:2mm;">
+      1. İŞYERİ BİLGİLERİ
+    </div>
+
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        font-size:10pt;
+        margin-bottom:6mm;
+      "
+      border="1"
+    >
+      <tr>
+        <td style="width:35%; padding:2mm; font-weight:bold;">İŞYERİ ADI/UNVANI</td>
+        <td style="padding:2mm;">{{firma.firmaAdi}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">ADRES</td>
+        <td style="padding:2mm;">{{firma.adres}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İLETİŞİM</td>
+        <td style="padding:2mm;">{{firma.iletisim}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞVERENİN ADI SOYADI/UNVANI</td>
+        <td style="padding:2mm;">{{kisiler.isveren}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">TEHLİKE SINIFI</td>
+        <td style="padding:2mm;">{{firma.tehlikeSinifi}}</td>
+      </tr>
+
+      <!-- ÇALIŞAN SAYISI (ALT TABLOLU) -->
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">ÇALIŞAN SAYISI</td>
+        <td style="padding:0;">
+          <table style="width:100%; border-collapse:collapse; font-size:10pt;" border="0">
+            <tr>
+              <td style="width:20%; padding:2mm; border-left:0; border-top:0; border-bottom:0; border-right:1px solid #000; font-weight:bold; text-align:center;">ERKEK</td>
+              <td style="width:20%; padding:2mm; border-top:0; border-bottom:0; border-right:1px solid #000; font-weight:bold; text-align:center;">KADIN</td>
+              <td style="width:20%; padding:2mm; border-top:0; border-bottom:0; border-right:1px solid #000; font-weight:bold; text-align:center;">ÇOCUK</td>
+              <td style="width:20%; padding:2mm; border-top:0; border-bottom:0; border-right:1px solid #000; font-weight:bold; text-align:center;">ÇIRAK</td>
+              <td style="width:20%; padding:2mm; border-top:0; border-bottom:0; border-right:0; font-weight:bold; text-align:center;">ÖĞRENCİ</td>
+            </tr>
+            <tr>
+              <td style="padding:2mm; border-left:0; border-top:1px solid #000; border-bottom:0; border-right:1px solid #000; text-align:center;">{{firma.calisanErkek}}</td>
+              <td style="padding:2mm; border-top:1px solid #000; border-bottom:0; border-right:1px solid #000; text-align:center;">{{firma.calisanKadin}}</td>
+              <td style="padding:2mm; border-top:1px solid #000; border-bottom:0; border-right:1px solid #000; text-align:center;">{{firma.calisanCocuk}}</td>
+              <td style="padding:2mm; border-top:1px solid #000; border-bottom:0; border-right:1px solid #000; text-align:center;">{{firma.calisanCirak}}</td>
+              <td style="padding:2mm; border-top:1px solid #000; border-bottom:0; border-right:0; text-align:center;">{{firma.calisanOgrenci}}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- DEĞERLENDİRMEYE KATILANLAR BAŞLIĞI -->
+      <tr>
+        <td
+          colspan="2"
+          style="
+            padding:2mm;
+            font-weight:bold;
+            text-align:center;
+          "
+        >
+          DEĞERLENDİRMEYE KATILANLAR
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞVEREN/İŞVEREN VEKİLİ</td>
+        <td style="padding:2mm;">{{kisiler.isveren}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞ GÜVENLİĞİ UZMANI</td>
+        <td style="padding:2mm;">{{kisiler.uzman}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">İŞ YERİ HEKİMİ</td>
+        <td style="padding:2mm;">{{kisiler.hekim}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">ÇALIŞAN TEMSİLCİSİ</td>
+        <td style="padding:2mm;">{{kisiler.temsilci}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">DESTEK ELEMANI</td>
+        <td style="padding:2mm;">{{kisiler.destek}}</td>
+      </tr>
+
+      <tr>
+        <td style="padding:2mm; font-weight:bold;">BİLGİ SAHİBİ KİŞİ</td>
+        <td style="padding:2mm;">{{kisiler.bilgiSahibi}}</td>
+      </tr>
+    </table>
+  </div>
+      
+
+    </div>
+  </section>
+
+
+
+  <!-- ================= SAYFA 2 ================= -->
+  <section class="page">
+     <div class="page-content">
+      <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+<div style="page-break-before: always;"></div>
+      <!-- 2. İŞYERİ İÇİN BELİRLENEN ACİL DURUMLAR -->
+    <div style="font-weight:bold; margin-bottom:3mm;">
+      2.&nbsp; İŞYERİ İÇİN BELİRLENEN ACİL DURUMLAR
+    </div>
+
+    <div style="font-size:10.5pt; line-height:1.55; margin-left:4mm;">
+      <div>a)&nbsp; YANGIN</div>
+      <div>b)&nbsp; PATLAMA VE PARLAMA</div>
+      <div>c)&nbsp; YANIK</div>
+      <div>d)&nbsp; ELEKTRİK ÇARPASI</div>
+      <div>e)&nbsp; İŞ KAZASI</div>
+      <div>f)&nbsp; TRAVMA</div>
+      <div>g)&nbsp; BESİN ZEHİRLENMESİ</div>
+      <div>h)&nbsp; GAZ DUMAN ZEHİRLENMESİ</div>
+      <div>ı)&nbsp; KİMYASAL SIZINTI – DÖKÜNTÜ</div>
+      <div>i)&nbsp; DEPREM</div>
+      <div>j)&nbsp; SABOTAJ</div>
+      <div>k)&nbsp; AŞIRI SOĞUK</div>
+      <div>l)&nbsp; HORTUM / FIRTINA</div>
+      <div>m)&nbsp; YILDIRIM DÜŞMESİ</div>
+      <div>n)&nbsp; ÇEVRE KİRLİLİĞİ</div>
+      <div>o)&nbsp; HIRSIZLIK</div>
+      <div>ö)&nbsp; YÜKSEKTEN DÜŞME</div>
+      <div>p)&nbsp; EKLEM BACAKLI VEYA SÜRÜNGEN ISIRMASI / SOKMASI</div>
+    </div>
+
+    <!-- 3. TOPLANMA YERİ -->
+    <div style="font-weight:bold; margin-top:7mm; margin-bottom:2mm;">
+      3.&nbsp; TOPLANMA YERİ
+    </div>
+
+    <div style="margin-top:1mm; line-height:1.45;">
+      İş yeri alanında tahliye gerektiren bir durumda; tüm çalışanlar belirlenen acil
+      toplanma bölgesinde toplanacaklardır.
+    </div>
+
+    <!-- ✅ TOPLANMA YERİ FOTOĞRAFI -->
+    <div style="margin-top:4mm; border:1px solid #000; padding:2.5mm;">
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        Toplanma Yeri Fotoğrafı
+      </div>
+
+      <!-- yükseklik: 80mm -->
+      <div
+        style="
+          width:100%;
+          height:80mm;
+          border:1px solid #000;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          overflow:hidden;
+        "
+      >
+        <img
+          src="{{toplanmaFotoUrl}}"
+          alt="Toplanma Yeri Fotoğrafı"
+          style="
+            width:100%;
+            height:100%;
+            object-fit:contain;
+          "
+        />
+      </div>
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+<div style="page-break-before: always;"></div>
+
+
+  <!-- ================= SAYFA 3 ================= -->
+  <section class="page">
+
+
+     <!-- ÜST İÇERİK (SAYFA 2 İLE AYNI MARGIN) -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+
+    <!-- 4. İŞYERİNİ DIŞARIDAN ETKİLEYEBİLECEK DURUMLAR -->
+    <div style="font-weight:bold; margin-bottom:3mm;">
+      4.&nbsp; İŞYERİNİ DIŞARIDAN ETKİLEYEBİLECEK DURUMLAR
+    </div>
+
+    <div style="font-size:10.5pt; line-height:1.55; margin-left:4mm;">
+      <div>a)&nbsp; Yakın çevrede bulunan sanayi tesisleri, depolar veya işletmelerden kaynaklanabilecek yangın, patlama ve kimyasal sızıntılar</div>
+      <div>b)&nbsp; İşyerine komşu alanlarda meydana gelebilecek trafik kazaları</div>
+      <div>c)&nbsp; Elektrik, doğalgaz ve su gibi altyapı hatlarında meydana gelebilecek arızalar</div>
+      <div>d)&nbsp; Şiddetli yağış, fırtına, sel, aşırı sıcak veya soğuk gibi doğal afetler</div>
+      <div>e)&nbsp; Toplumsal olaylar, sabotaj ve benzeri insan kaynaklı dış tehditler</div>
+    </div>
+
+    <!-- 5. ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER -->
+    <div style="font-weight:bold; margin-top:7mm; margin-bottom:2mm;">
+      5.&nbsp; ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER
+    </div>
+
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        table-layout:fixed;
+        font-size:10.5pt;
+      "
+    >
+      <tr>
+        <th style="border:1px solid #000; padding:2mm; width:30%;">
+          BELİRLENEN ACİL DURUM
+        </th>
+        <th style="border:1px solid #000; padding:2mm; width:70%;">
+          ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER
+        </th>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          YANGIN
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+          Yangın algılama ve alarm sistemleri mevcuttur. Yangın söndürme ekipmanları
+          uygun yerlere yerleştirilmiştir. Çalışanlara yangın konusunda eğitim
+          verilmekte ve yılda en az bir kez yangın tatbikatı yapılmaktadır.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          KİMYASAL SIZINTI / DÖKÜNTÜ
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+          Kimyasal maddelere ait güvenlik bilgi formları (GBF) bulundurulmaktadır.
+          Dökülme veya sızıntı durumunda alan izole edilir ve yalnızca eğitimli
+          personel tarafından müdahale edilir.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          DEPREM
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+          Deprem anında yapılması gerekenler konusunda çalışanlara bilgilendirme
+          yapılmaktadır. Düzenli olarak acil durum tatbikatları gerçekleştirilmektedir.
+        </td>
+      </tr>
+  
+        <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          PATLAMA VE PARLAMA
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+          Yanıcı ve parlayıcı maddeler güvenli alanlarda muhafaza edilir. Uygun
+          havalandırma sağlanır. Elektrik tesisatı ve ekipmanlar periyodik olarak
+          kontrol edilir. Kıvılcım oluşturabilecek işlemler için gerekli iş izinleri
+          uygulanır. Yetkisiz personelin riskli alanlara girişi engellenir. Acil
+          durum ekipleri bilgilendirilir ve tatbikatlar yapılır.
+        </td>
+      </tr>
+            <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+         BESİN ZEHİRLENMESİ 
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+         Gıda güvenliği kurallarına uyulur. Yemek hizmeti alınan firmaların
+          hijyen şartları takip edilir. Personel hijyen eğitimi alır. Şüpheli
+          durumda ilgili birimlere bilgi verilir ve sağlık kuruluşuna sevk sağlanır.
+        </td>
+      </tr>
+           <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+         İŞ KAZASI
+        </td>
+        <td style="border:1px solid #000; padding:2mm;">
+          Çalışanlara iş sağlığı ve güvenliği eğitimleri verilir. Tehlikeli
+          davranışlar engellenir. Olay halinde acil durum koordinatörüne haber verilir.
+          İlk yardım ekibi müdahale eder ve gerekli ise sağlık kuruluşuna sevk edilir.
+        </td>
+      </tr>
+    
+        <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          ELEKTRİK ÇARPASI
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Elektrik tesisatı ve panolar periyodik kontrol edilir. Kaçak akım rölesi
+          kullanılır. Yetkisiz kişilerin müdahalesi engellenir. Arıza durumunda
+          elektrik yetkilisine haber verilir. İlk yardım uygulanır, gerekli ise
+          sağlık kuruluşuna sevk sağlanır.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          GAZ / DUMAN ZEHİRLENMESİ
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Ortam havalandırması sağlanır. Gaz kaçağı şüphesinde alan hızla boşaltılır,
+          enerji kaynakları güvenli şekilde kapatılır. Acil durum ekiplerine haber
+          verilir. Etkilenen kişi temiz havaya çıkarılır ve ilk yardım uygulanır.
+          Gerekli ise 112 çağrılır.
+        </td>
+      </tr>
+
+    </table>
+
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 4 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- ÜST İÇERİK (SAYFA 2 İLE AYNI MARGIN) -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <!-- 5. ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER (DEVAM) -->
+
+
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        table-layout:fixed;
+        font-size:10.5pt;
+      "
+    >
+      <tr>
+        <th style="border:1px solid #000; padding:2mm; width:30%;">
+          BELİRLENEN ACİL DURUM
+        </th>
+        <th style="border:1px solid #000; padding:2mm; width:70%;">
+          ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER
+        </th>
+      </tr>
+
+     
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          YANIK
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Yanık riskine karşı KKD kullanılır. Yanık durumunda ilk yardım uygulanır
+          ve derhal sağlık kuruluşuna sevk edilir. Kimyasal yanıklarda ilgili GBF’ye
+          göre işlem yapılır.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          TRAVMA
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Travma durumunda hareket ettirmeden değerlendirme yapılır. İlk yardım ekibi
+          müdahale eder. Gerekli durumlarda 112 çağrılır ve en yakın sağlık kuruluşuna
+          sevk sağlanır.
+        </td>
+      </tr>
+    
+             <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          SABOTAJ
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Sabotaj ve benzeri risklere karşı kontrollü giriş-çıkış uygulanır, yetkisiz
+          kişilerin sahaya girişi engellenir. Şüpheli durumlar derhal kolluk
+          kuvvetlerine ve ilgili birimlere bildirilir. Acil durum planı kapsamında
+          tahliye ve toplanma prosedürleri uygulanır.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          AŞIRI SOĞUK
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Çalışanlara uygun kişisel koruyucu donanım sağlanır. Zemin, giriş-çıkış ve
+          yürüyüş yollarında buzlanmaya karşı düzenli temizlik yapılır. Isınma
+          imkânları ve sıcak içecek temini sağlanır. Gerekli durumlarda çalışma
+          süreleri ve dinlenme aralıkları düzenlenir.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          HORTUM / FIRTINA
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Meteorolojik uyarılar takip edilir. Açık alan çalışmaları mümkünse
+          durdurulur. Gevşek malzemeler sabitlenir. Çalışanlar güvenli kapalı alanlara
+          yönlendirilir. Elektrik hatları ve ekipmanlar kontrol edilir, acil durumda
+          ilgili birimlere haber verilir.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          YILDIRIM DÜŞMESİ
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Yıldırım riski olan hava koşullarında açık alanda çalışma sınırlandırılır.
+          Çalışanlar kapalı ve güvenli alanlara alınır. Metal ekipmanlardan uzak
+          durulur. Paratoner ve topraklama sistemleri periyodik kontrol edilir.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          ÇEVRE KİRLİLİĞİ
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Çevreye döküntü/sızıntı risklerine karşı uygun depolama yapılır. Olay
+          halinde alan izole edilir, sızıntı kaynağı güvenli şekilde durdurulur.
+          Emilim malzemeleri kullanılır ve atıklar mevzuata uygun şekilde bertaraf
+          edilir. Gerekli bildirimler yapılır.
+        </td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          HIRSIZLIK
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Giriş-çıkışlar kontrollü tutulur, güvenlik kamera sistemi ve/veya
+          güvenlik görevlisi ile izleme sağlanır. Şüpheli durumda kolluk kuvvetlerine
+          haber verilir. Olay kayıt altına alınır ve ilgili kişilere bildirilir.
+        </td>
+      </tr>
+
+            <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          EKLEM BACAKLI VEYA SÜRÜNGEN ISIRMASI / SOKMASI
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          Isırılan/sokulan bölge hareket ettirilmeden değerlendirilir. Alerjik reaksiyon
+          belirtileri izlenir. İlk yardım uygulanır ve en kısa sürede sağlık kuruluşuna
+          sevk sağlanır. Gerekli durumlarda 112 çağrılır.
+        </td>
+      </tr>
+
+    </table>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 5 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+    <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <!-- ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER TABLOSU (AYNEN KORUNDU) -->
+    <table
+      style="
+        width:100%;
+        border-collapse:collapse;
+        table-layout:fixed;
+        font-size:10.5pt;
+      "
+    >
+      <tr>
+        <th style="border:1px solid #000; padding:2mm; width:30%;">
+          BELİRLENEN ACİL DURUM
+        </th>
+        <th style="border:1px solid #000; padding:2mm; width:70%;">
+          ÖNLEYİCİ VE SINIRLANDIRICI TEDBİRLER
+        </th>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:2mm; text-align:center; font-weight:bold;">
+          YÜKSEKTEN DÜŞME
+        </td>
+        <td style="border:1px solid #000; padding:2mm; line-height:1.35;">
+          <div style="margin-left:4mm;">
+            • Mümkün olduğunca çalışmalar zeminde yapılır, yüksekte çalışma zorunlu ise gerekli tedbirler alınır.<br/>
+            • İskele, platform ve merdivenler çalışmaya başlamadan kontrol edilir.<br/>
+            • Yüksekte çalışma sırasında emniyet kemeri ve uygun bağlantı noktaları kullanılır.<br/>
+            • Malzeme ve aletlerin düşmesine karşı önlem alınır.<br/>
+            • Çalışma alanı altı bariyerlerle çevrilir, yetkisiz giriş engellenir.<br/>
+            • Yükseklik korkusu, baş dönmesi vb. rahatsızlığı olan kişiler yüksekte çalıştırılmaz.<br/>
+            • Acil durumda ilk yardım ve 112 bilgilendirmesi yapılır.
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- BOŞLUK -->
+    <div style="height:5mm;"></div>
+
+    <!-- 6. MÜDAHALE YÖNTEMLERİ (SAYFA 5'E DEVAM) -->
+    <div style="text-align:justify;">
+
+      <div style="font-weight:bold; margin-bottom:2mm; text-align:left;">
+        6.&nbsp; MÜDAHALE YÖNTEMLERİ
+      </div>
+
+      <div style="font-weight:bold; margin-left:4mm; margin-bottom:3mm; text-align:left;">
+        a)&nbsp; YANGIN
+      </div>
+
+      <div style="font-weight:bold; margin-bottom:3mm; text-align:left;">
+        YANGININ NEDENLERİ
+      </div>
+
+      <div style="font-size:10.5pt; line-height:1.55;">
+
+        <p>
+          <strong>1.&nbsp; Korunma önlemlerinin alınmaması</strong><br/>
+          Yangın, elektrik kontağı, ısıtma sistemleri, doğalgaz, LPG tüpleri,
+          parlayıcı-patlayıcı maddelerin yeterince korunmaya alınmamasından doğmaktadır.
+          Elektrik enerjisi akımının teknik koşullara göre yapılması, LPG tüplerinin ve
+          doğalgazın doğru kullanılması, bacaların temizlenmesi ve parlayıcı-patlayıcı
+          maddeler için gerekli önlemin alınması halinde yangın afetinde büyük ölçüde
+          azalma olacaktır.
+        </p>
+
+        <p>
+          <strong>2.&nbsp; Bilgisizlik</strong><br/>
+          Yangına karşı önlemlerin nasıl alınacağını bilmek gerekir. Elektrikli aletlerin
+          doğru kullanımını bilmemek, soba ve kalorifer sistemlerinin yanlış yerleştirilmesi,
+          tavan arasına ve çatıya kolay tutuşabilecek eşyalar koymak yangını davet eder.
+          Yangının oluşumunu önlemek ve yangını söndürmek için, yangın olayını öğrenelim.
+        </p>
+
+        <p>
+          <strong>3.&nbsp; İhmal</strong><br/>
+          Yangın konusunda bilgili olmak yetmez. Söndürülmeden atılan bir kibrit veya sigara
+          izmariti, kapatmayı unuttuğumuz LPG tüpü, ateşi söndürülmemiş ocak, fişi prizde
+          unutulan her türlü cihazın ihmâlinden büyük yangınlar çıkabilir. Bu nedenle,
+          yangına karşı dikkatli ve titiz olmamız gerekir.
+        </p>
+
+        <p>
+          <strong>4.&nbsp; Kazalar</strong><br/>
+          İstem dışı olayların bazılarından yangın çıkabilir. Yangın konusunda yeterli
+          düzeyde bilgilenmek, bu tür olaylarda nasıl hareket edeceğimize yardımcı olur.
+        </p>
+   
+        <p>
+          <strong>5.&nbsp; Sıçrama</strong><br/>
+        Kontrol altındaki bir ateşin, ihmal veya bilgisizlik sonucu yayılarak
+        veyahut parlayıp-patlayarak sıçraması her zaman mümkündür.
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 6 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <p>
+        <strong>6.&nbsp; Sabotaj</strong><br/>
+        Bazı insanlar, çeşitli amaç ve kazanç uğruna kasıtlı olarak yangın çıkarırlar.
+        Bu tür olaylara karşı gerekli önlemler alınmalıdır.
+      </p>
+
+      <p>
+        <strong>7.&nbsp; Doğa olayları</strong><br/>
+        Rüzgârlı havalarda kuru dalların birbirine sürtmesi, yıldırım düşmesi ve benzeri
+        doğa olayları sonucu yangınlar çıkabilir.
+      </p>
+
+      <p>
+        <strong>8.&nbsp; Parlama</strong><br/>
+        Hızlı yanma esnasında yanan cismin ani şekilde enerji çıkararak patlama veya
+        parlamalar şeklinde olan yanmadır.
+      </p>
+
+      <p>
+        <strong>9.&nbsp; Patlama</strong><br/>
+        Yüksek sıcaklık üreten ve genellikle büyük miktarlarda gaz oluşmasına neden olan
+        hızlı bir kimyasal reaksiyondur.
+      </p>
+
+      <p>
+        <strong>YANGIN:</strong><br/>
+        Maddenin ısı ve oksijenle birleşmesi sonucu oluşan kimyasal bir olaydır.
+        Yanmanın oluşabilmesi için yanıcı madde, ısı ve oksijenin bir arada bulunması gerekir.
+      </p>
+
+      <!-- Yangın Üçgeni -->
+      <div style="text-align:center; margin:4mm 0 5mm 0;">
+        <img
+  src="{{acil.yanginUcgeni}}"
+  alt="Yangın Üçgeni"
+  style="
+    max-width:70%;
+    height:40mm;
+    object-fit:contain;
+  "
+/>
+      </div>
+
+      <p>
+        <strong>Yangın Sınıfları:</strong><br/>
+        Yangınlar, yanıcı maddenin fiziksel özelliklerine göre sınıflandırılır.
+      </p>
+
+      <!-- Yangın Sınıfları Görseli -->
+      <div style="text-align:center; margin-top:3mm;">
+       <img
+  src="{{acil.yanginSiniflari}}"
+  alt="Yangın Sınıfları"
+  style="
+    max-width:85%;
+    height:55mm;
+    object-fit:contain;
+  "
+/>
+      </div>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 7 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <p>
+        <strong>A Sınıfı Katı Yanıcı Maddeler Yangını (ADİ YANGINLAR):</strong>
+        Artık olarak karbon tabakası bırakan ve genelde korlu olarak yanan katı yanıcı maddelerin tutuşması ile oluşan
+        yangınlardır. Metallerin dışında, bu yanıcılar katı maddeleri kapsar. Odun, kömür, kâğıt, tekstil maddeleri,
+        kauçuk bazı örneklerdir. Bu yanıcılar için yanmaya devam etme özellikleri, yani yanma yüzeyde sınırlı olmayıp
+        maddenin iç kısımlarına doğru devam etmektedir. Naftalin, zift gibi yanarak eriyen A sınıfı içinde değerlendirilir.
+        Bu tip yangınlarda yanma derinliğine nüfuz etmeden yüzeyde oluşur.
+      </p>
+
+      <p>
+        <strong>B Sınıfı Sıvı Yanıcı Maddeler Yangını (AKARYAKIT YANGINLARI):</strong>
+        Yanıcı sıvıların oluşturduğu bu yangınlar genellikle petrol türevi ve bitkisel yağların tutuşması ile oluşan
+        yangınlardır. Ancak B sınıfı yangınları yine yanıcı madde özelliğine göre kendi içinde de üç kategoride düşünmek
+        doğru bir değerlendirmedir: Birincisi su ile karışmayan ham petrol, benzin, gaz yağı, makine yağları, laklar vb.
+        sıvılar. İkincisi su ile hemen karışan (suda çözülen) alkol vb. sıvılar. Üçüncüsü ise katran, asfalt, gres vb.
+        ağır yağlardır. B sınıfı yangınlarda yanma yüzeydedir. Yanı ısınan sıvıdan çıkan buharlar yanar.
+      </p>
+
+      <p>
+        <strong>C Sınıfı Gaz Yanıcı Maddeler Yangını (GAZ YANGINLARI):</strong>
+        Yanabilen gazların oluşturduğu yangınlardır. Bütan, eter, aseton, likit petrol gazı (LPG veya SPG) havagazı,
+        doğal gaz vb. gaz yanıcılar bu sınıfa örnek bazı gazlardır. C sınıfı yangınlarda yanma gazın sızıntı yüzeydedir.
+      </p>
+
+      <p>
+        Gaz basıncının atmosfer basıncından fazla olduğu yerlerde böyle devam eder. Gaz ve atmosfer basıncının eşit
+        olduğu yerlerde yanma bölgede devam eder. Gaz, depo vb. kapalı yerlerde ise bu durumda yanma bölgesindeki hızlı
+        yanma basıncının ne denecek açıklık (havalandırma) yoksa patlama kaçınılmazdır. Elektrikli makine ve hassas
+        cihazların yangınlarını da bu sınıfa dâhil edebiliriz.
+      </p>
+
+      <p>
+        <strong>D Sınıfı Hafif Metal Yangınları (METAL YANGINLARI):</strong>
+        Özel yangınlar olarak da nitelendirilen D sınıfı yangınlar gelişen teknoloji ile endüstriyel çevrelerde
+        görülmeye başlayan yangınlardır. Bu yangınlar Magnezyum, Alüminyum, sodyum, zirkonyum vb. hafif metallerin
+        yanması ile oluşur.
+      </p>
+
+      <div style="margin-top:3mm; font-weight:bold;">
+        Yangın Söndürme Prensipleri:
+      </div>
+
+      <p style="margin-top:1mm;">
+        Yangının sınıfı ne olursa olsun söndürme prensipleri ortaktır. Bu prensip yanmayı meydana getiren üç unsurdun
+        yanıcı maddeyi, oksijeni veya ısıyı ortadan kaldırmaktır.
+      </p>
+
+      <!-- TABLO -->
+      <table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10pt; margin-top:2mm;">
+        <tr>
+          <th style="border:1px solid #000; padding:2mm; width:33.33%; text-align:center;">
+            Yanıcı Maddeyi Yok Etmek
+          </th>
+          <th style="border:1px solid #000; padding:2mm; width:33.33%; text-align:center;">
+            Isıyı Yok Etmek
+          </th>
+          <th style="border:1px solid #000; padding:2mm; width:33.33%; text-align:center;">
+            Oksijeni Yok Etmek
+          </th>
+        </tr>
+
+        <tr>
+          <td style="border:1px solid #000; padding:2mm;">Yanıcı maddeyi ortadan kaldırmak</td>
+          <td style="border:1px solid #000; padding:2mm;">Su ile soğutmak</td>
+          <td style="border:1px solid #000; padding:2mm;">Örtmek</td>
+        </tr>
+
+        <tr>
+          <td style="border:1px solid #000; padding:2mm;">Yanıcı maddeyi ısıdan ayırmak</td>
+          <td style="border:1px solid #000; padding:2mm;">Yanıcı maddeyi dağıtmak</td>
+          <td style="border:1px solid #000; padding:2mm;">Boğmak</td>
+        </tr>
+
+        <tr>
+          <td style="border:1px solid #000; padding:2mm;">Ara boşluğu meydana getirmek</td>
+          <td style="border:1px solid #000; padding:2mm;">Kuvvetli üflemek</td>
+          <td style="border:1px solid #000; padding:2mm;">Oksijeni azaltmak</td>
+        </tr>
+      </table>
+
+
+
+    </div>
+  </div>
+
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 8 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <p style="margin-top:0;">
+        <strong>BİNALARIN YANGINDAN KORUNMASI HAKKINDA YÖNETMELİK</strong><br/>
+        <strong>MADDE 99- (1)</strong>
+        Taşınabilir söndürme tüplerinin tipi ve sayısı, mekânlarda var olan durum ve risklere göre belirlenir. Buna göre;
+        <br/>a) A sınıfı yangın çıkması muhtemel yerlerde, çok maksatlı kuru kimyevi tozlu veya sulu,
+        <br/>b) B sınıfı yangın çıkması muhtemel yerlerde, kuru kimyevi tozlu, karbondioksitli veya köpüklü,
+        <br/>c) C sınıfı yangın çıkması muhtemel yerlerde, kuru kimyevi tozlu veya karbondioksitli,
+        <br/>ç) D sınıfı yangın çıkması muhtemel yerlerde, kuru metal tozlu,
+      </p>
+
+      <p style="margin-top:1mm;">
+        söndürme tüpleri bulundurulur.
+      </p>
+
+      <p style="margin-top:1mm;">
+        <strong>(2)</strong> Düşük tehlike sınıfında her 500 m², orta tehlike ve yüksek tehlike sınıfında her 250 m² yapı
+        inşaat alanı için 1 adet olmak üzere, uygun tipte 6 kg’lık yangın söndürme tüpü bulundurulması gerekir.
+      </p>
+
+      <p style="margin-top:1mm;">
+        <strong>(3)</strong> Otoparklarda, depolarda, tesisat dairelerinde ve benzeri yerlerde ayrıca tekerlekli tip
+        söndürme tüpü bulundurulması mecburidir.
+      </p>
+
+      <p style="margin-top:1mm;">
+        <strong>(4)</strong> Söndürme tüpleri dışarıda durur, geçiş boşluklarının yakınına ve dengeli dağıtılarak,
+        görülebilecek şekilde işaretlenir ve her durumda kolayca girişilebilir yerlere, yangın dolaplarının içine veya
+        yakınına yerleştirilir. Söndürme tüplerine ulaşma mesafesi en fazla 25 m olur.
+      </p>
+
+      <p style="margin-top:1mm;">
+        <strong>(5)</strong> Taşınabilir söndürme tüpleri için, söndürücünün duvara bağlantı asma halkası duvardan
+        kolaylıkla alınabilecek ve zeminden asma halkasına olan uzaklığı yaklaşık 90 cm’yi aşmayacak şekilde montaj yapılır.
+      </p>
+
+      <p style="margin-top:1mm;">
+        <strong>(6)</strong> Arabalı yangın söndürücülerin TS 11749- EN 1866 ve diğer taşınabilir yangın söndürme
+        tüplerinin TS 862- EN 3 kalite belgeli olması şarttır.
+      </p>
+
+      <!-- Görsel: Yangın Söndürmede Doğru / Yanlış -->
+      <div style="text-align:center; margin:4mm 0 0 0;"><img
+  src="{{acil.yanginSondurmeDogruYanlis}}"
+  alt="Yangın Söndürmede Doğru / Yanlış"
+  style="
+    max-width:96%;
+    height:88mm;
+    object-fit:contain;
+    display:inline-block;
+  "
+/>
+      </div>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 9 ================= -->
+  <section class="page">
+    <div class="page-content">
+<!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        Yangın Söndürme Tüpü Kullanımı
+      </div>
+
+      <ol style="margin:0; padding-left:5mm;">
+        <li style="margin-bottom:2mm;">
+          Elle taşınabilen seyyar yangın söndürücü tüpleri, mümkünse duvar/direk üzerine yerden en fazla 90 cm yükseklikte asılacaktır.
+          Ancak; asılma imkânı yoksa paslanmayı önlemek üzere tüp altlarına tahta/plastikten altlık konulacaktır.
+        </li>
+        <li style="margin-bottom:2mm;">
+          Gece ve gündüz şartlarında bu tür cihazların görünmeleri için fosforik uyarıcı tabelalar kullanılmalıdır.
+        </li>
+        <li style="margin-bottom:2mm;">
+          Yangın söndürme cihazının üzerine numara basılmalı ve acil eylem planları üzerinde yerleri gösterilerek işaretlenmelidir.
+        </li>
+        <li style="margin-bottom:2mm;">
+          Yangın kaçış yollarına, yangın duvar vanalarının bulunduğu yerlere ve kapıların ön ve arkalarına malzeme bırakılmayacak.
+        </li>
+        <li style="margin-bottom:2mm;">
+          Yangın söndürme cihazlarını gelişi güzel yerlere koymayın, kapı önlerine takoz olarak kullanılmayacak.
+        </li>
+        <li style="margin-bottom:2mm;">
+          Çöp kutuları kontrollü olarak dolmasını beklemeden her gün akşam boşaltılacaktır.
+        </li>
+        <li style="margin-bottom:0;">
+          Yangın mahallerinde kurtarılması gereken eşya, dolap ve kasa üzerine <strong>"YANGINDA İLK ÖNCE KURTARILACAKTIR"</strong> yazılı etiketler konulacaktır.
+        </li>
+      </ol>
+
+      <!-- Görsel -->
+      <div style="text-align:center; margin:5mm 0 0 0;">
+        <img
+          src="{{acil.yanginSondurmeTupuNasilKullanilir}}"
+          alt="Yangın Söndürme Tüpü Nasıl Kullanılır?"
+          style="max-width:98%; height:96mm; object-fit:contain; display:inline-block;"
+        />
+      </div>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 10 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        Yangın Esnasında Hareket Tarzı
+      </div>
+
+      <p style="margin:0 0 2mm 0;">
+        Eğer yangın işletmenin tamamını ve tüm personeli tehdit edici boyutta ise,
+      </p>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          En yakın yangın alarm düğmesine basılır ve yüksek sesle “Yangın var herkes dışarı çıksın”
+          diye bağırılır veya uyarıcı yardımcısı alet kullanılarak da uyarı yapılabilir.
+        </li>
+        <li>
+          Elektrik Bakım Sorumlusu tarafından işletmemizin elektrikleri kesilir.
+          Yangına kesinlikle elektrikleri kesilmeden müdahale edilmez.
+        </li>
+        <li>
+          Kurtarma ekibi kurtarılması gereken malzemeleri kurtarır ve yangının yayılmasına
+          sebep olacak yanıcı, parlayıcı, patlayıcı malzemeler uzaklaştırılır.
+        </li>
+        <li>
+          İlkyardım ekibi yaralılara ilkyardım müdahalesi yapmak için müdahale ekipmanlarını
+          alarak olay mahalline gelir ve hazır bekler.
+        </li>
+        <li>
+          Yaralananlara ilkyardım yapıldıktan sonra “ACİL ÇAĞRI MERKEZİ (112)” aranır
+          ve yaralının hastaneye sevki sağlanır.
+        </li>
+        <li>
+          Mevcut imkânların yeterliliğine göre yönetim kararı ile “112” aranarak
+          itfaiyeden yardım istenir. Yangının yeri, cinsi ve durumu doğru şekilde aktarılır.
+        </li>
+        <li>
+          İtfaiye geldiğinde acil durum ekipleri itfaiye ile koordineli çalışarak
+          söndürme çalışmalarına yardımcı olur.
+        </li>
+      </ol>
+
+      <p style="margin:0 0 2mm 0;">
+        Eğer yangın büyük değil ve geneli tehdit edecek boyutta değilse,
+      </p>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          Yangının bulunduğu bölgedeki personel en yetkili kişi tarafından
+          tehlikeli bölgeden uzaklaştırılır.
+        </li>
+        <li>
+          Acil durum ekibindeki personelin toplanması sağlanır.
+        </li>
+        <li>
+          Elektrik Bakım Sorumlusu ve Yardımcısı tarafından yangın bölgesinin
+          elektrikleri kesilir.
+        </li>
+        <li>
+          Yangın söndürme ekipleri müdahale ederken, koruma ve kurtarma ekipleri
+          değerli evrak ve malzemeleri uzaklaştırır.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin:3mm 0 2mm 0; text-align:center;">
+        YANGINA KARŞI ALINACAK TEDBİRLER
+      </div>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        1.&nbsp; Kimyasallar
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Tüm kimyasallar etiketlenmiş şekilde kapalı kaplarda saklanacaktır.</li>
+        <li>Kullanım alanlarında sadece gerekli miktarda kimyasal bulundurulacaktır.</li>
+        <li>Kimyasallar etiketlerinde yazan isimlerle depolanacaktır.</li>
+        <li>Kimyasal depolarının elektrik tesisatı gerekiyorsa exproof olacaktır.</li>
+        <li>Depoların tüm elektrik sistemleri depo dışından kontrol edilecektir.</li>
+        <li>Depo içindeki kimyasallar uygun şekilde etiketlenerek depolanacaktır.</li>
+        <li>
+          Depo içinde ve dışında hem dolap ve raflarda hem de personel için
+          gerekli topraklama tertibatı olacaktır.
+        </li>
+                <li>Depolarda sürekli olarak temiz hava girişi sağlanmalıdır.</li>
+        <li>Kimyasallar ateşleme kaynaklarından uzak tutulmalıdır.</li>
+        <li>Kimyasallar ile çalışan personel pamuklu iş elbisesi giymelidir. Sentetik elbiseler statik elektrik biriktirebilir.</li>
+        <li>Barut Depolarının Önünde Yetkili Personel Harici Girişler Yasaklanmalıdır.</li>
+        <li>Yetkili Personel Barut Deposu içerisine Girmeden Önce Bakır Levhalarla Ellerini Değdirerek Statik Elektriğin Boşaltılması Gerekmektedir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 11 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Miktarı 50 lt’yi aşan çözücüler (solventler) kimyasal dökülmelerine karşı döküntülerin birikeceği tepsiler bulunan metal dolaplarda ve/veya özel olarak hazırlanmış ya da amaca uygun olarak yeniden düzenlenmiş odalarda saklanmalıdır.</li>
+        <li>Molekülünde klor olan oksitleyici kimyasal depolama alanlarında Nitrojen triclorid (NCl3) oluşumunun engellenmesi maksadıyla, alanda monoamonyum fosfat bileşenli kuru kimyasal tozlu yangın söndürücü kullanılmamalıdır.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        2.&nbsp; Yanıcı Gazlar
+      </div>
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Gaz boruları sağlam olmalı ve fazla ısınmasına yol açmayacak şekilde yerleştirilmelidir.</li>
+        <li>Kullanılmayan gaz vanaları tamamen kapatılmalıdır.</li>
+        <li>Kullanılmayan gaz tüpleri dışarıda düşmeye karşı dayanıklı bir şekilde bekletilmelidir.</li>
+        <li>Yanıcı gazlar kullanılan çalışma alanı terk edilmemelidir.</li>
+        <li>Yanıcı gazlar ile çalışılan yerlerde kullanılan gazlara ile ilgili gaz detektörleri bulunmalıdır.</li>
+        <li>Gaz detektörlerinin algılama yapması halinde ana gaz valfi ve solenoid yardımıyla otomatik olarak gaz akışı kesilmelidir.</li>
+        <li>Çalışma ortamında uygun yerlere “Sigara İçmek Yasaktır” ve “Dikkat Ateşle Yaklaşma” levhaları asılmalıdır.</li>
+        <li>Gazlar ile çalışılan ortamda sürekli olarak temiz hava girişi sağlanmalıdır.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        3.&nbsp; Elektrik Panoları, UPS, Trafo
+      </div>
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Temizlik ve bakım için kullanılan yağlı bez ve üstüpü parçaları ağzı kapaklı metal çöp bidonlarına atılır.</li>
+        <li>Paratonerler ve topraklama kabloları periyodik olarak kontrol edilir.</li>
+        <li>Uygun yerlere “Sigara İçmek Yasaktır” ve “Dikkat Ateşle Yaklaşma” ikaz ve uyarı levhaları asılır.</li>
+        <li>Yeteri kadar uygun tipte (köpüklü, CO₂, halokarbonlu, kuru kimyevi tozlu) yangın söndürme tüpleri ve diğer yangın söndürme araçları faal olarak kullanıma hazır bulundurulur.</li>
+        <li>Otomatik yangın algılama dedektörleri uygun yerlere yerleştirilir.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        4.&nbsp; Malzeme / Teçhizat Depoları
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Depoların içinde ve malzemeler arasında sigara içilmesine izin verilmez.</li>
+        <li>Çabuk parlayıcı ve sıcağa karşı malzemeler sık sık kontrol edilir.</li>
+        <li>Depolardaki malzemelerin özelliğine göre uygun tipte yangın söndürme tüpleri dolu ve kullanıma hazır bulundurulur.</li>
+        <li>Depoların uygun ve görülebilecek yerlerine “Sigara İçmek Yasaktır” ikaz ve uyarı levhaları konulur.</li>
+        <li>Elektrik tesisatı, kablo bağlantıları, sigorta ve prizler her hafta bir plan ve kontrol listesine göre devamlı kontrol edilir, arızalı ve hasarlı olanlar değiştirilir.</li>
+        <li>Depolamada aydınlatma ve ısıtma araçlarının yakın olacak şekilde üst raflara yanıcı materyal depolanması yapılmaz.</li>
+        <li>Barut Depolarının Önünde Yetkili Personel Harici Girişler Yasaklanmalıdır.</li>
+        <li>Yetkili Personel Barut Deposu içerisine Girmeden Önce Bakır Levhalarla Ellerini Değdirerek Statik Elektriğin Boşaltılması Gerekmektedir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 12 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        5.&nbsp; Açık Alanlar
+      </div>
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Çevredeki yabani otlar, kâğıt, bez parçası gibi yanıcı atıklar temizlenir, kesilen otlar yakılmaz ve tesis dışına çıkarılır.</li>
+        <li>Yangın hidrantları, vana ve logarlar devamlı bakımlı ve temiz tutulur.</li>
+        <li>İtfaiye gelinceye kadar kullanılmak üzere, içinde 2x20 m uzunlukta hortumu olan ve her an kullanıma hazır durumda hortum ucunda lansı olan su sistemine bağlı saha yangın dolapları bulundurulur.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        6.&nbsp; Elektrik Tesisatları
+      </div>
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Elektrik tesisatına, proje harici fazla yüklü cihazlar takılmaz.</li>
+        <li>Tüm bina ve tesislerin elektrik dağıtım panolarındaki sigortalar muhafazalı ve otomatik olur.</li>
+        <li>Elektrikle çalışan cihazlardan, teknik dokümanına göre gerekli olanlar topraklanır.</li>
+        <li>Bina ve tesislerde çıplak veya hasarlı kablo, priz, fiş vb. gibi elektrik malzemesi derhal yenilenir.</li>
+        <li>Aynı prizden birden fazla elektrikli alet çalıştırılmaz.</li>
+        <li>Ana ve tali panolar yangın riski ile elektrik çarpmasına karşı kaçak akım rölesi takılacaktır.</li>
+        <li>Paratoner, elektrik ve topraklama tesisatı, diğer tesislere bağlı bir defa yetkili teknik eleman tarafından periyodik kontrol edilecek; kontrol sonucu hazırlanan tutanak (rapor) dosyasında muhafaza edilecektir.</li>
+        <li>Bina elektrik sobası, ocağı, ütüsü, benzin, ispirto, gaz veya LPG ocağı gibi yangın riski yüksek cihazlar kullanılmayacaktır. Ancak, yemekhane, çay ocağı gibi yerlerde bina amirinin gerekli görmesi halinde ihtiyaç duyulan bu gibi araçlar kullanılabilir.</li>
+        <li>Elektrik panolarında sigortaların nerelere ait olduğu belirtilecektir.</li>
+        <li>Çatılarda güvenlik gübresi olup olmadığı, elektrik kablo kontrolü ve baca kontrolü yapılır.</li>
+        <li>Elektrik panolarına yeteri kadar uygun tipte (halokarbonlu) yangın söndürme tüpleri faal olarak kullanıma hazır bulundurulur.</li>
+        <li>Yetkili Personel Barut Deposu içerisine Girmeden Önce Bakır Levhalarla Ellerini Değdirerek Statik Elektriğin Boşaltılması Gerekmektedir.</li>
+        <li>Statik Elektriğin Topraklaması; Topraklamanın Bağlı Olup Olmadığı, Topraklama Ölçümlerinin Takibi, Yetkili ve Ehli Kişi Tarafından Takip Edilerek Raporlanacaktır.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        7.&nbsp; Mutfak-Çay Ocağı
+      </div>
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Yeteri kadar uygun tipte (köpüklü, CO₂, halokarbonlu, kuru kimyevi tozlu) yangın söndürme tüpleri faal olarak kullanıma hazır bulundurulur.</li>
+        <li>Yangın söndürme araçları faal olarak kullanıma hazır bulundurulur.</li>
+        <li>Kullanılan elektrikli cihazların topraklaması olmalıdır.</li>
+        <li>Topraklama sistemi periyodik olarak kontrol edilecektir.</li>
+        <li>Otomatik yangın algılama dedektörleri uygun yerlere yerleştirilir.</li>
+        <li>Yüksek binalar içinde bulunan mutfakların davlumbazlarına otomatik söndürme sistemi yapılmalı ve ocaklarda kullanılan gazın özelliklerine göre gaz algılama, gaz kesme ve uyarı tesisatı kurulması şarttır.</li>
+        <li>Mutfakların bodrumda olması ve gaz kullanılması halinde, havalandırma sistemleri yapılır.</li>
+        <li>İkinci bir çıkış tesis edilmesinin gaz kullanılmaması yasaktır.</li>
+        <li>Mutfak ve çay ocakları, binanın diğer kısımlarından daha fazla süreyle yangına dayanıklı bölmelerle ayrılmış biçimde konuşlandırılır. Bölme olarak ahşap ve diğer kolay yanıcı maddeler kullanılmaz.</li>
+            
+</ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 13 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+   <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+ 
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        8.&nbsp; Çatılar
+      </div>
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Çatılarda yangına karşı koruma gereçlerinden başka bir eşya, yanıcı, patlayıcı madde bulundurulamaz.</li>
+        <li>Çatıya elektrik tesisatı çekilemez. Isıtma, soğutma, haberleşme ve iletişim, alıcı, verici cihazlarına yerleştirilmesi zorunlu olduğu hallerde çatıya, elektrikli cihazları yerleştirmek gerekirse yangına karşı ilave tedbirler alınarak yetkili kişiler eliyle elektrik tesisatı çekilebilir.</li>
+        <li>Çatı giriş kapısı devamlı kapalı ve kilitli tutulur. Çatıya yetkililerin izni ile çıkılabilir. Çatı araları periyodik olarak temizlenir.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        9.&nbsp; Hava Tankı Patlaması
+      </div>
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li><strong>Hava Tankının Patlama Nedenleri</strong></li>
+        <li>Basınç testlerinin yapılmaması</li>
+        <li>Tank cidarlarının incelmesi ve cidarlarda çatlaklar oluşması</li>
+        <li>Emniyet supaplarının çalışmaması</li>
+        <li>Basınç göstergelerinin bozuk olması</li>
+        <li><strong>Hava Tankı Patlamasını Önlemek İçin Yapılması Gerekenler;</strong></li>
+        <li>Hava tankı yılda 1 kez olmak üzere yetkili mühendis tarafından periyodik kontrolü yapılmalı ve dosyalanmalıdır.</li>
+        <li>Hava tankları yılda bir kez en yüksek işletme basıncının 1,5 katı fazlası ile hidrostatik basınç testine tabi tutulmalı, test raporları dosyalanmalıdır.</li>
+        <li>Emniyet supapları da hava tankı ile birlikte yılda bir kez test edilmeli, test raporları dosyalanmalıdır.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        10.&nbsp; Tehlikeli Madde-Sızıntı, Dökülme Veya Taşması
+      </div>
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li><strong>Tehlikeli Madde Sızıntı ve Döküntü Nedenleri;</strong></li>
+        <li>Mazot, Fuel Oil, Sıvı Kostik Tankları ve bunlara ait boru hatlarında olabilecek delinmeler sonucu,</li>
+        <li>Tankerden dolum yapılması sırasında,</li>
+        <li>Motorlu taşıtların tehlikeli madde tank ve borularına çarpması sonucu,</li>
+        <li><strong>Tehlikeli Madde Sızıntı ve Döküntülerinin Önlenmesi</strong></li>
+        <li>Bu tür acil durumlarda kum, toprak ya da talaş ile döküntünün etrafı çevrelenmeli,</li>
+        <li>Arıza süratle giderilmeli ve daha sonra tehlikeli atıklar absorban bir malzemeye emdirilerek plastik poşetlerde bertaraf edilmek üzere toplanmalıdır.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin:0 0 1mm 0;">
+        11.&nbsp; Kombi/Şofben
+      </div>
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Kombi/Şofben için bir talimat hazırlanacak, bakıldığında kolayca görülebilecek bir yere asılacak.</li>
+        <li>Ayrı bir sigorta ve kaçak akım rölesi olacak şekilde bağlantı yapılacak. Kombi/Şofben regülatöre bağlanacak.</li>
+        <li>Kombi/Şofbenin bacaları kontrol ettirilecek.</li>
+        <li>Kombi/Şofbenin bodrumda kurulurken gazın özelliklerine göre gaz algılama, gaz kesme ve uyarı tesisatı kurulması şarttır.</li>
+        <li>Kombi/Şofben (yılda bir defa) yetkili servis tarafından periyodik olarak kontrol edilecektir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 14 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+       <!-- ÜST İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="margin-top:2mm;">
+      <img
+        src="{{acil.yanginAnindaHareketTalimati}}"
+        alt="Yangın Anında Hareket Talimatı"
+        style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+      />
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 15 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- ÜST BAŞLIK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:8mm 8mm 2mm 8mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div
+      style="
+        background:#ff0000;
+        color:#ffffff;
+        font-weight:bold;
+        font-size:16pt;
+        padding:4mm 0;
+        border:1px solid #000;
+      "
+    >
+      YANGIN ACİL EYLEM PLANI
+    </div>
+
+    <!-- ALT BAŞLIK -->
+    <div
+      style="
+        margin-top:3mm;
+        font-weight:bold;
+        font-size:12pt;
+        border-bottom:1px solid #000;
+        padding-bottom:1mm;
+      "
+    >
+      1. Kimyasal Sızıntı – Döküntü
+    </div>
+  </div>
+
+  <!-- GÖRSEL ALAN -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:4mm 8mm 4mm 8mm;
+      text-align:center;
+    "
+  >
+    <img
+      src="{{acil.yanginAcilEylemPlani}}"
+      alt="Kimyasal Sızıntı – Döküntü Yangın Acil Eylem Planı"
+      style="
+        width:100%;
+        height:210mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+      "
+    />
+  </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 16 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+       <!-- ÜST BAŞLIK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:8mm 8mm 2mm 8mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div
+      style="
+        background:#ff0000;
+        color:#ffffff;
+        font-weight:bold;
+        font-size:16pt;
+        padding:4mm 0;
+        border:1px solid #000;
+      "
+    >
+      YANGIN ACİL EYLEM PLANI
+    </div>
+
+    <div
+      style="
+        margin-top:3mm;
+        font-weight:bold;
+        font-size:12pt;
+        border-bottom:1px solid #000;
+        padding-bottom:1mm;
+      "
+    >
+      1. Kimyasal Sızıntı – Döküntü (Devamı)
+    </div>
+  </div>
+
+  <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:10.5pt;
+      line-height:1.45;
+      margin:3mm 10mm 0 10mm;
+      text-align:justify;
+    "
+  >
+    <ol style="margin:0; padding-left:5mm;">
+      <li>Dökülme ve sızıntı meydana gelmesi halinde durum sorumluya haber verilir.</li>
+      <li>Sızan veya dökülen kimyasal ürünün MSDS (Malzeme Güvenlik Bilgi Formu) Formuna göre özellikleri belirlenir. Bu noktada kesinlikle Eldiven, Maske, Tulum vb. diğer Kişisel Koruyucu Donanımlar kullanılmalıdır.</li>
+      <li>Dökülen ve sızan kimyasal yanıcı özellik taşıyorsa mümkün mertebe etrafta bulunan malzemeler uzaklaştırılır.</li>
+      <li>Bölgede çalışan diğer personele bilgi verilir.</li>
+      <li>Acil Durum Müdahale ekiplerinin gerekli önlemi alması sağlanır.</li>
+      <li>Dökülen ve sızan kimyasalın insan sağlığına zararlı olması ve maruz kalınması halinde Kimyasala ait MSDS’de bulunan İlkyardım bilgileri uygulanır. Bu uygulamalar ancak ilkyardımcı personel gerçekleştirebilir. Bu sebepten dolayı Acil Durum ilkyardım ekibine haber verilir.</li>
+      <li>Kimyasala maruz kalmış kişi fenalaşmış bir haldeyse en yakın sağlık kuruluşuna haber ver.</li>
+      <li>Mevcutta ki Döküntü–Sızıntı kaynağı tespit edilir, döküntünün oluşması engellenir ve sızıntı Absorban malzeme vb. yardımıyla engellenir.</li>
+      <li>Çevre Kirliliği Planına göre hareket edilir.</li>
+      <li>Olay yeri ve Döküntü/Sızıntı sebebi tespit edilir ve incelenir. Tutanak tutulur ve gerekli tedbirler alınır.</li>
+    </ol>
+
+    <!-- Görsel -->
+    <div style="text-align:center; margin-top:4mm;">
+      <img
+        src="{{acil.kimyasalMaddeDepolamaMatrisi}}"
+        alt="Kimyasal Madde Depolama Matrisi"
+        style="
+          width:100%;
+        height:120mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+      />
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 17 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+<!-- GÖRSEL -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.yanginSiniflariAciklama}}"
+      alt="Yangın Sınıfları Açıklama"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 18 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+       <!-- GÖRSEL -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.yanginSiniflariAciklama2}}"
+      alt="Yangın Sınıfları Açıklama Devam"
+     style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 19 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+        <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        2. DEPREM
+      </div>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Deprem Öncesinde Yapılacaklar:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Mevcut binaların dayanıklılığı artırılır.</li>
+        <li>Yerleşim planı hazırlanır.</li>
+        <li>İşyeri ve binalardaki yaşamsal tehdit veya ekonomik kayba yol açabilecek nesneler sabitlenir.</li>
+        <li>Çalışanlara acil durumda araması gereken numaralar öğretilir.</li>
+        <li>Aydınlatmalar sabitlenir.</li>
+        <li>Dolap üzerine konulan eşya ve büro malzemeleri kayarak düşmelerini önlemek için plastik tutucu malzeme veya yapıştırıcılarla sabitlenir.</li>
+        <li>Dolaplar ve devrilebilecek benzeri eşyalar birbirine ve duvara sabitlenir. Eğer sabitlenen eşya ve duvar arasında boşluk kalıyorsa, çarpma etkisini düşürmek için araya bir dolgu malzemesi konulur.</li>
+        <li>Tavan ve duvara asılan vazo, klima vb. cihazlar bulundukları yere ağırlıklarını taşıyacak şekilde duvar ve pencerelerden yeterince uzağa ve kanca ile asılır.</li>
+        <li>İçinde ağır eşyalar bulunan dolap kapakları mekanik kilitler takılarak sıkıca kapalı kalmaları sağlanır.</li>
+        <li>Tezgâh üzerindeki kayabilecek eşyaların altına metal profil koyarak bunların kayması önlenir.</li>
+        <li>Zehirli, patlayıcı, yanıcı maddeler düşmeyecek bir konumda sabitlenir ve kırılmayacak bir şekilde depolanır. Bu maddelerin üzerlerine fosforlu, belirleyici etiketler konulur.</li>
+        <li>Rafların önüne elastik bant ya da tel eklenebilir. Küçük nesneler ve şişeler, birbirlerine çarpmayacak ve devrilmeyecek şekilde, kutular içine yerleştirilir.</li>
+        <li>Gaz kaçağı ve yangına karşı, gaz vanası ve elektrik sigortaları otomatik hale getirilir.</li>
+        <li>Binadan acilen çıkmak için kullanılacak yollardaki tehlikeler ortadan kaldırılır, bu yollar işaretlenir; çıkış engelleyebilecek eşyalar çıkış yolu üzerinden kaldırılır.</li>
+        <li>Geniş çıkış yolları oluşturulur. Dışa doğru açılan kapılar kullanılır, acil çıkış kapıları kilitli olmamalıdır. Acil çıkışlar aydınlatılır.</li>
+        <li>Önemli evrakların (kimlik kartları, tapu, sigorta belgeleri, sağlık karnesi, diplomalar, pasaport, banka cüzdanı vb.) kopyaları hazırlanarak su geçirmeyecek şekilde saklanır, ayrıca bu evrakların bir örneği de bölge dışı bağlantı kişisinde bulundurulur.</li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Deprem Sırasında Yapılacaklar:
+      </div>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        A. Bina İçinde;
+      </div>
+
+      <ol style="margin:0; padding-left:5mm;">
+        <li>Kesinlikle panik yapılmamalı.</li>
+        <li>Sabitlenmemiş dolap, raf, pencere vb. eşyalardan uzak durulmalı.</li>
+        <li>Varsa sağlam sandalyelerle desteklenmiş masa altına veya dolgun ve hacimli koltuk, kanepe içi dolu sandık gibi koruma sağlayabilecek eşya yanına çömelerek hayat üçgeni oluşturulmalıdır. Baş iki el arasında kavranarak baş korunur (yastık, kitap vb.) malzeme ile korunmalıdır. Sarsıntı geçene kadar bu pozisyonda beklenmelidir.</li>
+      </ol>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 20 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        ÇÖMEL – KORUN – BEKLE
+      </div>
+
+      <p style="margin:0 0 2mm 0;">
+        <strong>ÇÖMEL:</strong><br />
+        Çömelerek hedef küçültmek, üzerinize doğru düşecek unsurların
+        yaralama riskini azaltır.
+      </p>
+
+      <p style="margin:0 0 2mm 0;">
+        <strong>KORUN:</strong><br />
+        Kollarınızla baş ve boynunuzu kapatın. Cama arkanızı dönün.
+        Bir siperin yanına ya da altına ÇENİN pozisyonu alarak kendinizi koruyun.
+        Bu siper masa, konsol, sandalye olabilir.
+      </p>
+
+      <p style="margin:0 0 2mm 0;">
+        <strong>BEKLE:</strong><br />
+        Sarsıntı bitene kadar tutunarak bekleyin.
+        Sarsıntı sırasında koşmak, merdivenden inmek tehlikelidir.
+      </p>
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Merdivenlere ya da çıkışlara doğru koşulmamalıdır.</li>
+        <li>Balkona çıkılmamalıdır.</li>
+        <li>Balkonlardan ya da pencerelerden aşağıya atlanmamalıdır.</li>
+        <li>Telefonlar acil durum ve yangınları bildirmek dışında kullanılmamalıdır.</li>
+        <li>Kibrit, çakmak yakılmamalı, elektrik düğmelerine dokunulmamalıdır.</li>
+      </ul>
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Mutfak, imalathane, laboratuvar gibi iş aletlerinin bulunduğu yerlerde; ocak, fırın vb. cihazlar kapatılmalı, dökülebilecek malzeme ve maddelerden uzaklaşılmalıdır.</li>
+        <li>Sarsıntı geçtikten sonra elektrik, gaz ve su vanaları kapatılmalıdır.</li>
+        <li>Diğer güvenlik önlemleri alınarak gerekli olan eşya ve malzemeler alınarak bina daha önce tespit edilen yoldan derhal terk edilip toplanma bölgesine gidilmelidir.</li>
+      </ul>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        B. Açık Alanda;
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Enerji hatları ve direklerinden, ağaçlardan, diğer binalardan ve duvar diplerinden uzaklaşılmalıdır. Açık arazide çömelerek etraftan gelebilecek tehlikelere karşı hazırlıklı olunmalıdır.</li>
+        <li>Binalardan düşebilecek baca, cam kırıkları ve sıvalara karşı tedbirli olunmalıdır.</li>
+        <li>Toprak altındaki kanalizasyon, elektrik ve gaz hatlarından gelebilecek tehlikelere karşı dikkatli olunmalıdır.</li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Deprem Sonrasında Yapılacaklar:
+      </div>
+
+      <ol style="margin:0; padding-left:5mm;">
+        <li>Sakin olun.</li>
+        <li>Sarsıntı sona erdiğinde, binanın gerekli noktalarında işaretlenmiş olan tahliye kapılarını kullanarak ve görevlilerin yönlendirmelerine uyarak bina dışında belirtilmiş tahliye alanlarına çıkın. Çıkışların önünü kapatmayın.</li>
+        <li>Deprem sonrasında kibrit, çakmak gibi patlamalara neden olabilecek nesneleri kullanmayın. Işık kaynağı olarak sadece fener kullanın.</li>
+        <li>Bina yıkılmamış olsa bile herhangi birinin üzerine düşecek ağır bir cisim yaralanmaya neden olabilir.</li>
+        <li>Ana şoktan sonra gelecek olan artçı şoklar hasar görmüş binaları yıkabilir. Binaya girmeden önce çok iyi kontrol edin. Hasar varsa kesinlikle içeri girmeyin.</li>
+        <li>Deprem sonrasında dışarı çıktıktan sonra binanın önünde beklemeyin.</li>
+        <li>Gaz, su, elektrik tesisatlarını hızlı bir şekilde kontrol edin, hasar varsa kapatın.</li>
+        <li>Telefonu acil durumlar dışında kullanmayın.</li>
+       </ol>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+
+  <!-- ================= SAYFA 21 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.depremAcilEylemPlani}}"
+      alt="Yangın Sınıfları Açıklama"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 22 ================= -->
+  <section class="page">
+  
+<div style="page-break-before: always;"></div>
+      <div style="font-family:'Times New Roman', serif; font-size:11pt; margin:10mm 10mm 10mm 10mm; text-align:justify;">
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        3. PATLAMA VE PARLAMA
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Bina ve eklentilerinde bir patlama veya parlama meydana geldiğinde olayı gören çalışanlar acil durumu;
+        Acil Müdahale Ekip Sorumlularına acil durum duyuru usulleriyle uygun olarak bildirir.
+        Acil durum organizasyonunda yer almayan personel belirtilmiş firmanın bulunan Acil Toplanma Bölgesine yönelir.
+        Acil durum organizasyonunda yer alan personel ise patlamanın kaynağına, yerine ve sonuçlarına göre
+        Acil Durum Ekip Sorumlularının emirleri doğrultusunda hareket eder.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Tehlikeli Yerlerin Sınıflandırılması:
+      </div>
+
+      <p style="margin:0 0 1.5mm 0;">
+        Bölge 0; Gaz, buhar ve sis halindeki parlayıcı maddelerin hava ile karışımından oluşan patlayıcı ortamın
+        sürekli olarak veya uzun süre ya da sık sık oluştuğu yerler,
+      </p>
+      <p style="margin:0 0 1.5mm 0;">
+        Bölge 1; Gaz, buhar ve sis halindeki parlayıcı maddelerin hava ile karışımından oluşan patlayıcı ortamın
+        normal çalışma koşullarında ara sıra meydana gelme ihtimali olan yerler,
+      </p>
+      <p style="margin:0 0 1.5mm 0;">
+        Bölge 2; Gaz, buhar ve sis halindeki parlayıcı maddelerin hava ile karışarak normal çalışma koşullarında
+        patlayıcı ortam oluşturma ihtimali olmayan yerler ya da böyle bir ihtimal olsa bile patlayıcı ortamın
+        çok kısa bir süre için kalıcı olduğu yerler,
+      </p>
+      <p style="margin:0 0 1.5mm 0;">
+        Bölge 20; Havada bulut halinde bulunan yanıcı tozların, sürekli olarak veya uzun süreli ya da sık sık
+        patlayıcı ortam oluşturabileceği yerler,
+      </p>
+      <p style="margin:0 0 1.5mm 0;">
+        Bölge 21; Normal çalışma koşullarında, havada bulut halinde bulunan yanıcı tozların ara sıra
+        patlayıcı ortam oluşturabileceği yerler,
+      </p>
+      <p style="margin:0 0 3mm 0;">
+        Bölge 22; Normal çalışma koşullarında, havada bulut halinde yanıcı tozların patlayıcı ortam oluşturma
+        ihtimali bulunmayan ancak böyle bir ihtimal olsa bile bunun yalnızca çok kısa bir süre için geçerli olduğu yerlerdir.
+      </p>
+
+      <ol style="margin:0; padding-left:5mm;">
+        <li>Patlama anından hemen sonra en yakındaki acil durum düğmesine basılmalıdır.</li>
+        <li>Yanıcı, parlayıcı ve yakıcı maddeler emniyetli uygun depolara koyulur, açıkta bırakılmaz.</li>
+        <li>Patlayıcı ortam oluşmasını önlemek için depolama alanında belirli periyotlarda havadaki gaz miktarı ölçülerek kayıt altına alınıp takip edilecek.</li>
+        <li>Yapılan işlemlerin doğası gereği patlayıcı ortam oluşmasının önlenmesi mümkün değilse patlayıcı ortamın tutuşmasını önlemek amacıyla işletmenin çevre çitlerine ve alan girişlerine “Ateşle Yaklaşılması Yasaktır” ve “Patlayıcı Ortam” ibareleri asılarak, ortama yaklaşanların uyarılması sağlanacaktır.</li>
+        <li>Yangın tüpleri ve yangın dolaplarını ayda bir kontrol et; hortumlar ve diğer yangın teçhizatı her an göreve hazır bulundurunuz.</li>
+        <li>Elektrik tesisatlarını kontrol altında tut; ark, kaçak var ise yetkili personele onarımını yaptırınız. İzinsiz elektrik ocakları ve sobaları kullandırmayınız.</li>
+      </ol>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 23 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa23Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 24 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        4. BESİN ZEHİRLENMESİ
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        İşyerinde toplu beslenme (yemekhane, catering vb.) hizmeti nedeniyle bir veya birden fazla çalışanda
+        bulantı, kusma, ishal, karın ağrısı, ateş, halsizlik gibi şikayetlerin kısa süre içinde ortaya çıkması
+        “besin zehirlenmesi şüphesi” olarak değerlendirilir. Amaç; etkilenen kişilere hızlı müdahale etmek,
+        yayılımı durdurmak, delilleri korumak ve tekrarını önlemektir.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Belirti gösteren kişiler güvenli bir alana alınır, kalabalıktan uzak tutulur ve dinlenmeleri sağlanır.</li>
+        <li>Acil Durum Ekip Sorumlusu / yönetim temsilcisine derhal haber verilir; İSG profesyoneli ve işyeri hekimi bilgilendirilir.</li>
+        <li>Ağır belirtiler varsa (bayılma, bilinç değişikliği, kanlı ishal, yüksek ateş, şiddetli kusma, nefes darlığı, çocuk/hamile/yaşlı/ kronik hastalık) 112 aranır ve sağlık kuruluşuna sevk sağlanır.</li>
+        <li>Etkilenen kişilere “doktor önerisi olmadan” ilaç verilmez; bilinç kaybı riski olan kişiye ağızdan sıvı verilmez.</li>
+        <li>Şüpheli yiyecek/içeceklerin tüketimi derhal durdurulur; ilgili ürünler etiketlenerek ayrı bir yerde muhafaza edilir, kesinlikle imha edilmez.</li>
+        <li>Yemek listesi, üretim/dağıtım saatleri, servis edilen partiler, sıcaklık kayıtları ve kimlerin ne tükettiği mümkün olduğunca kayıt altına alınır.</li>
+        <li>Yemekhane/servis alanı ve mutfak hijyeni kontrol edilir; personelin el hijyeni, çapraz bulaşma, ekipman temizlik ve dezenfeksiyon uygulamaları denetlenir.</li>
+        <li>Şüpheli numune gerekiyorsa (kurum prosedürüne göre) soğuk zincir korunarak numune saklanır; ilgili resmi birimler talep ederse teslim edilir.</li>
+        <li>Olayla ilgili tutanak tutulur: tarih-saat, etkilenen kişi sayısı, belirtiler, sevk edilenler, tüketilen gıdalar, alınan önlemler.</li>
+        <li>Olay sonlandırıldıktan sonra kök neden analizi yapılır ve düzeltici/önleyici faaliyetler planlanır (catering denetimi, sıcaklık takibi, eğitim, hijyen planı vb.).</li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Toplu vaka şüphesinde erken bildirim hayat kurtarır ve yayılımı azaltır.</li>
+        <li>Şüpheli gıdalar “delil” niteliğindedir; imha etmek yerine muhafaza edilmelidir.</li>
+        <li>İletişim tek kanaldan yürütülmeli, panik oluşturacak söylentiler önlenmelidir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 25 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+       <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa25Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+ <!-- ================= SAYFA 26 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        5. İŞ KAZASI
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        İş kazası; işyerinde veya işin yürütümü sırasında meydana gelen ve çalışanın yaralanmasına/sağlığının
+        bozulmasına yol açan olaydır. Amaç; olay yerini güvenli hale getirmek, yaralıya doğru ilkyardımı yapmak,
+        acil sağlık hizmetini çağırmak, olayı kayıt altına almak ve tekrarını önlemektir.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li><strong>Güvenliği sağla:</strong> Olay yerinde ikinci bir kazayı önlemek için makine/enerji kaynaklarını durdur, alanı emniyete al, gerekirse çevreyi boşalt.</li>
+        <li><strong>Haber ver:</strong> Acil Durum Ekip Sorumlusunu, İSG profesyonelini ve işyeri hekimini bilgilendir.</li>
+        <li><strong>112’yi ara:</strong> Bilinç kaybı, ciddi kanama, kırık/ezilme, solunum sıkıntısı, elektrik çarpması, yüksekten düşme, yanık, zehirlenme vb. ağır durumlarda derhal 112 aranır.</li>
+        <li><strong>İlkyardım uygula:</strong> Sadece eğitimli ilkyardımcı müdahale eder. Gereksiz hareket ettirme yapma; kanamayı bası ile durdur; şok pozisyonu/yan pozisyon gibi uygun pozisyonu ver.</li>
+        <li><strong>Olay yerini koru:</strong> Hayati müdahaleler dışında düzeni bozma. Ekipman/alan emniyete alınır ve meraklı kalabalık uzaklaştırılır.</li>
+        <li><strong>Sevk ve refakat:</strong> Yaralı sağlık kuruluşuna sevk edilecekse refakatçi belirlenir, kimlik ve gerekli bilgiler hazırlanır.</li>
+        <li><strong>Kayıt altına al:</strong> Tarih-saat, yer, olayın kısa özeti, tanıklar, etkilenen kişi(ler), ilk müdahale, sevk bilgileri tutanakla kayda alınır; varsa foto/video delil güvenli şekilde saklanır.</li>
+        <li><strong>Bildirim süreci:</strong> İş kazası bildirimi ve resmi süreçler işveren/işveren vekili ve ilgili birimlerce mevzuata uygun şekilde yürütülür.</li>
+        <li><strong>Kök neden analizi:</strong> Olayın temel nedeni belirlenir (davranış, ekipman, yöntem, çevre, eğitim vb.) ve düzeltici/önleyici faaliyetler planlanır.</li>
+        <li><strong>Tekrarını önle:</strong> Risk değerlendirmesi güncellenir, gerekli eğitimler verilir, ekipman/koruyucular kontrol edilir, prosedür revize edilir.</li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Önce <strong>kendi güvenliğiniz</strong> ve alan güvenliği.</li>
+        <li>Eğitimsiz kişi ilkyardım uygulamaz; yaralı gereksiz yere hareket ettirilmez.</li>
+        <li>Delilleri korumak, tekrarını önlemek için kritik önemdedir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 27 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+       <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa27Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 28 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+    <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        6. ELEKTRİK ÇARPMASI
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Elektrik çarpması; elektrik akımının insan vücudu üzerinden geçmesi sonucu ortaya çıkan ve
+        hafif yaralanmalardan ölüme kadar varabilen ciddi sonuçlar doğurabilen bir acil durumdur.
+        Amaç; enerji kaynağını güvenli şekilde kesmek, yaralıyı akımdan ayırmak, doğru ilkyardımı
+        uygulamak ve profesyonel sağlık desteğini en kısa sürede sağlamaktır.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Önce kendi güvenliğini sağla:</strong>
+          Enerji kesilmeden yaralıya <u>kesinlikle dokunma</u>.
+        </li>
+        <li>
+          <strong>Elektriği kes:</strong>
+          Ana şalterden, sigortadan veya acil durdurma butonundan elektrik akımı derhal kesilir.
+          Mümkün değilse kuru ve yalıtkan bir cisim (tahta, plastik, lastik vb.) ile yaralı akım kaynağından uzaklaştırılır.
+        </li>
+        <li>
+          <strong>112’yi ara:</strong>
+          Bilinç kaybı, solunum durması, yanık, kasılma, kalp ritim bozukluğu şüphesinde derhal 112 aranır.
+        </li>
+        <li>
+          <strong>İlkyardım uygula:</strong>
+          Yaralının bilinci ve solunumu kontrol edilir. Solunum veya kalp durması varsa eğitimli ilkyardımcı tarafından
+          temel yaşam desteğine başlanır.
+        </li>
+        <li>
+          <strong>Yanıklara müdahale:</strong>
+          Elektrik yanıkları su ile soğutulur; yanık bölgeye krem, merhem vb. sürülmez, üzeri temiz bezle örtülür.
+        </li>
+        <li>
+          <strong>Hareket ettirme:</strong>
+          Yaralı gereksiz yere hareket ettirilmez; omurga yaralanması ihtimali göz önünde bulundurulur.
+        </li>
+        <li>
+          <strong>Alanı emniyete al:</strong>
+          Olay yerinde ikinci bir elektrik çarpmasını önlemek için enerji kaynakları kilitlenir ve uyarı levhaları yerleştirilir.
+        </li>
+        <li>
+          <strong>Sevk ve refakat:</strong>
+          Yaralı sağlık kuruluşuna sevk edilirken refakatçi görevlendirilir.
+        </li>
+        <li>
+          <strong>Kayıt altına al:</strong>
+          Olayın yeri, zamanı, nedeni, etkilenen kişi bilgileri ve yapılan müdahaleler tutanakla kayıt altına alınır.
+        </li>
+        <li>
+          <strong>Düzeltici faaliyet:</strong>
+          Elektrik tesisatı, topraklama, kaçak akım röleleri ve ekipmanlar kontrol edilir; gerekli iyileştirmeler yapılır.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Elektrik çarpmasında <strong>ilk kural enerji kesilmeden müdahale etmemektir.</strong></li>
+        <li>Kaçak akım röleleri ve topraklama hayati öneme sahiptir.</li>
+        <li>Elektrik yanıkları dışarıdan küçük görünse bile iç hasar ciddi olabilir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 29 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa29Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 30 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        7. GAZ ZEHİRLENMESİ
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Gaz zehirlenmesi; karbonmonoksit (CO), doğalgaz/LPG, solvent buharları veya proses gazları gibi
+        zararlı gazların solunmasıyla oluşan acil bir durumdur. Amaç; maruziyeti derhal durdurmak,
+        kişiyi güvenli ortama almak, profesyonel sağlık desteğini çağırmak ve ikinci bir zehirlenmeyi
+        önlemektir.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Belirtiler:
+      </div>
+
+      <ul style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>Baş ağrısı, baş dönmesi, halsizlik, bulantı-kusma</li>
+        <li>Nefes darlığı, göğüs sıkışması, çarpıntı</li>
+        <li>Uyku hali, bilinç bulanıklığı, bayılma</li>
+        <li>CO zehirlenmesinde “kiraz kırmızısı” renk görülebilir (her zaman olmaz)</li>
+      </ul>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Önce kendi güvenliğini sağla:</strong>
+          Gaz yoğunluğu olan ortama koruyucu önlem almadan girme. Mümkünse maske/solunum koruyucu kullan.
+        </li>
+        <li>
+          <strong>Maruziyeti durdur:</strong>
+          Gaz kaynağını kapat (vana/şalter/proses durdurma), ortamı havalandır (kapı-pencere aç).
+          Kıvılcım oluşturabilecek elektrik düğmelerine dokunma; açık alev yakma.
+        </li>
+        <li>
+          <strong>Kişiyi temiz havaya çıkar:</strong>
+          Etkilenen kişiyi hızla açık havaya veya iyi havalandırılmış güvenli alana al.
+        </li>
+        <li>
+          <strong>112’yi ara:</strong>
+          Bilinç kaybı, solunum sıkıntısı, göğüs ağrısı, nöbet, hamile/çocuk/yaşlı veya çoklu vaka varsa derhal 112 aranır.
+        </li>
+        <li>
+          <strong>İlk değerlendirme:</strong>
+          Bilinç, solunum ve nabız kontrol edilir. Solunum yoksa eğitimli ilkyardımcı tarafından temel yaşam desteğine başlanır.
+        </li>
+        <li>
+          <strong>Uygun pozisyon:</strong>
+          Bilinci açık kişiyi dinlendir; üşümeyi önle. Bilinci kapalı ama solunumu olan kişiyi yan (koma) pozisyonuna al.
+        </li>
+        <li>
+          <strong>Kusma riskine dikkat:</strong>
+          Bilinci kapalı kişiye ağızdan sıvı/yiyecek verilmez. Bilinç bulanıklığı olan kişi yalnız bırakılmaz.
+        </li>
+        <li>
+          <strong>Alanı emniyete al:</strong>
+          Bölgeyi şerit ile çevir, yetkisiz girişleri engelle. Gaz ölçümü yapılmadan alana geri dönülmez.
+        </li>
+        <li>
+          <strong>Kayıt altına al:</strong>
+          Olay yeri, zaman, şüpheli gaz türü, etkilenen kişi sayısı, belirtiler, yapılan müdahaleler tutanakla kaydedilir.
+        </li>
+        <li>
+          <strong>Düzeltici/önleyici faaliyet:</strong>
+          Gaz algılama sistemleri, havalandırma, bacalar, cihaz bakımları, kaçak kontrolleri ve eğitimler gözden geçirilir.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Gaz olan ortama korumasız girmek ikinci bir kazaya yol açabilir.</li>
+        <li>CO zehirlenmesi kokusuzdur; “koku yoksa tehlike yok” düşüncesi yanlıştır.</li>
+        <li>Gaz kaçağı şüphesinde kıvılcım oluşturabilecek işlemlerden kaçının.</li>
+      </ul>
+
+    </div>
+  </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 31 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa31Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 32 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        8. YANIK
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Yanık; ısı, alev, sıcak sıvı/buhar, elektrik, kimyasal maddeler veya radyasyon etkisiyle
+        deri ve/veya derin dokuların zarar görmesiyle oluşan acil bir durumdur. Amaç; yanıcı/etkileyici
+        kaynağı durdurmak, hasarı sınırlamak, enfeksiyonu önlemek ve profesyonel sağlık desteğini
+        zamanında sağlamaktır.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Güvenliği sağla:</strong>
+          Yanığa neden olan kaynağı (alev, sıcak sıvı, kimyasal, elektrik) güvenli şekilde uzaklaştır.
+          Elektrik yanıklarında enerji kesilmeden yaralıya dokunma.
+        </li>
+        <li>
+          <strong>Soğut:</strong>
+          Yanık bölgeyi mümkün olan en kısa sürede en az <strong>20 dakika</strong> boyunca serin (soğuk değil)
+          akan su altında tut. Buz uygulama.
+        </li>
+        <li>
+          <strong>Kıyafet ve takılar:</strong>
+          Yanık bölgedeki yüzük, saat, kemer gibi sıkıştırabilecek eşyaları çıkar.
+          Deriye yapışmış giysileri zorla çıkarma.
+        </li>
+        <li>
+          <strong>Ört:</strong>
+          Yanık alanı temiz, yapışmayan bir bez/örtü ile kapat. Patlamış kabarcıkları (büller) patlatma.
+        </li>
+        <li>
+          <strong>Kimyasal yanıklar:</strong>
+          Kimyasal maddeyle temas kesilir; etkilenen bölge bol suyla uzun süre yıkanır.
+          Kimyasalın türü bilinmiyorsa nötralize etmeye çalışma.
+        </li>
+        <li>
+          <strong>112’yi ara:</strong>
+          Geniş alan yanıkları, yüz–el–ayak–eklem–genital bölge yanıkları, elektrik yanıkları,
+          solunum yolu etkilenmesi, çocuk/yaşlı/hamile vakalarda derhal 112 aranır.
+        </li>
+        <li>
+          <strong>İlkyardım:</strong>
+          Bilinç, solunum ve dolaşım kontrol edilir. Şok belirtilerine karşı kişiyi yatır,
+          üzerini ört ve sakin tut.
+        </li>
+        <li>
+          <strong>Uygulama yapma:</strong>
+          Yanığa diş macunu, yoğurt, krem, yağ vb. maddeler sürme.
+        </li>
+        <li>
+          <strong>Kayıt altına al:</strong>
+          Olayın yeri, zamanı, nedeni, yanık türü ve derecesi, yapılan müdahaleler tutanakla kaydedilir.
+        </li>
+        <li>
+          <strong>Önleyici faaliyet:</strong>
+          Sıcak yüzeyler, kimyasallar, elektrik tesisatı ve KKD kullanımı gözden geçirilir;
+          gerekli eğitim ve iyileştirmeler yapılır.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Yanıkta en etkili ilk adım <strong>erken ve yeterli soğutmadır</strong>.</li>
+        <li>Elektrik ve kimyasal yanıklar dışarıdan küçük görünse bile derin hasar yapabilir.</li>
+        <li>Enfeksiyon riskini azaltmak için yanık alan temiz ve kapalı tutulmalıdır.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 33 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa33Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 34 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+     <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        9. TRAVMA
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Travma; düşme, çarpma, ezilme, sıkışma, kesilme, trafik kazası veya iş kazası gibi nedenlerle
+        vücutta oluşan yaralanmaları ifade eder. Amaç; olay yerini güvenli hale getirmek, hayati
+        fonksiyonları korumak, doğru ilkyardımı uygulamak ve profesyonel sağlık desteğini zamanında
+        sağlamaktır.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Güvenliği sağla:</strong>
+          Olay yerinde ikinci bir yaralanmayı önlemek için alanı emniyete al, makine ve enerji
+          kaynaklarını durdur.
+        </li>
+        <li>
+          <strong>112’yi ara:</strong>
+          Bilinç kaybı, ciddi kanama, şiddetli ağrı, şekil bozukluğu, yüksekten düşme,
+          çoklu yaralanma veya trafik kazası varsa derhal 112 aranır.
+        </li>
+        <li>
+          <strong>Hayati kontrol:</strong>
+          Bilinç, solunum ve dolaşım kontrol edilir. Solunum yoksa eğitimli ilkyardımcı tarafından
+          temel yaşam desteğine başlanır.
+        </li>
+        <li>
+          <strong>Kanamayı durdur:</strong>
+          Ciddi kanamalarda doğrudan bası uygulanır; gerekirse bandaj yapılır.
+          Uzuv kopması varsa kopan parça temiz bir bezle sarılarak soğuk ortamda muhafaza edilir.
+        </li>
+        <li>
+          <strong>Hareket ettirme:</strong>
+          Omurga ve boyun yaralanması ihtimali varsa yaralı <u>kesinlikle hareket ettirilmez</u>.
+          Zorunlu hallerde boyun-gövde ekseni bozulmadan taşıma yapılır.
+        </li>
+        <li>
+          <strong>Şok önlemleri:</strong>
+          Yaralı yatırılır, üzeri örtülür, sıcak tutulur ve sakinleştirilir.
+        </li>
+        <li>
+          <strong>Kırık-çıkık-çarpma:</strong>
+          Şekil bozukluğu olan uzuvlar bulunduğu pozisyonda tespit edilir; yerine oturtmaya çalışılmaz.
+        </li>
+        <li>
+          <strong>Yabancı cisim:</strong>
+          Vücuda saplanmış cisimler çıkarılmaz; sabitlenerek sağlık ekiplerine teslim edilir.
+        </li>
+        <li>
+          <strong>Alan kontrolü:</strong>
+          Meraklı kalabalık uzaklaştırılır; olay yeri korunur.
+        </li>
+        <li>
+          <strong>Kayıt ve bildirim:</strong>
+          Olayın yeri, zamanı, nedeni, yaralanma türü ve yapılan müdahaleler tutanakla kayıt altına alınır.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Travmalarda <strong>ilk dakikalar hayati öneme sahiptir</strong>.</li>
+        <li>Omurga şüphesi olan yaralıyı gereksiz yere hareket ettirmek kalıcı hasara yol açabilir.</li>
+        <li>Eğitimsiz kişilerce yapılan müdahaleler yaralanmayı ağırlaştırabilir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 35 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa35Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 36 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        10. HIRSIZLIK VE YAĞMA MÜDAHALE PLANI
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Hırsızlık ve yağma; işyerine izinsiz girilmesi, malzeme, ekipman, evrak veya kişisel eşyaların
+        çalınması ya da cebir, tehdit ve zor kullanılarak gerçekleştirilen saldırgan eylemler olarak
+        değerlendirilir. Amaç; çalışanların can güvenliğini sağlamak, olayın büyümesini önlemek,
+        yetkili birimlere doğru ve zamanında bildirim yapmak ve tekrarını önleyici tedbirleri almaktır.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Can güvenliği önceliklidir:</strong>
+          Şüpheli veya saldırgan kişilerle fiziksel temasa girilmez, karşı koyulmaz.
+          Çalışanlar sakin olmaya teşvik edilir.
+        </li>
+        <li>
+          <strong>Haber ver:</strong>
+          Olay derhal işveren/işveren vekiline, Acil Durum Ekip Sorumlusuna ve güvenlik birimine bildirilir.
+        </li>
+        <li>
+          <strong>155 / 112:</strong>
+          Yağma, tehdit, silah, darp veya ciddi risk söz konusuysa derhal kolluk kuvvetlerine haber verilir.
+        </li>
+        <li>
+          <strong>Alanı izole et:</strong>
+          Olay sonrası bölge emniyete alınır, yetkisiz kişilerin girişine izin verilmez.
+        </li>
+        <li>
+          <strong>Delilleri koru:</strong>
+          Kapı, kilit, pencere, kasa, kamera kayıtları ve olay yerindeki izler korunur;
+          temizlik veya düzenleme yapılmaz.
+        </li>
+        <li>
+          <strong>Tanık bilgileri:</strong>
+          Olayı gören çalışanların kimlik ve iletişim bilgileri not edilir.
+        </li>
+        <li>
+          <strong>Kamera ve kayıtlar:</strong>
+          Güvenlik kamerası kayıtları yedeklenir ve yetkili birimlere teslim edilmek üzere muhafaza edilir.
+        </li>
+        <li>
+          <strong>Envanter tespiti:</strong>
+          Çalınan veya zarar gören malzeme, ekipman ve evraklar liste halinde tespit edilir.
+        </li>
+        <li>
+          <strong>Psikolojik destek:</strong>
+          Olaydan etkilenen çalışanlara gerektiğinde psikolojik destek sağlanır.
+        </li>
+        <li>
+          <strong>Düzeltici ve önleyici faaliyet:</strong>
+          Güvenlik önlemleri (kilitler, aydınlatma, kamera, alarm, giriş-çıkış kontrolü)
+          gözden geçirilir ve gerekli iyileştirmeler yapılır.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Hırsızlık ve yağma olaylarında <strong>mal değil, insan hayatı önceliklidir</strong>.</li>
+        <li>Şüpheli durumlarda erken bildirim olayın büyümesini önler.</li>
+        <li>Delillerin korunması adli sürecin sağlıklı yürütülmesi için kritiktir.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 37 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa37Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 38 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div
+    style="
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      margin:10mm 10mm 10mm 10mm;
+      text-align:justify;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <div style="font-size:10.5pt; line-height:1.55;">
+
+      <div style="font-weight:bold; margin-bottom:2mm;">
+        11. EKLEM BACAKLI VEYA SÜRÜNGEN ISIRMASI / SOKMASI
+      </div>
+
+      <p style="margin:0 0 3mm 0;">
+        Eklem bacaklı (arı, eşek arısı, akrep, örümcek, kene vb.) veya sürüngen (yılan vb.)
+        ısırması/sokması; lokal ağrıdan ciddi alerjik reaksiyonlara ve hayati risklere kadar
+        değişen sonuçlar doğurabilen acil durumlardır. Amaç; kişiyi güvene almak, yayılımı ve
+        komplikasyonları önlemek, doğru ilkyardımı uygulamak ve gerekli hallerde profesyonel
+        sağlık desteğini sağlamaktır.
+      </p>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Müdahale Adımları:
+      </div>
+
+      <ol style="margin:0 0 3mm 0; padding-left:5mm;">
+        <li>
+          <strong>Güvenliği sağla:</strong>
+          Kişiyi sokan/ısıran canlıdan uzaklaştır; tekrar temas riskini ortadan kaldır.
+        </li>
+        <li>
+          <strong>Sakinleştir ve dinlendir:</strong>
+          Kişi yatırılır veya oturtulur, panik önlenir. Isırılan/sokulan bölge mümkünse kalp seviyesinin altında tutulur.
+        </li>
+        <li>
+          <strong>Bölgeyi değerlendir:</strong>
+          Şişlik, kızarıklık, ağrı, kanama ve yayılım kontrol edilir. Takı ve sıkıştırıcı eşyalar çıkarılır.
+        </li>
+        <li>
+          <strong>Soğuk uygulama:</strong>
+          Şişlik ve ağrıyı azaltmak için bezle sarılmış soğuk uygulama yapılır (doğrudan buz temas ettirilmez).
+        </li>
+        <li>
+          <strong>Arı/eşek arısı sokması:</strong>
+          İğne varsa cımbızla sıkmadan kazıyarak çıkarılır; iğne sıkılarak çıkarılmaz.
+        </li>
+        <li>
+          <strong>Kene ısırması:</strong>
+          Kene uygun teknikle (sağlık personeli/özel aparat) çıkarılır; kimyasal madde dökülmez,
+          yakma/sıkma yapılmaz. Bölge gözlem altında tutulur.
+        </li>
+        <li>
+          <strong>Yılan/akrep ısırması:</strong>
+          Kesme, emme, turnike uygulanmaz. Isırılan uzuv sabitlenir ve hareket ettirilmez.
+        </li>
+        <li>
+          <strong>112’yi ara:</strong>
+          Nefes darlığı, dudak-dil-boğaz şişmesi, yaygın kızarıklık, bilinç değişikliği,
+          şiddetli ağrı, çoklu sokma/ısırma veya çocuk/yaşlı/hamile vakalarda derhal 112 aranır.
+        </li>
+        <li>
+          <strong>Ağızdan bir şey verme:</strong>
+          Bilinç kapalı kişiye ağızdan sıvı/yiyecek verilmez. Alkollü madde verilmez.
+        </li>
+        <li>
+          <strong>Kayıt altına al:</strong>
+          Olayın zamanı, yeri, canlı türü (biliniyorsa), belirtiler ve yapılan müdahaleler tutanakla kaydedilir.
+        </li>
+      </ol>
+
+      <div style="font-weight:bold; margin-bottom:1mm;">
+        Unutmayın:
+      </div>
+
+      <ul style="margin:0; padding-left:5mm;">
+        <li>Alerjik reaksiyonlar (anafilaksi) dakikalar içinde gelişebilir; erken müdahale hayati önem taşır.</li>
+        <li>Isırma/sokmada kesme, emme, turnike gibi uygulamalar <strong>zararlıdır</strong>.</li>
+        <li>Belirtiler hafif olsa bile kişi bir süre gözlem altında tutulmalıdır.</li>
+      </ul>
+
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+
+  <!-- ================= SAYFA 39 ================= -->
+  <section class="page">
+    <div class="page-content">
+
+      <!-- TAM SAYFA GÖRSEL -->
+
+   <div
+    style="
+      font-family:'Times New Roman', serif;
+      margin:10mm 10mm 6mm 10mm;
+      text-align:center;
+    "
+  >
+
+<div style="page-break-before: always;"></div>
+    <img
+      src="{{acil.sayfa39Gorsel}}"
+      alt="Acil Durum Görseli"
+      style="
+          width:100%;
+        height:230mm;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+        "
+    />
+  </div>
+
+
+    </div>
+  </section>
+
+
+ <!-- ================= SAYFA 40 ================= -->
+  <section class="page">
+<div style="page-break-before: always;"></div>
+    <div class="page-content">
+
+
+      <!-- SAYFA GENEL -->
+  <div style="font-family:'Times New Roman', serif; margin:10mm 10mm 6mm 10mm;">
+
+    <!-- 1) ACİL TELEFONLAR TABLOSU -->
+    <div style="font-size:11pt; font-weight:bold; margin-bottom:2mm;">
+      ACİL DURUM TELEFONLARI
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:10pt; table-layout:fixed;">
+      <tr>
+        <th style="border:1px solid #000; background:#9dc3e6; padding:6px;">KURUM</th>
+        <th style="border:1px solid #000; background:#9dc3e6; padding:6px;">AÇIKLAMA</th>
+        <th style="border:1px solid #000; background:#9dc3e6; padding:6px;">TELEFON</th>
+      </tr>
+
+      <tr>
+        <td rowspan="4" style="border:1px solid #000; padding:6px; font-weight:bold;">Acil Çağrı Merkezi</td>
+        <td style="border:1px solid #000; padding:6px;">İtfaiye</td>
+        <td rowspan="4" style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">112</td>
+      </tr>
+      <tr><td style="border:1px solid #000; padding:6px;">Ambulans</td></tr>
+      <tr><td style="border:1px solid #000; padding:6px;">Jandarma</td></tr>
+      <tr><td style="border:1px solid #000; padding:6px;">Polis</td></tr>
+
+      <tr>
+        <td rowspan="2" style="border:1px solid #000; padding:6px; font-weight:bold;">Hastane</td>
+        <td style="border:1px solid #000; padding:6px;">{{acil.hastane1Ad}}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:center;">{{acil.hastane1Tel}}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000; padding:6px;">{{acil.hastane2Ad}}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:center;">{{acil.hastane2Tel}}</td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:6px; font-weight:bold;">Gaz Arıza</td>
+        <td style="border:1px solid #000; padding:6px;"></td>
+        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">187</td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:6px; font-weight:bold;">Su Arıza</td>
+        <td style="border:1px solid #000; padding:6px;"></td>
+        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">185</td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:6px; font-weight:bold;">Elektrik Arıza</td>
+        <td style="border:1px solid #000; padding:6px;"></td>
+        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">186</td>
+      </tr>
+
+      <tr>
+        <td style="border:1px solid #000; padding:6px; font-weight:bold;">Alo Trafik</td>
+        <td style="border:1px solid #000; padding:6px;"></td>
+        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">154</td>
+      </tr>
+    </table>
+
+    <!-- 2) 112 BANNER -->
+    <div style="text-align:center; margin:6mm 0 4mm 0;">
+      <img
+        src="{{acil.banner112}}"
+        alt="Acil Durum 112"
+        style="max-width:100%; height:28mm; object-fit:contain; display:inline-block;"
+      />
+    </div>
+
+    <!-- 3) TAHLİYE PLANLARI -->
+    <div style="font-size:11pt; font-weight:bold; margin:0 0 2mm 0;">
+      7. TAHLİYE PLANLARI
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+      <tr>
+        <!-- SOL: FİRMA TAHLİYE PLANI (MANUEL GÖRSEL) -->
+        <td style="border:1px solid #000; width:72%; height:90mm; text-align:center; vertical-align:middle;">
+          <img
+            src="{{tahliyeFotoUrl}}"
+            alt="Tahliye Planı"
+            style="max-width:100%; max-height:88mm; object-fit:contain; display:inline-block;"
+          />
+        </td>
+
+        <!-- SAĞ: SABİT LEJANT -->
+        <td style="border:1px solid #000; width:28%; vertical-align:top; padding:6px;">
+          <div style="font-size:10pt; font-weight:bold; margin-bottom:6px;">LEJANT</div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <img src="{{acil.iconAcilCikis}}" style="width:18px; height:18px;" alt="Acil Çıkış" />
+            <div style="font-size:10pt;">ACİL ÇIKIŞ</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <img src="{{acil.iconYanginTupu}}" style="width:18px; height:18px;" alt="Yangın Söndürme Tüpü" />
+            <div style="font-size:10pt;">YANGIN SÖNDÜRME TÜPÜ</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <img src="{{acil.iconIlkYardim}}" style="width:18px; height:18px;" alt="İlk Yardım" />
+            <div style="font-size:10pt;">İLK YARDIM / ECZA DOLABI</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <img src="{{acil.iconToplanma}}" style="width:18px; height:18px;" alt="Toplanma Alanı" />
+            <div style="font-size:10pt;">TOPLANMA ALANI</div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px;">
+            <img src="{{acil.iconAlarm}}" style="width:18px; height:18px;" alt="Yangın Alarm Cihazı" />
+            <div style="font-size:10pt;">YANGIN ALARM CİHAZI</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+  </div>
+
+
+    </div>
+  </section>
+
+
+<!-- ================= SAYFA 41 ================= -->
+  <section class="page">
+
+<div style="page-break-before: always;"></div>
+    <div class="page-content">
+
+      <!-- İÇERİK -->
+  <div style="font-family:'Times New Roman', serif; margin:10mm 10mm 6mm 10mm;">
+
+    <div
+      style="
+        text-align:center;
+        font-weight:bold;
+        font-size:14pt;
+        margin-bottom:6mm;
+        text-decoration:underline;
+      "
+    >
+      EN YAKIN HASTANE KROKİSİ
+    </div>
+
+    <!-- HASTANE YOL TARİFİ / KROKİ GÖRSELİ -->
+    <div
+      style="
+        width:100%;
+        height:140mm;
+        border:1px solid #000;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:hidden;
+      "
+    >
+      <img
+        src="{{hastaneFotoUrl}}"
+        alt="En Yakın Hastane Yol Tarifi"
+        style="
+          width:100%;
+          height:100%;
+          object-fit:contain;
+          display:block;
+        "
+      />
+    </div>
+
+    <div style="font-size:9pt; margin-top:3mm; text-align:left;">
+      Not: Krokide işyerinden en yakın hastaneye ulaşım güzergâhı gösterilir.
+    </div>
+  </div>
+
+
+    </div>
+  </section>
+
+ 
+</body>
+</html>

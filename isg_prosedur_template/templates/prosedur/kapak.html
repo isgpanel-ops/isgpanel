@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    /* Firma adını 4 satıra sabitle (kayma sorununu çözer) */
+    .firma-adi-4satir{
+      width: 100%;
+      max-width: 170mm;
+      margin: 10mm auto 0 auto;
+
+      font-size: 22pt;
+      font-weight: bold;
+      color: #003366;
+
+      line-height: 8.5mm;          /* satır yüksekliği */
+      height: 34mm;                /* 8.5mm x 4 satır = 34mm */
+      overflow: hidden;
+
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+
+      word-break: break-word;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. ÜST LOGO -->
+  <div style="text-align:center; margin-top:28mm; margin-bottom:24mm;">
+    <img
+  src="{{kurumsal.logo}}"
+  style="height:36mm; max-width:170mm; object-fit:contain;"
+  alt="Kurumsal Logo"
+/>
+  </div>
+
+  <!-- 2) ORTA ALAN -->
+  <div style="text-align:center; font-family:'Times New Roman', serif; margin-top:4mm;">
+    <div
+      style="
+        font-size:26pt;
+        font-weight:bold;
+        color:#e30613;
+        letter-spacing:1px;
+        text-transform:uppercase;
+      "
+    >
+      RİSK DEĞERLENDİRMESİ
+    </div>
+
+    <div style="margin-top:10mm; font-size:22pt; font-weight:bold; color:#003366;
+            line-height: 28px; height: 112px; overflow:hidden;">
+  {{firma.firmaAdi}}
+</div>
+
+    <div style="margin-top:6mm; font-size:20pt; color:#475569;">
+      SGK Sicil No: {{firma.sgkSicilNo}}
+    </div>
+  </div>
+
+  <!-- 3) TEHLİKE / TARİH BLOĞU -->
+  <div
+    style="
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:42mm;
+      text-align:center;
+      font-family:'Times New Roman', serif;
+      font-size:11pt;
+      color:#111827;
+    "
+  >
+    <div style="width:55%; margin:0 auto 5mm auto; border-top:1px solid #d1d5db;"></div>
+
+    <div>Tehlike Sınıfı: {{firma.tehlikeSinifi}}</div>
+    <div>Hazırlama Tarihi: {{tarihler.hazirlamaTr}}</div>
+    <div>Geçerlilik Tarihi: {{tarihler.gecerlilikTr}}</div>
+  </div>
+
+  <!-- 4. EN ALT FOOTER – TAM SAYFA DİBİNDE -->
+  <div style="
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:12mm;
+    text-align:center;
+    font-family:'Times New Roman', serif;
+    font-size:10pt;
+  ">
+    "Bu doküman
+    <img
+      src="{{panel.logoUrl}}"
+      style="height:12pt; vertical-align:middle; margin:0 4px;"
+      alt="İSG Panel Logo"
+    />
+    sistemi üzerinden elektronik ortamda oluşturulmuştur.”
+  </div>
+
+  <!-- Sayfa kırılması -->
+ 
+<!-- 5. BELGE DOĞRULAMA QR -->
+<div style="
+  position:absolute;
+  right:12mm;
+  bottom:20mm;
+  width:34mm;
+  text-align:center;
+  font-family:'Times New Roman', serif;
+  color:#111827;
+">
+  <div style="
+    font-size:8pt;
+    font-weight:bold;
+    margin-bottom:2mm;
+    letter-spacing:.3px;
+  ">
+    BELGE DOĞRULAMA
+  </div>
+
+  <img
+    src="{{verifyQr}}"
+    style="width:28mm; height:28mm; object-fit:contain;"
+    alt="Belge Doğrulama QR"
+  />
+
+  <div style="
+    font-size:7pt;
+    font-weight:bold;
+    margin-top:1.5mm;
+    letter-spacing:.5px;
+    color:#374151;
+  ">
+    {{verificationCode}}
+  </div>
+</div>
+
+</body>
+</html>

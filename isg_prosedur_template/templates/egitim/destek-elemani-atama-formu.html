@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"/>
+  <title>Destek Elemanı Atama Formu</title>
+  <style>
+    body {
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      color: #000;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 10mm;
+      box-sizing: border-box;
+    }
+
+    .box {
+      border: 1px solid #000;
+      padding: 10mm;
+      min-height: 270mm;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid #000;
+      padding-bottom: 6mm;
+      margin-bottom: 6mm;
+    }
+
+    .logo img {
+      max-width: 120px;
+      max-height: 54px;
+      object-fit: contain;
+    }
+
+    .title {
+      flex: 1;
+      text-align: center;
+      font-weight: 700;
+      font-size: 13pt;
+      letter-spacing: .04em;
+    }
+
+    .date {
+      width: 120px;
+      text-align: right;
+      font-size: 9pt;
+    }
+
+    .p {
+      line-height: 1.35;
+      font-size: 10.5pt;
+    }
+
+    .h {
+      font-weight: 700;
+      margin-top: 6mm;
+      margin-bottom: 2mm;
+    }
+
+    .ol {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 10.5pt;
+      line-height: 1.35;
+    }
+
+    .sign {
+      display: flex;
+      gap: 12mm;
+      margin-top: 10mm;
+      font-size: 9.5pt;
+    }
+
+    .sig {
+      flex: 1;
+      border-top: 1px solid #000;
+      padding-top: 4mm;
+    }
+
+    .label {
+      font-weight: 700;
+      margin-bottom: 3mm;
+    }
+
+    .line {
+      margin-top: 6mm;
+    }
+
+  .imzaWrap {
+  height: 80px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+  margin-top: 2mm;
+  padding-left: 4mm;
+  padding-top: 2mm;
+}
+
+.imzaWrap img {
+  max-width: 220px;
+  max-height: 92px;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+  transform: translate(-45px, -20px);
+}
+
+    .docno {
+      position: absolute;
+      bottom: 10mm;
+      left: 10mm;
+      font-size: 9pt;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="box">
+      <div class="top">
+        <div class="logo"><img src="{{logoSrc}}" alt="logo"></div>
+        <div class="title">DESTEK ELEMANI ATAMA FORMU</div>
+        <div class="date">
+          <div style="font-weight:700;">TARİH</div>
+          <div>{{duzenlemeTarihi}}</div>
+        </div>
+      </div>
+
+      <div class="p">
+        <div style="font-weight:700;text-transform:uppercase;">{{firmaAdi}}</div>
+        <div style="margin-top:4mm;">
+          İş sağlığı ve güvenliği çalışmaları kapsamında yapılacak görevlerini yürütmek ve uygulamak amacı ile
+          asıl olarak <b>{{destekAdSoyad}}</b> isimli personel <b>DESTEK ELEMANI</b> olarak atanmıştır.
+        </div>
+      </div>
+
+      <div class="h">Destek Elemanı Görev Tanımı</div>
+      <div class="p">
+        <div>1. ORGANİZASYONDAKİ ÜNVANI: Destek Elemanı</div>
+        <div>2. BAĞLI BİRİMLER: Bağlantılı olarak çalışılması gereken tüm birimler.</div>
+        <div>3. NİTELİKLERİ: En az ortaokul veya dengi okul mezunu olmak. (İSG önleme, koruma, tahliye, yangın, ilk yardım vb.)</div>
+        <div>4. OLMADIĞINDA VEKÂLET EDECEK OLAN: Vekâlet listesinde açıklanmıştır.</div>
+
+        <div class="h" style="font-size:11pt;">5. GÖREV, YETKİ VE SORUMLULUKLARI:</div>
+        <ol class="ol">
+          <li>İşveren tarafından atanır.</li>
+          <li>İSG konularında özel olarak eğitilir.</li>
+          <li>İlk yardım eğitimi aldırılır, 3 yılda bir güncellenir.</li>
+          <li>Yangın söndürme tüplerinin erişilebilir olmasını sağlar.</li>
+          <li>Küçük yangınlarda ilk müdahaleyi yapar.</li>
+          <li>Acil durum talimatlarının görünür olmasını sağlar.</li>
+          <li>Tatbikatlarda talimata uygun hareket eder.</li>
+          <li>Acil durumlarda ilk müdahaleyi yapar.</li>
+          <li>Hakları kısıtlanamaz.</li>
+          <li>Gizlilik yükümlülüğü vardır.</li>
+          <li>Politika ve hedeflere uygun çalışır.</li>
+        </ol>
+      </div>
+
+      <div class="sign">
+        <div class="sig">
+          <div class="label">İŞVEREN / İŞVEREN VEKİLİ</div>
+          <div>ADI/SOYADI: {{isverenAdSoyad}}</div>
+          <div class="line">TARİH: {{duzenlemeTarihi}}</div>
+          <div class="line">İMZA</div>
+          <div class="imzaWrap">{{ISVEREN_IMZA}}</div>
+        </div>
+
+        <div class="sig">
+          <div class="label">ASIL ATANAN ÜYE (DESTEK ELEMANI)</div>
+          <div>ADI/SOYADI: {{destekAdSoyad}}</div>
+          <div class="line">T.C. KİMLİK NO: {{destekTc}}</div>
+          <div class="line">TARİH: {{duzenlemeTarihi}}</div>
+          <div class="line">İMZA</div>
+          <div class="imzaWrap">{{DESTEK_IMZA}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

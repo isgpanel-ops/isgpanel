@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>İşe Giriş Eğitimi Test Formu</title>
+
+<style>
+  @page { size: A4; margin: 10mm; }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #0f172a;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  td, th {
+    border: 1px solid #cbd5e1;
+    padding: 6px;
+    vertical-align: middle;
+  }
+
+  .title {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    color: #0f2f57;
+    letter-spacing: .3px;
+  }
+
+  .logoWrap {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logoImg {
+    max-height: 72px;
+    max-width: 150px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .personBox {
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 95px;
+  }
+
+  .personRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .personLabel {
+    width: 105px;
+    font-weight: bold;
+  }
+
+  .personColon {
+    width: 12px;
+  }
+
+  .personValue {
+    font-weight: bold;
+  }
+
+  .personImza {
+    width: 155px;
+    height: 38px;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .summaryBox {
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 8px;
+    margin-top: 10px;
+  }
+
+  .summaryTable td {
+    border: none;
+    border-right: 1px solid #cbd5e1;
+    text-align: center;
+  }
+
+  .summaryTable td:last-child {
+    border-right: none;
+  }
+
+  .summaryLabel {
+    font-size: 12px;
+    font-weight: bold;
+    color: #1e3a8a;
+  }
+
+  .summaryValue {
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 4px;
+  }
+
+  .green { color: #16a34a; }
+  .red { color: #dc2626; }
+  .blue { color: #1d4ed8; }
+
+  .note {
+    margin: 8px 0 10px;
+    text-align: center;
+    font-size: 11px;
+    color: #1e3a8a;
+    font-style: italic;
+  }
+
+  .testTable th {
+    background: #0f2f57;
+    color: #fff;
+    font-size: 10px;
+    text-align: center;
+  }
+
+  .testTable td {
+    font-size: 10px;
+  }
+
+  .center {
+    text-align: center;
+  }
+
+  .bold {
+    font-weight: bold;
+  }
+
+  .question {
+    font-weight: bold;
+    color: #0f2f57;
+  }
+
+  .options {
+    line-height: 1.45;
+  }
+
+  .marked {
+    font-weight: bold;
+    color: #1d4ed8;
+  }
+
+  .correctIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border: 2px solid #16a34a;
+    border-radius: 50%;
+    color: #16a34a;
+    font-weight: bold;
+    font-size: 12px;
+  }
+
+  .wrongIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border: 2px solid #dc2626;
+    border-radius: 50%;
+    color: #dc2626;
+    font-weight: bold;
+    font-size: 12px;
+  }
+
+  .footer {
+    margin-top: 8px;
+    font-size: 10px;
+    color: #334155;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  col.c-no { width: 5%; }
+  col.c-soru { width: 28%; }
+  col.c-sec { width: 37%; }
+  col.c-cevap { width: 12%; }
+  col.c-sonuc { width: 9%; }
+  col.c-puan { width: 9%; }
+</style>
+</head>
+
+<body>
+
+<table style="border:none;">
+  <tr>
+    <td style="width:30%; border:none;">
+      <div class="personBox">
+        <div class="personRow">
+          <div class="personLabel">Ad Soyad</div>
+          <div class="personColon">:</div>
+          <div class="personValue">%%AD_SOYAD%%</div>
+        </div>
+
+        <div class="personRow">
+          <div class="personLabel">İmza</div>
+          <div class="personColon">:</div>
+          <div class="personValue">
+            <img src="%%PERSONEL_IMZA%%" class="personImza" />
+          </div>
+        </div>
+
+        <div class="personRow" style="margin-bottom:0;">
+          <div class="personLabel">Eğitim Bitiş Tarihi</div>
+          <div class="personColon">:</div>
+          <div class="personValue">%%BITIS_TARIHI%%</div>
+        </div>
+      </div>
+    </td>
+
+    <td style="width:45%; border:none;" class="title">
+      İŞE GİRİŞ EĞİTİMİ<br/>TEST SONUÇ FORMU
+    </td>
+
+    <td style="width:25%; border:none;">
+      <div class="logoWrap">
+        <img src="%%LOGO_SRC%%" class="logoImg" />
+      </div>
+     
+    </td>
+  </tr>
+</table>
+
+<div class="summaryBox">
+  <table class="summaryTable">
+    <tr>
+      <td>
+        <div class="summaryLabel">Doğru Sayısı</div>
+        <div class="summaryValue green">%%DOGRU_SAYISI%%</div>
+      </td>
+      <td>
+        <div class="summaryLabel">Yanlış Sayısı</div>
+        <div class="summaryValue red">%%YANLIS_SAYISI%%</div>
+      </td>
+      <td>
+        <div class="summaryLabel">Toplam Puan</div>
+        <div class="summaryValue blue">%%TOPLAM_PUAN%% / 100</div>
+      </td>
+      <td>
+        <div class="summaryLabel">Başarı Oranı</div>
+        <div class="summaryValue blue">% %%BASARI_ORANI%%</div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="note">
+  Her doğru cevap 10 puan değerindedir. Toplam 100 puan üzerinden değerlendirilmiştir.
+</div>
+
+<table class="testTable">
+  <colgroup>
+    <col class="c-no" />
+    <col class="c-soru" />
+    <col class="c-sec" />
+    <col class="c-cevap" />
+    <col class="c-sonuc" />
+    <col class="c-puan" />
+  </colgroup>
+
+  <thead>
+    <tr>
+      <th>No</th>
+      <th>Sorular</th>
+      <th>Seçenekler</th>
+      <th>İşaretlenen</th>
+      <th>Sonuç</th>
+      <th>Puan</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    %%TEST_ROWS%%
+  </tbody>
+</table>
+
+<div class="footer">
+  <div>Bu belge, işe giriş eğitimi kapsamında yapılan testin sonucunu göstermektedir.</div>
+  
+</div>
+
+</body>
+</html>

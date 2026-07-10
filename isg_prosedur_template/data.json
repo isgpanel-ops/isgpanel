@@ -1,0 +1,27 @@
+{
+  "firma": {
+    "firmaAdi": "Örnek Firma A.Ş.",
+    "sgkSicilNo": "1234567890",
+    "tehlikeSinifi": "Tehlikeli",
+    "adres": "Sanayi Mah. Örnek Cad. No:10, İstanbul",
+    "nace": "47.11",
+    "faaliyet": "Perakende satış"
+  },
+  "tarihler": {
+    "hazirlamaTr": "11.11.2025",
+    "gecerlilikTr": "11.11.2026"
+  },
+  "kisiler": {
+    "isveren": "Ahmet Yılmaz (İşveren Vekili)",
+    "uzman": "Mehmet Arıkan (C Sınıfı İGU)",
+    "hekim": "",
+    "temsilci": "Zeynep Kaya",
+    "destek": "",
+    "bilgiSahibi": ""
+  },
+  "riskEkip": {
+    "yaziTarihi": "11.11.2025",
+    "imzaAlani": "İŞVEREN",
+    "belgeNo": "RD-EKIP-2025/01"
+  }
+}

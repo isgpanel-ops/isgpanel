@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>EĞİTİM KATILIM FORMU</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      color: #000;
+      margin: 0;
+      padding: 16px;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border: 1px solid #000; padding: 6px 6px; vertical-align: middle; }
+
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .bold { font-weight: 700; }
+
+    .h-56 { height: 56px; }
+    .h-40 { height: 40px; }
+    .h-32 { height: 32px; }
+    .h-28 { height: 28px; }
+    .h-22 { height: 22px; }
+
+    .no-border { border: none !important; }
+    .p-0 { padding: 0 !important; }
+
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+  </style>
+</head>
+
+<body>
+
+  <table>
+    <tr class="h-56">
+      <td style="width: 160px;" class="center">
+        <img src="{{logoSrc}}" alt="logo" style="max-width:140px; max-height:46px; object-fit:contain;" />
+      </td>
+      <td class="center bold" style="font-size: 16px;">
+        DESTEK / ACİL DURUM EKİPLERİ EĞİTİM KATILIM FORMU
+      </td>
+    </tr>
+  </table>
+
+  <table style="margin-top:10px;">
+    <tr>
+      <td class="center bold">EĞİTİMİN KONULARI</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 12px;">
+        {{EGITIM_KONULARI_TEXT}}
+      </td>
+    </tr>
+  </table>
+
+  <table style="margin-top:10px;">
+    <tr class="h-28">
+      <td style="width:140px;" class="bold">FİRMA ADI :</td>
+      <td class="bold">{{firmaAdi}}</td>
+    </tr>
+  </table>
+
+  <table style="margin-top:10px;">
+    <tr>
+      <td class="center bold">EĞİTİME KATILAN PERSONELİN</td>
+    </tr>
+  </table>
+
+  <table>
+    <thead>
+      <tr class="h-32">
+        <th class="center" style="width:45px;">NO</th>
+        <th class="center" style="width:120px;">T.C. NUMARASI</th>
+        <th class="center">ADI SOYADI</th>
+        <th class="center" style="width:170px;">GÖREVİ</th>
+        <th class="center" style="width:170px; padding:0;">
+          <div style="border-bottom:1px solid #000; padding:6px 0;" class="bold">
+            EĞİTİM {{egitimSaat}} SAAT
+          </div>
+          <div style="padding:4px 0;" class="center">
+            {{EGITIM_TARIH}}
+          </div>
+          <div style="border-bottom:1px solid #000;"></div>
+          <div style="padding:6px 0;" class="bold">İMZA</div>
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {{KATILIMCI_ROWS}}
+    </tbody>
+  </table>
+
+  <!-- ALT İMZA BLOĞU: SADECE SONDA GÖRÜNÜR -->
+  <table style="margin-top:12px; width:100%; border-collapse:collapse; table-layout:fixed;">
+    <tr>
+      <td class="p-0">
+        <div style="height:28px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          İŞ GÜVENLİĞİ UZMANI
+        </div>
+      </td>
+      <td class="p-0">
+        <div style="height:28px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          İŞYERİ HEKİMİ
+        </div>
+      </td>
+      <td class="p-0">
+        <div style="height:28px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          İŞVEREN / İŞVEREN VEKİLİ
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="p-0" style="border-bottom:none;">
+        <div style="height:40px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          {{isgUzmaniAdSoyad}}
+        </div>
+      </td>
+      <td class="p-0" style="border-bottom:none;">
+        <div style="height:40px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          {{isyeriHekimiAdSoyad}}
+        </div>
+      </td>
+      <td class="p-0" style="border-bottom:none;">
+        <div style="height:40px; display:flex; align-items:center; justify-content:center; font-weight:700;">
+          {{isverenAdSoyad}}
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="p-0" style="border-top:none;">
+        <div style="height:56px; display:flex; align-items:center; justify-content:center;">
+          {{UZMAN_IMZA}}
+        </div>
+      </td>
+      <td class="p-0" style="border-top:none;">
+        <div style="height:56px; display:flex; align-items:center; justify-content:center;">
+          {{HEKIM_IMZA}}
+        </div>
+      </td>
+      <td class="p-0" style="border-top:none;">
+        <div style="height:56px; display:flex; align-items:center; justify-content:center;">
+          {{ISVEREN_IMZA}}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

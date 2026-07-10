@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Yıllık Eğitim Planı</title>
+
+<style>
+@page{ size:A4 landscape; margin:10mm; }
+*{ box-sizing:border-box; }
+
+body{ margin:0; font-family:Arial, Helvetica, sans-serif; color:#0b2f55; }
+
+/* ✅ taşma olmaması için çok az daralttık (tasarım aynı) */
+.frame{ border:1px solid #1d1d1d; padding:16mm 14mm; } /* eskisi: 18mm 16mm */
+
+table{ width:100%; border-collapse:collapse; table-layout:fixed; font-size:11px; }
+th, td{ border:1px solid #1d1d1d; padding:3px 5px; vertical-align:middle; } /* eskisi: 4px 6px */
+
+.head{ font-weight:700; text-align:center; font-size:10px; }
+.no{ text-align:center; font-weight:700; padding-left:0; padding-right:0; }
+.topic{ font-weight:700; }
+.center{ text-align:center; font-weight:700; }
+
+/* Üst başlık bandı */
+.titleCell{ padding:0; height:70px; }
+.titleInner{ width:100%; border-collapse:collapse; table-layout:fixed; }
+.titleInner td{ border:0; }
+
+.logoTd{ width:18%; padding-left:6px; }
+.titleTd{ width:64%; text-align:center; font-weight:700; font-size:16px; letter-spacing:.3px; }
+.dateTd{ width:18%; text-align:right; font-weight:700; font-size:11px; padding-right:6px; white-space:nowrap; }
+
+/* Logo alanı: çerçevesiz, ama ortalı ve sabit */
+.logoWrap{ width:140px; height:40px; }
+.logoLabel{ display:block; text-align:center; font-weight:700; font-size:10px; color:#555; letter-spacing:.5px; line-height:40px; }
+.logoImg{ display:block; margin:0 auto; max-height:36px; max-width:140px; }
+
+/* Mustache ile: logo varsa label gizle */
+.has-logo .logoLabel{ display:none; }
+
+/* İmza */
+.signCell{
+  padding:0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.signTbl{ width:100%; border-collapse:collapse; table-layout:fixed; }
+.signTbl td{ border:1px solid #1d1d1d; height:82px; text-align:center; vertical-align:top; font-weight:700; padding-top:10px; }
+
+.foot{ font-size:8px; border-top:0; padding:6px; }
+</style>
+</head>
+
+<body>
+<div class="frame">
+
+<table>
+
+<colgroup>
+  <col style="width:3%">
+  <col style="width:47%">
+  <col style="width:13%">
+  <col style="width:13%">
+  <col style="width:9%">
+  <col style="width:6%">
+  <col style="width:9%">
+</colgroup>
+
+<!-- BAŞLIK -->
+<tr>
+  <td colspan="7" class="titleCell">
+    <table class="titleInner">
+      <tr>
+        <td class="logoTd">
+          <div class="logoWrap {{logoVarMi}}">
+            <span class="logoLabel">LOGO</span>
+            <img class="logoImg" src="{{logoUrl}}" alt="" onerror="this.style.display='none'">
+          </div>
+        </td>
+        <td class="titleTd">YILLIK EĞİTİM PLANI</td>
+        <td class="dateTd">Tarih: {{tarih}}</td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- FİRMA -->
+<tr>
+  <td colspan="7" style="font-weight:700;">FİRMA ADI: {{firmaAdi}}</td>
+</tr>
+
+<!-- BAŞLIKLAR -->
+<tr>
+  <th class="head">NO</th>
+  <th class="head">EĞİTİM KONUSU</th>
+  <th class="head">EĞİTİMİ VERECEK<br>KİŞİ/KURULUŞ</th>
+  <th class="head">KATILIMCI</th>
+  <th class="head">PLANLANAN<br>EĞİTİM TARİHİ</th>
+  <th class="head">SÜRE<br>(sa.)</th>
+  <th class="head">GERÇEKLEŞEN<br>EĞİTİM TARİHİ</th>
+</tr>
+
+<!-- ✅ SATIRLAR ARTIK BACKEND’DEN GELECEK -->
+{{{satirlarHtml}}}
+
+<!-- İMZA -->
+<tr style="page-break-inside: avoid; break-inside: avoid;">
+  <td colspan="7" class="signCell">
+    <table class="signTbl">
+      <colgroup>
+        <col style="width:33.33%">
+        <col style="width:33.33%">
+        <col style="width:33.33%">
+      </colgroup>
+      <tr>
+        <td>İŞ GÜVENLİĞİ UZMANI<br>{{isgUzmaniAdi}}</td>
+        <td>İŞYERİ HEKİMİ<br>{{isyeriHekimiAdi}}</td>
+        <td>İŞVEREN / İŞVEREN VEKİLİ<br>{{isverenAdi}}</td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+</table>
+
+</div>
+</body>
+</html>

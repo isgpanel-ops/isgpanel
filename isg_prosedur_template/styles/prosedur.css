@@ -1,0 +1,23 @@
+@page {
+  size: A4;
+  margin: 10mm 12mm 20mm 12mm;
+}
+
+body {
+  font-family: "Times New Roman", serif;
+  font-size: 11pt;
+}
+
+h1, h2, h3 {
+  font-family: "Times New Roman", serif;
+}
+
+h1 {
+  font-size: 22pt;
+  margin: 0;
+}
+
+h2 {
+  font-size: 16pt;
+  margin: 0;
+}

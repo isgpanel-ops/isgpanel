@@ -1,0 +1,129 @@
+/* ========================
+   Genel Sayfa Düzeni
+======================== */
+.page-container {
+  padding: 20px;
+  background: #f8fafc;
+  min-height: calc(100vh - 100px);
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #1e293b; /* koyu lacivert */
+}
+
+/* ========================
+   Kontrol Barı (Firma Seç)
+======================== */
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.rd-select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.rd-search {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.rd-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.rd-btn-primary {
+  background: #2563eb; /* mavi */
+  color: white;
+}
+
+.rd-btn-primary:hover {
+  background: #1e40af;
+}
+
+.rd-btn-success {
+  background: #059669; /* yeşil */
+  color: white;
+}
+
+.rd-btn-success:hover {
+  background: #047857;
+}
+
+.rd-btn-warning {
+  background: #f59e0b; /* turuncu */
+  color: white;
+}
+
+.rd-btn-warning:hover {
+  background: #b45309;
+}
+
+/* ========================
+   Seçilen Firma Kutusu
+======================== */
+.rd-firma-box {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* ========================
+   Kartlar
+======================== */
+.rd-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.rd-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rd-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.rd-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.rd-card p {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.4;
+}

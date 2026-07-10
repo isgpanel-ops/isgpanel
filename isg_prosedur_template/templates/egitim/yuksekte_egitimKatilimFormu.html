@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Eğitim Katılım Formu</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body{ font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
+
+  table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  td, th{ border:1px solid #000; padding:6px; vertical-align:middle; }
+
+  .center{ text-align:center; }
+  .bold{ font-weight:bold; }
+  .title{ font-size:18px; font-weight:bold; text-align:center; padding:10px 0; }
+  .secHeader{ font-weight:bold; text-align:center; background:#f2f2f2; }
+
+  /* Logo alanı */
+  .logoWrap{
+    height:55px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .logoImg{
+    max-height:55px;
+    max-width:100%;
+    object-fit:contain;
+    display:block;
+  }
+
+
+  .personelFotoBox{
+    width: 90px;
+    height: 110px;
+    margin: auto;
+    border: 1.5px solid #1e3a8a;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .personelFotoBox img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+  }
+
+  /* Eğitim konuları */
+  .topics div{ margin:2px 0; }
+
+  /* Satır yüksekliği */
+  .rowH{ height:32px; }
+
+  /* Kolon genişlikleri */
+  col.c-no{ width:6%; }
+  col.c-tc{ width:20%; }
+  col.c-ad{ width:30%; }
+  col.c-gorev{ width:22%; }
+  col.c-eg{ width:22%; }
+
+  /* Hücre ortalama */
+  .centerCell{
+    text-align:center;
+    vertical-align:middle;
+    word-break:break-word;
+  }
+
+  /* Sağdaki EĞİTİM/İMZA mini tablo */
+  .mini{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+  }
+  .mini td{
+    border:none;
+    border-top:1px solid #000;
+    padding:2px 1px;
+    font-size:11px;
+  }
+  .mini tr:first-child td{ border-top:none; }
+
+  .miniText{
+    font-size:11px;
+    line-height:12px;
+    white-space:nowrap;
+  }
+
+  /* Alt imza kutuları */
+  .signHead{
+    font-weight:bold;
+    text-align:center;
+    padding:8px 4px;
+  }
+  .signBox{
+    height:100px;
+    text-align:center;
+    position:relative;
+  }
+  .signNameInBox{
+    position:absolute;
+    top:8px;
+    left:0;
+    right:0;
+    font-size:11px;
+    font-weight:normal;
+    z-index:2;
+  }
+  .signLabel{
+    position:absolute;
+    bottom:4px;
+    left:0;
+    right:0;
+    font-size:11px;
+    font-weight:bold;
+    z-index:2;
+  }
+
+  /* Rol imzaları için eklendi */
+ .altImzaBox {
+  width: 180px;
+  height: 70px;
+  margin: 8px auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .altImzaImg {
+    width: 180px;
+    height: 70px;
+    object-fit: contain;
+    object-position: center center;
+    display: block;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ÜST -->
+<table>
+  <tr>
+    <td style="width:22%" class="center">
+      <div class="logoWrap">
+        <img src="{{LOGO_SRC}}" class="logoImg" />
+      </div>
+    </td>
+
+    <td class="title" style="width:56%">
+      YÜKSEKTE ÇALIŞMA EĞİTİM KATILIM FORMU
+    </td>
+
+    <td style="width:22%; text-align:center; vertical-align:middle;">
+      <div class="personelFotoBox">
+        <img src="{{PERSONEL_FOTO}}" />
+      </div>
+    </td>
+  </tr>
+</table>
+
+<!-- EĞİTİM KONULARI -->
+<table style="margin-top:8px;">
+  <tr>
+    <td colspan="2" class="secHeader">EĞİTİMİN KONUSU</td>
+  </tr>
+
+  <tr>
+    <td style="width:50%; vertical-align:top;">
+      <div><span class="cb">☒</span><b>Yüksekte Çalışma Eğitimi</b></div>
+      <div>a) Yüksekte çalışmanın tanımı ve temel mevzuat</div>
+      <div>b) Düşme riskleri ve korunma prensipleri</div>
+      <div>c) Düşmeye karşı toplu korunma önlemleri (korkuluk, yaşam hattı vb.)</div>
+      <div>ç) İskele / merdiven / platform güvenliği</div>
+    </td>
+    <td style="vertical-align:top;">
+      <div>d) Kişisel koruyucu donanımlar (emniyet kemeri, lanyard, şok emici)</div>
+      <div>e) Ankraj noktaları ve bağlantı ekipmanları</div>
+      <div>f) Çalışma öncesi kontrol ve güvenli çalışma kuralları</div>
+      <div>g) Acil durum ve kurtarma esasları</div>
+    </td>
+  </tr>
+</table>
+
+<!-- FİRMA -->
+<table style="margin-top:8px;">
+  <tr>
+    <td class="bold" style="width:20%;">FİRMA ADI :</td>
+    <td class="bold">{{firmaAdi}}</td>
+  </tr>
+</table>
+
+<!-- PERSONEL TABLOSU -->
+<table style="margin-top:8px;">
+  <colgroup>
+    <col class="c-no">
+    <col class="c-tc">
+    <col class="c-ad">
+    <col class="c-gorev">
+    <col class="c-eg">
+  </colgroup>
+
+  <tr>
+    <td colspan="5" class="secHeader">EĞİTİME KATILAN PERSONELİN</td>
+  </tr>
+
+  <tr class="center bold">
+    <td>NO</td>
+    <td>T.C. NUMARASI</td>
+    <td>ADI SOYADI</td>
+    <td>GÖREVİ</td>
+    <td style="padding:0;">
+      <div class="center bold" style="padding:6px;">YÜKSEKTE ÇALIŞMA</div>
+      <table class="mini">
+        <tr><td class="center miniText">{{YK_SAAT}} SAAT</td></tr>
+        <tr><td class="center miniText miniDate">{{YK_TARIH}}</td></tr>
+        <tr><td class="center bold" style="font-size:11px;">İMZA</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  {{KATILIMCI_ROWS}}
+</table>
+
+<!-- ALT İMZA BLOĞU -->
+<table class="signatureTable" style="margin-top:12px; width:100%; border-collapse:collapse;">
+  <colgroup>
+    <col style="width:50%">
+    <col style="width:50%">
+  </colgroup>
+
+  <tr>
+    <td class="signHead">
+      İŞ GÜVENLİĞİ UZMANI
+    </td>
+
+    <td class="signHead">
+      İŞYERİ HEKİMİ
+    </td>
+  </tr>
+
+  <tr>
+    <td class="signBox">
+      <div class="signNameInBox">
+        {{UZMAN_ADSOYAD}}
+      </div>
+
+      {{UZMAN_IMZA}}
+
+      <div class="signLabel">
+        İMZA
+      </div>
+    </td>
+
+    <td class="signBox">
+      <div class="signNameInBox">
+        {{HEKIM_ADSOYAD}}
+      </div>
+
+      {{HEKIM_IMZA}}
+
+      <div class="signLabel">
+        İMZA
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<div style="
+  width:100%;
+  margin-top:10px;
+  display:flex;
+  justify-content:flex-end;
+">
+  <div style="
+    width:130px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    padding:8px;
+    text-align:center;
+    background:#fff;
+  ">
+    <div style="
+      font-size:10px;
+      font-weight:bold;
+      margin-bottom:4px;
+      color:#0f172a;
+    ">
+      BELGE DOĞRULAMA
+    </div>
+
+    <img
+      src="{{VERIFY_QR}}"
+      style="
+        width:82px;
+        height:82px;
+        object-fit:contain;
+      "
+    />
+
+    <div style="
+      margin-top:4px;
+      font-size:9px;
+      font-weight:bold;
+      word-break:break-word;
+      color:#334155;
+    ">
+      {{VERIFICATION_CODE}}
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Risk Değerlendirmesi</title>
+
+<style>
+/* =========================
+   SAYFA AYARLARI
+========================= */
+@page {
+  size: A4 landscape;
+  margin: 1cm 0.5cm;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* =========================
+   SAYFA WRAPPER
+========================= */
+.page {
+  width: 29.7cm;
+  min-height: 21cm;
+  box-sizing: border-box;
+  page-break-after: always;
+
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  align-items: stretch; /* 🔥 tablo daralmasın */
+}
+
+.page:last-child {
+  page-break-after: auto;
+}
+
+/* =========================
+   SAYFA NUMARASI
+========================= */
+.pageNo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* =========================
+   TABLO GENEL AYAR
+   🔥 TABLO ASLA DARALMAZ
+   🔥 YAZI KÜÇÜLÜR
+========================= */
+table {
+  border-collapse: collapse;
+
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+
+  table-layout: fixed;
+
+  font-size: 10px;        /* 🔥 yazı küçülür */
+  line-height: 1.25;
+
+  flex: 0 0 auto;
+}
+
+/* =========================
+   HÜCRELER
+========================= */
+th, td {
+  border: 1px solid #cfd6df;
+
+  padding: 3px;           /* 🔥 yatay alan kazanılır */
+  vertical-align: middle;
+  text-align: center;
+
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* =========================
+   HEADER
+========================= */
+.header td {
+  font-weight: bold;
+}
+
+.logo {
+  width: 180px;
+  height: 80px;
+  object-fit: contain;
+  display: block;
+}
+
+/* =========================
+   RİSK TABLOSU
+========================= */
+.riskTable {
+  width: 100% !important;
+}
+
+/* Başlık satırı */
+.bg {
+  background: #eef2f7;
+  font-weight: bold;
+}
+
+/* Sol hizalı alanlar */
+.left {
+  text-align: left;
+}
+
+/* =========================
+   İMZA BLOĞU
+========================= */
+.signatures {
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.sig {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  min-width: 0;
+}
+
+.sigKase {
+  min-height: 34px;
+  font-size: 9px;
+  line-height: 1.1;
+  color: #1d4ed8;
+  opacity: 0.60;
+  margin-bottom: 2px;
+}
+
+.kaseName {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kaseUnvan {
+  font-size: 8px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.kaseNo {
+  font-size: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sigBox {
+  height: 40px;
+  border: 1px solid #cfd6df;
+}
+</style>
+</head>
+
+<body>
+
+{{#each pages}}
+<div class="page">
+  <div class="pageNo">SAYFA NO: {{pageNo}}</div>
+
+  <!-- =======================
+       ÜST BAŞLIK
+  ======================== -->
+  <table class="header">
+    <tr>
+      <td rowspan="2" style="width:190px">
+        <img class="logo" src="{{../kurumsalLogo}}" />
+      </td>
+      <td colspan="6">{{../firmaAdi}}</td>
+      <td>DÜZENLENDİĞİ TARİH</td>
+      <td>{{../hazirlamaTarihi}}</td>
+    </tr>
+    <tr>
+      <td colspan="6">RİSK DEĞERLENDİRMESİ</td>
+      <td>GEÇERLİLİK</td>
+      <td>{{../gecerlilikTarihi}}</td>
+    </tr>
+   <tr>
+  <td>REVİZYON TARİHİ</td>
+  <td>{{../revizyonNo}}</td>
+  <td>TEHLİKE SINIFI</td>
+  <td>{{../tehlikeSinifi}}</td>
+  <td>SGK SİCİL NO</td>
+  <td colspan="3">{{../sgkSicilNo}}</td>
+</tr>
+
+<tr>
+  <td>FİRMA ADRESİ</td>
+  <td colspan="8" class="left">
+    {{../firmaAdresi}}
+  </td>
+</tr>
+  </table>
+
+  <!-- =======================
+       RİSK TABLOSU
+  ======================== -->
+  <table class="riskTable">
+    <tr class="bg">
+      <th>NO</th>
+      <th>BÖLÜM</th>
+      <th>FAALİYET</th>
+      <th>TEHLİKE</th>
+      <th>RİSK</th>
+      <th>SONUÇ</th>
+      <th>ETKİ ALANI</th>
+      <th>O</th>
+      <th>Ş</th>
+      <th>RDS</th>
+      <th>RİSK TANIMI</th>
+      <th>ALINACAK ÖNLEMLER</th>
+      <th>MEVCUT DURUM</th>
+      <th>SORUMLU</th>
+      <th>TERMİN</th>
+      <th>O</th>
+      <th>Ş</th>
+      <th>RDS</th>
+    </tr>
+
+    {{#each rows}}
+    <tr>
+      <td>{{no}}</td>
+      <td class="left">{{bolum}}</td>
+      <td class="left">{{faaliyet}}</td>
+      <td class="left">{{tehlike}}</td>
+      <td class="left">{{risk}}</td>
+      <td class="left">{{sonuc}}</td>
+      <td class="left">{{etkiAlaniText}}</td>
+      <td>{{olasilik}}</td>
+      <td>{{siddet}}</td>
+      <td class="{{rdsClass}}">{{rds}}</td>
+      <td class="left">{{riskTanimi}}</td>
+      <td class="left">{{onlem}}</td>
+      <td class="left">{{mevcutDurumText}}</td>
+      <td class="left">{{sorumluText}}</td>
+      <td>{{termin}}</td>
+      <td>{{sonO}}</td>
+      <td>{{sonS}}</td>
+      <td class="{{sonRdsClass}}">{{sonRds}}</td>
+    </tr>
+    {{/each}}
+  </table>
+
+  <!-- =======================
+       İMZA BLOĞU
+  ======================== -->
+   <!-- =======================
+       İMZA BLOĞU
+  ======================== -->
+  <div class="signatures">
+    {{#each ../imzaKisileri6}}
+    <div class="sig">
+      <div class="sigKase">
+        <div class="kaseName">{{adSoyad}}</div>
+        <div class="kaseUnvan">{{unvan}}</div>
+        {{#if sertifikaNo}}
+        <div class="kaseNo">{{sertifikaNo}}</div>
+        {{/if}}
+      </div>
+
+      <div class="sigBox"></div>
+    </div>
+    {{/each}}
+  </div>
+
+</div>
+{{/each}}
+
+</body>
+</html>

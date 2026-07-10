@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Çalışan Temsilcisi Görevlendirme Formu</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        color: #111;
+        margin: 0;
+        padding: 22px;
+      }
+
+      .page {
+        border: 1px solid #222;
+        padding: 18px 18px 14px 18px;
+        min-height: 1050px;
+        position: relative;
+      }
+
+      .header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .title-block { flex: 1; }
+
+      .title {
+        font-size: 16px;
+        font-weight: 700;
+        text-align: center;
+        margin: 0;
+        letter-spacing: 0.2px;
+      }
+
+      .sub {
+        margin-top: 8px;
+        text-align: center;
+        font-size: 11px;
+      }
+
+      .logo {
+        width: 120px;
+        height: 80px;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #fff;
+      }
+      .logo img { max-width: 100%; max-height: 100%; display: block; }
+
+      .info-row {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+      }
+      .info-box {
+        border: 1px solid #333;
+        padding: 8px;
+        min-height: 44px;
+      }
+      .info-label { font-size: 10px; color: #444; margin-bottom: 3px; }
+      .info-value { font-weight: 700; font-size: 12px; }
+
+      .section {
+        margin-top: 14px;
+        border: 1px solid #333;
+        padding: 10px;
+      }
+      .section h3 {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .bullets { margin: 0; padding-left: 16px; }
+      .bullets li { margin: 4px 0; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      th, td {
+        border: 1px solid #222;
+        padding: 6px;
+        vertical-align: middle;
+      }
+      th { background: #f3f3f3; font-size: 11px; }
+      td { height: 34px; }
+      .center { text-align: center; }
+
+      .signatures {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .sig {
+        border: 1px solid #222;
+        padding: 10px;
+        min-height: 90px;
+      }
+      .sig-title {
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      .sig-line {
+        margin-top: 30px;
+        border-top: 1px solid #666;
+        padding-top: 6px;
+        font-size: 11px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .footer {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: #444;
+      }
+
+      .muted { color: #444; font-size: 11px; }
+      .mt8 { margin-top: 8px; }
+      .mt12 { margin-top: 12px; }
+      .bold { font-weight: 700; }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <div class="header">
+        <div class="title-block">
+          <h1 class="title">ÇALIŞAN TEMSİLCİSİ GÖREVLENDİRME FORMU</h1>
+          <div class="sub muted">
+            Bu Form 6331 Sayılı İş Sağlığı ve Güvenliği Kanunun 3'üncü ve 20'nci maddeleri uyarınca düzenlenmiştir.
+          </div>
+        </div>
+
+        <div class="logo">
+          <img src="{{logoSrc}}" alt="logo" />
+        </div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-box">
+          <div class="info-label">Firma Adı</div>
+          <div class="info-value">{{firmaAdi}}</div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">Tehlike Sınıfı</div>
+          <div class="info-value">{{tehlikeSinifi}}</div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">Düzenleme Tarihi</div>
+          <div class="info-value">{{duzenlemeTarihi}}</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>ÇALIŞAN TEMSİLCİSİ GÖREV TANIMI</h3>
+
+        <ul class="bullets">
+          <li>
+            <span class="bold">Çalışan Temsilcisi:</span>
+            İş Sağlığı ve Güvenliği ile ilgili çalışmalara katılma, çalışmaları izleme, tedbir alınmasını isteme,
+            tekliflerde bulunma ve benzeri konularda çalışanları temsil etmeye yetkili çalışandır. (6331 Md.3)
+          </li>
+          <li>
+            Çalışan Temsilcileri, tehlike kaynağının yok edilmesi veya tehlikeden kaynaklanan riskin azaltılması için,
+            işverene öneride bulunma ve işverenden gerekli tedbirlerin alınmasını isteme hakkına sahiptir.
+          </li>
+          <li>
+            Görevlerini yürütmeleri nedeniyle, çalışan temsilcileri ve destek elemanlarının hakları kısıtlanamaz ve
+            görevlerini yerine getirebilmeleri için işveren tarafından gerekli imkânlar sağlanır.
+          </li>
+          <li>
+            İşyerinde yetkili sendika bulunması hâlinde, işyeri sendika temsilcileri çalışan temsilcisi olarak da görev yapar.
+          </li>
+        </ul>
+
+        <div class="mt12 muted">
+          Aşağıda kimlik bilgileri yazılı çalışan/çalışanlar işyerimizde <span class="bold">“Çalışan Temsilcisi”</span>
+          olarak görevlendirilmiş ve görevleri hakkında gerekli bilgilendirme yapılmıştır.
+          Çalışan temsilcisi sayısının birden fazla olması durumunda listenin başında bulunan ve seçilmiş olan temsilci
+          <span class="bold">“Çalışan Baş Temsilcisi”</span>dir.
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>ÇALIŞAN TEMSİLCİSİ BİLGİLERİ</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th class="center">ADI, SOYADI</th>
+              <th class="center">T.C. KİMLİK NO</th>
+              <th class="center">GÖREVİ</th>
+              <th class="center">İMZA</th>
+            </tr>
+          </thead>
+
+          <!-- ✅ ARTIK ÇOK SATIR -->
+          <tbody>
+            {{temsilciRows}}
+          </tbody>
+        </table>
+
+        <div class="signatures">
+          <div class="sig">
+            <div class="sig-title">TEBLİĞ EDEN (İŞVEREN / İŞVEREN VEKİLİ)</div>
+            <div class="center bold">{{isverenAdSoyad}}</div>
+            <div class="sig-line">
+              <span>İmza</span>
+              <span>Tarih: {{duzenlemeTarihi}}</span>
+            </div>
+          </div>
+
+          <div class="sig">
+            <div class="sig-title">TEBELLÜĞ EDEN (ÇALIŞAN TEMSİLCİSİ)</div>
+            <div class="center bold">{{basTemsilciAdSoyad}}</div>
+            <div class="sig-line">
+              <span>İmza</span>
+              <span>Tarih: {{duzenlemeTarihi}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>ÇALIŞAN TEMSİLCİSİ GÖREV YETKİ VE SORUMLULUKLARI</h3>
+
+        <div class="muted"><span class="bold">Pozisyon Adı:</span> Çalışan Temsilcisi</div>
+        <ul class="bullets mt8">
+          <li>Tüm personel ve bölüm müdürleriyle ilişki halinde bulunarak İSG ile ilgili olumsuzluklardan haberdar olmak,</li>
+          <li>İşçi sağlığını ve güvenliğini önemli derecede etkileyebilecek sorunlarda İSG ekibine haber vermek,</li>
+          <li>Riskleri en aza indirmek, tehlikeleri azaltmak veya kaynağında yok etmek için öneriler sunmak,</li>
+          <li>İSG konusunda sağlanan imkânları olumsuz yönde kullanmamak,</li>
+          <li>İSG toplantılarına katılmak,</li>
+          <li>İSG eğitim ihtiyaçlarını İSG ekibine bildirmek,</li>
+          <li>Yetkili makam denetimlerinde görüş bildirmek ve idarenin öngördüğü işleri yerine getirmek.</li>
+        </ul>
+      </div>
+
+      
+    </div>
+  </body>
+</html>
