@@ -8,6 +8,7 @@
     "migrate": "node scripts/run-migrations.js"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
     "archiver": "^7.0.1",
     "axios": "^1.13.1",
     "bcryptjs": "^3.0.3",
@@ -22,15 +23,20 @@
     "helmet": "^8.0.0",
     "hpp": "^0.2.3",
     "html-pdf-node": "^1.0.8",
+    "iyzipay": "^2.0.64",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
     "multer": "^2.0.2",
     "mustache": "^4.2.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.9.16",
     "pdf-lib": "^1.17.1",
     "pg": "^8.18.0",
     "pizzip": "^3.2.0",
     "playwright": "^1.58.2",
     "puppeteer": "^24.37.5",
+    "qrcode": "^1.5.4",
     "uuid": "^13.0.0"
   },
   "description": "",
