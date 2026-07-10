@@ -386,6 +386,16 @@ export default function SistemDurumu() {
   (import.meta.env.VITE_API_URL || "").trim().replace(/\/$/, "") ||
   "https://api.isgpanel.tr/api";
 
+  const SUPER_API_BASES = useMemo(() => {
+    const bases = [API_BASE];
+
+    if (typeof window !== "undefined" && /^https?:\/\//i.test(API_BASE)) {
+      bases.push("/api");
+    }
+
+    return [...new Set(bases.map((x) => x.replace(/\/$/, "")))];
+  }, [API_BASE]);
+
   const [data, setData] = useState(() => createInitialState());
 const [autoRefresh, setAutoRefresh] = useState(true);
 const [refreshEverySec, setRefreshEverySec] = useState(15);
@@ -572,17 +582,31 @@ async function handleMoveDocumentsToExternalStorage() {
       sessionStorage.getItem("authToken") ||
       "";
 
-    const res = await fetch(`${API_BASE}/super/storage/migrate-documents`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        onlyIfDiskAbovePct: DISK_MIGRATION_THRESHOLD,
-        limit: DOCUMENT_MIGRATION_BATCH_LIMIT,
-      }),
-    });
+    let res = null;
+    let lastFetchError = null;
+
+    for (const base of SUPER_API_BASES) {
+      try {
+        res = await fetch(`${base}/super/storage/migrate-documents`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            onlyIfDiskAbovePct: DISK_MIGRATION_THRESHOLD,
+            limit: DOCUMENT_MIGRATION_BATCH_LIMIT,
+          }),
+        });
+        break;
+      } catch (err) {
+        lastFetchError = err;
+      }
+    }
+
+    if (!res) {
+      throw lastFetchError || new Error("API baglantisi kurulamadi.");
+    }
 
     const json = await res.json().catch(() => ({}));
 
@@ -611,7 +635,10 @@ async function handleMoveDocumentsToExternalStorage() {
         : null;
     setStorageMoveResult({
       ok: false,
-      message: networkMessage || e?.message || "Taşıma işlemi sırasında hata oluştu.",
+      message:
+        networkMessage ||
+        e?.message ||
+        "Taşıma işlemi sırasında hata oluştu.",
     });
   } finally {
     setStorageMoving(false);
