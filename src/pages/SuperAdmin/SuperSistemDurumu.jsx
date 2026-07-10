@@ -400,6 +400,7 @@ const [loading, setLoading] = useState(false);
 const [error, setError] = useState(null);
 
 const DISK_MIGRATION_THRESHOLD = 80;
+const DOCUMENT_MIGRATION_BATCH_LIMIT = 25;
 
 const [storageMoving, setStorageMoving] = useState(false);
 const [storageMoveResult, setStorageMoveResult] = useState(null);
@@ -579,7 +580,7 @@ async function handleMoveDocumentsToExternalStorage() {
       },
       body: JSON.stringify({
         onlyIfDiskAbovePct: DISK_MIGRATION_THRESHOLD,
-        limit: 250,
+        limit: DOCUMENT_MIGRATION_BATCH_LIMIT,
       }),
     });
 
@@ -604,9 +605,13 @@ async function handleMoveDocumentsToExternalStorage() {
 
     await loadStatus();
   } catch (e) {
+    const networkMessage =
+      e?.name === "TypeError" && String(e?.message || "").includes("fetch")
+        ? `API baglantisi kurulamadi. Adres: ${API_BASE}`
+        : null;
     setStorageMoveResult({
       ok: false,
-      message: e?.message || "Taşıma işlemi sırasında hata oluştu.",
+      message: networkMessage || e?.message || "Taşıma işlemi sırasında hata oluştu.",
     });
   } finally {
     setStorageMoving(false);
