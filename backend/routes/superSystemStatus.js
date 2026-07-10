@@ -6,6 +6,14 @@ const mongoose = require("mongoose");
 const fs = require("fs/promises");
 const path = require("path");
 
+let documentMigrationJob = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  lastResult: null,
+  error: null,
+};
+
 function getDbHealth() {
   return new Promise(async (resolve) => {
     const started = Date.now();
@@ -219,20 +227,22 @@ function getDocumentModel() {
   }
 }
 
-router.post("/storage/migrate-documents", async (req, res) => {
+async function migrateLocalDocumentsToExternalStorage({
+  onlyIfDiskAbovePct = 80,
+  limit = 25,
+} = {}) {
   try {
-    const onlyIfDiskAbovePct = Number(req.body?.onlyIfDiskAbovePct || 80);
-    const limit = Math.min(Math.max(Number(req.body?.limit || 250), 1), 1000);
+    const safeLimit = Math.min(Math.max(Number(limit || 25), 1), 1000);
 
     const diskBefore = await getDiskUsage();
     const beforeDiskPct = Number(diskBefore?.diskPct || 0);
 
     if (beforeDiskPct < onlyIfDiskAbovePct) {
-      return res.status(400).json({
+      return {
         success: false,
         message: `Disk kullanımı %${onlyIfDiskAbovePct} altında. Taşıma başlatılmadı.`,
         beforeDiskPct,
-      });
+      };
     }
 
     const externalBaseDir = path.join(
@@ -276,7 +286,7 @@ router.post("/storage/migrate-documents", async (req, res) => {
         ],
       })
       .sort({ createdAt: 1 })
-      .limit(limit)
+      .limit(safeLimit)
       .toArray();
 
     console.log("FOUND DOC COUNT:", docs.length);
@@ -367,7 +377,7 @@ router.post("/storage/migrate-documents", async (req, res) => {
     const diskAfter = await getDiskUsage();
     const afterDiskPct = Number(diskAfter?.diskPct || 0);
 
-    return res.json({
+    return {
       success: true,
       message: "Belgeler harici depoya taşıma işlemi tamamlandı.",
       movedCount,
@@ -375,12 +385,83 @@ router.post("/storage/migrate-documents", async (req, res) => {
       failedCount,
       beforeDiskPct,
       afterDiskPct,
-    });
+    };
   } catch (err) {
     console.error("MIGRATE DOCUMENTS ERROR:", err);
-    return res.status(500).json({
+    return {
       success: false,
       message: "Belge taşıma işlemi sırasında hata oluştu.",
+      error: err.message,
+    };
+  }
+}
+
+router.get("/storage/migration-status", async (req, res) => {
+  return res.json({
+    success: true,
+    job: documentMigrationJob,
+  });
+});
+
+router.post("/storage/migrate-documents", async (req, res) => {
+  try {
+    const onlyIfDiskAbovePct = Number(req.body?.onlyIfDiskAbovePct || 80);
+    const limit = Math.min(Math.max(Number(req.body?.limit || 25), 1), 1000);
+
+    if (documentMigrationJob.running) {
+      return res.status(202).json({
+        success: true,
+        accepted: true,
+        message: "Belge tasima islemi zaten devam ediyor.",
+        job: documentMigrationJob,
+      });
+    }
+
+    documentMigrationJob = {
+      running: true,
+      startedAt: new Date(),
+      finishedAt: null,
+      lastResult: null,
+      error: null,
+    };
+
+    setImmediate(async () => {
+      try {
+        const result = await migrateLocalDocumentsToExternalStorage({
+          onlyIfDiskAbovePct,
+          limit,
+        });
+
+        documentMigrationJob = {
+          running: false,
+          startedAt: documentMigrationJob.startedAt,
+          finishedAt: new Date(),
+          lastResult: result,
+          error: result.success ? null : result.message,
+        };
+      } catch (err) {
+        documentMigrationJob = {
+          running: false,
+          startedAt: documentMigrationJob.startedAt,
+          finishedAt: new Date(),
+          lastResult: null,
+          error: String(err?.message || err || ""),
+        };
+        console.error("DOCUMENT MIGRATION BACKGROUND ERROR:", err);
+      }
+    });
+
+    return res.status(202).json({
+      success: true,
+      accepted: true,
+      message: "Belge tasima islemi arka planda baslatildi.",
+      job: documentMigrationJob,
+    });
+  } catch (err) {
+    console.error("MIGRATE DOCUMENTS START ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Belge tasima islemi baslatilamadi.",
       error: err.message,
     });
   }
