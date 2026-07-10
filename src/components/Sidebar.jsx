@@ -88,8 +88,8 @@ const isPaymentPending =
     },
 
     {
-      name: "Firmalarım",
-      path: "/panel/firmalarım",
+      name: "Firmalarımm",
+      path: "/panel/firmalarımm",
       icon: Building2,
     },
 
