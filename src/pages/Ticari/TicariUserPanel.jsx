@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const menuItems = [
   {
     key: "firmalarim",
-    label: "Firmalarım",
+    label: "Firmalar",
     icon: <FaBuilding className="text-sm" />,
     path: "/ticari/firmalarim",
   },
