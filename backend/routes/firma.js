@@ -1,6 +1,8 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const multer = require("multer");
+const zlib = require("zlib");
 const router = express.Router();
 
 const User = require("../models/User");
@@ -85,6 +87,169 @@ const isBireysel = (u) => {
   return role === "bireysel" || role === "uzman";
 };
 const getOrgId = (req) => req.user?.organization || req.user?.organizationId || null;
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+});
+
+function digitsOnly(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normalizeText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeHazard(value) {
+  const text = String(value || "").toLocaleUpperCase("tr-TR");
+  if (text.includes("ÇOK") || text.includes("COK")) return "Çok Tehlikeli";
+  if (text.includes("AZ")) return "Az Tehlikeli";
+  if (text.includes("TEHLİKELİ") || text.includes("TEHLIKELI")) return "Tehlikeli";
+  return "";
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  const text = String(value).trim();
+  const dot = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (dot) {
+    const d = new Date(Number(dot[3]), Number(dot[2]) - 1, Number(dot[1]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(text);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toDateOnly(value) {
+  const d = parseDateInput(value);
+  if (!d) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function computeValidityDate(hazirlama, tehlike) {
+  const d = parseDateInput(hazirlama);
+  if (!d) return null;
+  const hazard = normalizeHazard(tehlike) || tehlike;
+  const years = hazard === "Az Tehlikeli" ? 6 : hazard === "Tehlikeli" ? 4 : 2;
+  d.setFullYear(d.getFullYear() + years);
+  return d;
+}
+
+function firmScopeFilter(user) {
+  if (isAdmin(user) || isTicariUser(user)) {
+    const orgId = user?.organization || user?.organizationId || null;
+    return orgId ? { organization: orgId } : null;
+  }
+  if (isBireysel(user)) return { userId: user._id };
+  return null;
+}
+
+async function findDuplicateFirma(user, sgkNo, excludeId = null) {
+  const normalized = digitsOnly(sgkNo);
+  if (!normalized) return null;
+  const scope = firmScopeFilter(user);
+  if (!scope) return null;
+  const query = { ...scope, sgkNo: normalized };
+  if (excludeId) query._id = { $ne: excludeId };
+  return Firma.findOne(query).lean();
+}
+
+function decodePdfLiteralString(value) {
+  return String(value || "")
+    .replace(/\\([nrtbf()\\])/g, (_, c) => {
+      const map = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", "(": "(", ")": ")", "\\": "\\" };
+      return map[c] || c;
+    })
+    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+}
+
+function extractPdfText(buffer) {
+  const raw = Buffer.isBuffer(buffer) ? buffer.toString("latin1") : "";
+  const chunks = [];
+  const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let match;
+
+  while ((match = streamRe.exec(raw))) {
+    let text = "";
+    try {
+      text = zlib.inflateSync(Buffer.from(match[1], "latin1")).toString("utf8");
+    } catch (_) {
+      try {
+        text = Buffer.from(match[1], "latin1").toString("utf8");
+      } catch (_) {
+        text = "";
+      }
+    }
+
+    if (!text) continue;
+    for (const s of text.matchAll(/\((?:\\.|[^\\)])*\)/g)) {
+      const decoded = normalizeText(decodePdfLiteralString(s[0].slice(1, -1)));
+      if (/[A-Za-z0-9ĞÜŞİÖÇğüşiöç]/.test(decoded)) chunks.push(decoded);
+    }
+  }
+
+  const direct = raw
+    .replace(/[^\x20-\x7EĞÜŞİÖÇğüşiöçİı]/g, " ")
+    .replace(/\s+/g, " ");
+  return normalizeText(`${chunks.join(" ")} ${direct}`);
+}
+
+function pickAfterLabel(text, labels, stopLabels = []) {
+  const source = normalizeText(text);
+  const stops = stopLabels.length
+    ? `(?=${stopLabels.map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}|$)`
+    : "$";
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`${escaped}\\s*[:\\-]?\\s*(.*?)\\s*${stops}`, "i");
+    const m = source.match(re);
+    if (m?.[1]) return normalizeText(m[1]);
+  }
+  return "";
+}
+
+function parseIskatipPdf(buffer) {
+  const text = extractPdfText(buffer);
+  const labels = [
+    "Hizmet Alan İşyeri Unvanı",
+    "Hizmet Alan İşyeri SGK / DETSİS No",
+    "Hizmet Alan İşyeri Adresi",
+    "Hizmet Alan İşyeri İli",
+    "Güncel Çalışan Sayısı",
+    "Güncel Tehlike Sınıfı",
+    "Sözleşme Onay Tarihi",
+  ];
+  const firmName = pickAfterLabel(text, ["Hizmet Alan İşyeri Unvanı", "Hizmet Alan Isyeri Unvani"], labels);
+  const sgkRaw = pickAfterLabel(text, ["Hizmet Alan İşyeri SGK / DETSİS No", "Hizmet Alan Isyeri SGK / DETSIS No", "SGK / DETSİS No"], labels);
+  const adres = pickAfterLabel(text, ["Hizmet Alan İşyeri Adresi", "Hizmet Alan Isyeri Adresi"], labels);
+  const il = pickAfterLabel(text, ["Hizmet Alan İşyeri İli", "Hizmet Alan Isyeri Ili"], labels);
+  const countRaw = pickAfterLabel(text, ["Güncel Çalışan Sayısı", "Guncel Calisan Sayisi"], labels);
+  const hazardRaw = pickAfterLabel(text, ["Güncel Tehlike Sınıfı", "Guncel Tehlike Sinifi"], labels);
+  const dateRaw = pickAfterLabel(text, ["Sözleşme Onay Tarihi", "Sozlesme Onay Tarihi"], labels);
+  const tehlike = normalizeHazard(hazardRaw);
+  const hazirlama = toDateOnly(dateRaw);
+
+  return {
+    firmaAdi: firmName,
+    sgkSicilNo: digitsOnly(sgkRaw),
+    sgkNo: digitsOnly(sgkRaw),
+    adres,
+    il,
+    calisanSayisi: Number(digitsOnly(countRaw)) || "",
+    tehlike,
+    hazirlama,
+    gecerlilik: hazirlama && tehlike ? toDateOnly(computeValidityDate(hazirlama, tehlike)) : "",
+  };
+}
 
 // ✅ payload seçici (NACE + FAALİYET + TARİHLER DAHİL)
 function pickFirmaFields(body) {
@@ -98,6 +263,9 @@ function pickFirmaFields(body) {
     gecerlilik: b.gecerlilik ?? b.gecerlilikTarihi ?? b.gecerlilikTarih,
 
     adres: b.adres,
+    il: b.il,
+    calisanSayisi:
+      b.calisanSayisi ?? b.calisanSayisiGuncel ?? b.guncelCalisanSayisi,
     telefon: b.telefon,
     sektor: b.sektor,
 
@@ -385,6 +553,130 @@ router.post("/:id/unassign", auth, async (req, res) => {
 });
 
 // -------------------- GET /api/firma/:id  ✅ (Prosedür için en kritik)
+// -------------------- POST /api/firma/parse-iskatip-pdf
+router.post("/parse-iskatip-pdf", auth, uploadMemory.single("file"), async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: "PDF dosyası bulunamadı" });
+    }
+
+    const parsed = parseIskatipPdf(req.file.buffer);
+    if (!parsed.firmaAdi && !parsed.sgkSicilNo) {
+      return res.status(422).json({
+        message: "PDF içinden firma bilgileri okunamadı. Lütfen doğru İSG-KATİP hizmet sözleşmesi PDF'si yükleyin.",
+      });
+    }
+
+    return res.json({ ok: true, firma: parsed });
+  } catch (e) {
+    console.error("POST /api/firma/parse-iskatip-pdf hata:", e);
+    return res.status(500).json({ message: "PDF işlenirken hata oluştu" });
+  }
+});
+
+// -------------------- POST /api/firma/bulk
+router.post("/bulk", auth, async (req, res) => {
+  try {
+    const user = req.user;
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (!rows.length) return res.status(400).json({ message: "Excel satırı bulunamadı" });
+
+    const scope = firmScopeFilter(user);
+    if (!scope) return res.status(403).json({ message: "Yetkisiz" });
+
+    const orgId = getOrgId(req);
+    if ((isAdmin(user) || isTicariUser(user)) && !orgId) {
+      return res.status(400).json({ message: "Organizasyon bulunamadı" });
+    }
+
+    const existing = await Firma.find(scope).select("sgkNo").lean();
+    const existingSgk = new Set(existing.map((f) => digitsOnly(f.sgkNo)).filter(Boolean));
+    const seenInExcel = new Set();
+    const inserted = [];
+    const duplicates = [];
+    const invalidRows = [];
+
+    for (const [index, row] of rows.entries()) {
+      const rowNumber = Number(row?.rowNumber || index + 2);
+      const firmaAdi = normalizeText(row?.firmaAdi);
+      const sgkNo = digitsOnly(row?.sgkNo || row?.sgkSicilNo);
+      const tehlike = normalizeHazard(row?.tehlike);
+      const hazirlamaDate = parseDateInput(row?.hazirlama || row?.sozlesmeOnayTarihi);
+
+      const missing = [];
+      if (!firmaAdi) missing.push("Firma Adı boş");
+      if (!sgkNo) missing.push("SGK Sicil No boş");
+      if (!tehlike) missing.push("Tehlike Sınıfı boş");
+      if (!hazirlamaDate) missing.push("Tarih hatalı");
+
+      if (missing.length) {
+        invalidRows.push({ rowNumber, firmaAdi, sgkNo, reason: missing.join(", ") });
+        continue;
+      }
+
+      if (existingSgk.has(sgkNo)) {
+        duplicates.push({ rowNumber, firmaAdi, sgkNo, reason: "Sistemde kayıtlı" });
+        continue;
+      }
+
+      if (seenInExcel.has(sgkNo)) {
+        duplicates.push({ rowNumber, firmaAdi, sgkNo, reason: "Excel içinde mükerrer" });
+        continue;
+      }
+
+      seenInExcel.add(sgkNo);
+      const gecerlilik = parseDateInput(row?.gecerlilik) || computeValidityDate(hazirlamaDate, tehlike);
+      const doc = {
+        firmaAdi: upTR(firmaAdi),
+        sgkNo,
+        il: upTR(row?.il || ""),
+        adres: upTR(row?.adres || ""),
+        calisanSayisi: Number(digitsOnly(row?.calisanSayisi)) || null,
+        nace: digitsOnly(row?.nace),
+        faaliyet: upTR(row?.faaliyet || ""),
+        tehlike,
+        hazirlama: hazirlamaDate,
+        gecerlilik,
+      };
+
+      if (isAdmin(user) || isTicariUser(user)) {
+        doc.organization = orgId;
+        doc.createdBy = user._id;
+        doc.userId = user._id;
+        doc.durum = "Aktif";
+      } else {
+        doc.userId = user._id;
+      }
+
+      const firm = await Firma.create(doc);
+      existingSgk.add(sgkNo);
+      inserted.push(normalizeFirmaOut(firm.toObject?.() || firm));
+
+      if (isTicariUser(user) && FirmUser) {
+        await FirmUser.updateOne(
+          { organization: orgId, firmId: firm._id, userId: user._id },
+          { $set: { isActive: true, assignedBy: user._id } },
+          { upsert: true }
+        );
+      }
+    }
+
+    return res.status(201).json({
+      ok: true,
+      totalRows: rows.length,
+      insertedCount: inserted.length,
+      duplicateCount: duplicates.length,
+      invalidCount: invalidRows.length,
+      inserted,
+      duplicates,
+      invalidRows,
+    });
+  } catch (e) {
+    console.error("POST /api/firma/bulk hata:", e);
+    return res.status(500).json({ message: "Toplu firma ekleme sırasında hata oluştu" });
+  }
+});
+
 router.get("/:id", auth, async (req, res) => {
   try {
     const user = req.user;
@@ -446,6 +738,15 @@ router.post("/", auth, async (req, res) => {
     const data = pickFirmaFields(req.body);
 
     if (!data.firmaAdi) return res.status(400).json({ message: "firmaAdi zorunlu" });
+    data.sgkNo = digitsOnly(data.sgkNo);
+    if (!data.sgkNo) return res.status(400).json({ message: "SGK Sicil No zorunlu" });
+
+    const duplicate = await findDuplicateFirma(user, data.sgkNo);
+    if (duplicate) {
+      return res.status(409).json({
+        message: "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.",
+      });
+    }
 
     if (isAdmin(user) || isTicariUser(user)) {
       const orgId = getOrgId(req);
@@ -527,6 +828,16 @@ router.put("/:id", auth, async (req, res) => {
     const user = req.user;
     const firmId = req.params.id;
     const patch = pickFirmaFields(req.body);
+    if (patch.sgkNo !== undefined) {
+      patch.sgkNo = digitsOnly(patch.sgkNo);
+      if (!patch.sgkNo) return res.status(400).json({ message: "SGK Sicil No zorunlu" });
+      const duplicate = await findDuplicateFirma(user, patch.sgkNo, firmId);
+      if (duplicate) {
+        return res.status(409).json({
+          message: "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.",
+        });
+      }
+    }
 
     const firm = await Firma.findById(firmId);
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });

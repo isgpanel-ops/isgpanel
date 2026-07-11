@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import ExcelJS from "exceljs";
 import {
   HiPlus,
   HiSearch,
@@ -8,6 +9,9 @@ import {
   HiTrash,
   HiX,
   HiEye,
+  HiUpload,
+  HiDownload,
+  HiDocumentText,
 } from "react-icons/hi";
 import { Building2 } from "lucide-react";
 import naceData from "@/data/naceTR.json";
@@ -65,6 +69,34 @@ const toInputDate = (v) => {
   if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
 
   return "";
+};
+
+const inferNaceFromSgk = (sgk) => {
+  const only = digitsOnly(sgk);
+  return only.length >= 7 ? only.slice(1, 7) : "";
+};
+
+const getExcelCellValue = (cell) => {
+  const value = cell?.value;
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === "object") {
+    if (value.text) return String(value.text);
+    if (Array.isArray(value.richText)) return value.richText.map((x) => x.text || "").join("");
+    if (value.result != null) return String(value.result);
+  }
+  return String(value).trim();
+};
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 };
 
 // Geçerlilik / durum yardımcıları
@@ -236,6 +268,8 @@ export default function Firmalar() {
     firmaAdi: "",
     sgkSicilNo: "",
     adres: "",
+    il: "",
+    calisanSayisi: "",
     nace: "",
     faaliyet: "",
     tehlike: "Az Tehlikeli",
@@ -245,6 +279,12 @@ export default function Firmalar() {
 
   const [form, setForm] = useState(emptyForm);
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const pdfInputRef = useRef(null);
+  const bulkInputRef = useRef(null);
   const [detail, setDetail] = useState(null);
   const [userEdited, setUserEdited] = useState({
     faaliyet: false,
@@ -331,6 +371,8 @@ export default function Firmalar() {
       firmaAdi: firma?.firmaAdi || "",
       sgkSicilNo: firma?.sgkSicilNo || firma?.sgkNo || "",
       adres: firma?.adres || "",
+      il: firma?.il || "",
+      calisanSayisi: firma?.calisanSayisi || "",
       nace:
         firma?.nace ||
         firma?.naceKodu ||
@@ -442,6 +484,16 @@ export default function Firmalar() {
       return;
     }
 
+    const normalizedSgk = digitsOnly(form.sgkSicilNo);
+    const duplicate = safeFirmalar.some((f) => {
+      const fid = f?.id || f?._id || null;
+      return fid !== form.id && digitsOnly(f?.sgkSicilNo || f?.sgkNo) === normalizedSgk;
+    });
+    if (duplicate) {
+      openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+      return;
+    }
+
     const token = getToken();
     if (!token) {
       openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
@@ -454,6 +506,8 @@ export default function Firmalar() {
       sgkSicilNo: digitsOnly(form.sgkSicilNo),
       sgkNo: digitsOnly(form.sgkSicilNo),
       adres: upTR(form.adres),
+      il: upTR(form.il),
+      calisanSayisi: form.calisanSayisi ? Number(digitsOnly(form.calisanSayisi)) : null,
       nace: digitsOnly(form.nace),
       faaliyet: upTR(form.faaliyet),
       tehlike: form.tehlike,
@@ -488,6 +542,163 @@ export default function Firmalar() {
         "Hata",
         "Firma kaydedilirken hata oluştu. (Backend/Yetki/Endpoint kontrol)"
       );
+    }
+  };
+
+  const applyParsedFirma = (parsed = {}) => {
+    const sgk = digitsOnly(parsed.sgkSicilNo || parsed.sgkNo || "");
+    const nace = parsed.nace || inferNaceFromSgk(sgk);
+    const tehlike = parsed.tehlike || form.tehlike || "Az Tehlikeli";
+    const hazirlama = toInputDate(parsed.hazirlama || parsed.sozlesmeOnayTarihi);
+    setForm((prev) => ({
+      ...prev,
+      firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
+      sgkSicilNo: sgk || prev.sgkSicilNo,
+      adres: upTR(parsed.adres || prev.adres),
+      il: upTR(parsed.il || prev.il),
+      calisanSayisi: parsed.calisanSayisi || prev.calisanSayisi,
+      nace: nace || prev.nace,
+      faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
+      tehlike,
+      hazirlama: hazirlama || prev.hazirlama,
+      gecerlilik:
+        toInputDate(parsed.gecerlilik) ||
+        computeValidity(hazirlama || prev.hazirlama, tehlike),
+    }));
+    setUserEdited({ faaliyet: false, tehlike: false });
+  };
+
+  const handlePdfSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const token = getToken();
+    if (!token) {
+      openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+      return;
+    }
+
+    try {
+      setPdfLoading(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axios.post(`${API_URL}/firma/parse-iskatip-pdf`, fd, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      applyParsedFirma(res.data?.firma || {});
+      openInfo("Bilgilendirme", "PDF okundu ve firma formu dolduruldu.");
+    } catch (err) {
+      openInfo(
+        "Hata",
+        err?.response?.data?.message ||
+          "PDF okunamadı. Dosyanın İSG-KATİP hizmet sözleşmesi PDF'i olduğundan emin olun."
+      );
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const downloadBulkTemplate = async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Firmalar");
+    ws.addRow([
+      "Firma Adı",
+      "SGK Sicil No",
+      "İl",
+      "Adres",
+      "Çalışan Sayısı",
+      "Tehlike Sınıfı",
+      "Sözleşme Onay Tarihi",
+    ]);
+    ws.addRow([
+      "ÖRNEK FİRMA LTD. ŞTİ.",
+      "12345678901234567890123456",
+      "ANKARA",
+      "Örnek adres",
+      "25",
+      "Tehlikeli",
+      "01.06.2026",
+    ]);
+    ws.columns.forEach((col) => {
+      col.width = 24;
+    });
+    const buffer = await wb.xlsx.writeBuffer();
+    downloadBlob(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      "isgpanel_toplu_firma_sablonu.xlsx"
+    );
+  };
+
+  const handleBulkExcelSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const token = getToken();
+    if (!token) {
+      openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+      return;
+    }
+
+    try {
+      setBulkLoading(true);
+      setBulkResult(null);
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await file.arrayBuffer());
+      const ws = wb.worksheets[0];
+      if (!ws) throw new Error("Excel sayfası bulunamadı");
+
+      const rows = [];
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const firmaAdi = getExcelCellValue(row.getCell(1));
+        const sgkSicilNo = digitsOnly(getExcelCellValue(row.getCell(2)));
+        const il = getExcelCellValue(row.getCell(3));
+        const adres = getExcelCellValue(row.getCell(4));
+        const calisanSayisi = getExcelCellValue(row.getCell(5));
+        const tehlike = getExcelCellValue(row.getCell(6));
+        const sozlesmeOnayTarihi = getExcelCellValue(row.getCell(7));
+        if (![firmaAdi, sgkSicilNo, il, adres, calisanSayisi, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
+
+        const nace = inferNaceFromSgk(sgkSicilNo);
+        const auto = autoFromNace(nace);
+        rows.push({
+          rowNumber,
+          firmaAdi,
+          sgkSicilNo,
+          sgkNo: sgkSicilNo,
+          il,
+          adres,
+          calisanSayisi,
+          tehlike: tehlike || auto?.tehlike || "",
+          hazirlama: sozlesmeOnayTarihi,
+          nace,
+          faaliyet: auto?.faaliyet || "",
+        });
+      });
+
+      if (!rows.length) {
+        openInfo("Bilgilendirme", "Excel içinde eklenecek firma satırı bulunamadı.");
+        return;
+      }
+
+      const res = await axios.post(
+        `${API_URL}/firma/bulk`,
+        { rows },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setBulkResult(res.data || null);
+      await fetchFirmalar?.();
+    } catch (err) {
+      openInfo(
+        "Hata",
+        err?.response?.data?.message || err?.message || "Toplu firma ekleme başarısız oldu."
+      );
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -597,10 +808,22 @@ export default function Firmalar() {
               </p>
             </div>
           </div>
-          <button onClick={openAdd} className={`${btn.base} ${btn.primary}`}>
-            <HiPlus className="-ml-0.5 h-3 w-3" />
-            Yeni Firma
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setBulkResult(null);
+                setBulkOpen(true);
+              }}
+              className={`${btn.base} ${btn.ghost}`}
+            >
+              <HiUpload className="-ml-0.5 h-3 w-3" />
+              Toplu Firma Ekle
+            </button>
+            <button onClick={openAdd} className={`${btn.base} ${btn.primary}`}>
+              <HiPlus className="-ml-0.5 h-3 w-3" />
+              Yeni Firma
+            </button>
+          </div>
         </div>
 
         {/* Araç Çubuğu */}
@@ -825,6 +1048,25 @@ export default function Firmalar() {
               </button>
             </div>
 
+            <div className="border-b bg-slate-50 px-4 py-3">
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={handlePdfSelect}
+              />
+              <button
+                type="button"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={pdfLoading}
+                className={`${btn.base} ${btn.ghost} bg-white`}
+              >
+                <HiDocumentText className="h-3.5 w-3.5" />
+                {pdfLoading ? "PDF okunuyor..." : "İSG-KATİP PDF'den Otomatik Doldur"}
+              </button>
+            </div>
+
             <form onSubmit={saveForm} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -868,6 +1110,32 @@ export default function Firmalar() {
                     value={form.adres}
                     onChange={(e) =>
                       setForm({ ...form, adres: upTR(e.target.value) })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    İl
+                  </label>
+                  <input
+                    className={inputClass}
+                    placeholder="İL"
+                    value={form.il}
+                    onChange={(e) => setForm({ ...form, il: upTR(e.target.value) })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    Çalışan Sayısı
+                  </label>
+                  <input
+                    className={inputClass}
+                    placeholder="ÇALIŞAN SAYISI"
+                    value={form.calisanSayisi}
+                    onChange={(e) =>
+                      setForm({ ...form, calisanSayisi: digitsOnly(e.target.value) })
                     }
                   />
                 </div>
@@ -964,6 +1232,88 @@ export default function Firmalar() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Toplu Firma Ekle */}
+      {bulkOpen && (
+        <div className="fixed inset-0 z-[99999] grid place-items-center p-3">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setBulkOpen(false)}
+          />
+          <div className="relative z-[99999] w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-2 bg-gradient-to-r from-[#0a2b45] to-[#0a2b45]/90 text-white">
+              <div className="flex items-center gap-2">
+                <HiUpload className="h-4 w-4" />
+                <h3 className="text-sm font-semibold tracking-tight">
+                  Toplu Firma Ekle
+                </h3>
+              </div>
+              <button
+                onClick={() => setBulkOpen(false)}
+                className="rounded-lg p-1.5 hover:bg-white/10"
+              >
+                <HiX className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 p-4 text-xs text-slate-700">
+              <input
+                ref={bulkInputRef}
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                className="hidden"
+                onChange={handleBulkExcelSelect}
+              />
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                Excel'in ilk satırı başlık satırıdır. Kayıtlar 2. satırdan itibaren okunur.
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadBulkTemplate}
+                  className={`${btn.base} ${btn.ghost}`}
+                >
+                  <HiDownload className="h-3.5 w-3.5" />
+                  Örnek Excel Şablonu İndir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => bulkInputRef.current?.click()}
+                  disabled={bulkLoading}
+                  className={`${btn.base} ${btn.primary}`}
+                >
+                  <HiUpload className="h-3.5 w-3.5" />
+                  {bulkLoading ? "Yükleniyor..." : "Excel Seç ve Yükle"}
+                </button>
+              </div>
+
+              {bulkResult && (
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 font-semibold text-slate-800">Yükleme Özeti</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>Toplam Satır: <b>{bulkResult.totalRows || 0}</b></div>
+                    <div>Başarıyla Eklenen: <b>{bulkResult.insertedCount || 0}</b></div>
+                    <div>Mükerrer Kayıt: <b>{bulkResult.duplicateCount || 0}</b></div>
+                    <div>Hatalı Satır: <b>{bulkResult.invalidCount || 0}</b></div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t p-3">
+              <button
+                type="button"
+                onClick={() => setBulkOpen(false)}
+                className={`${btn.base} ${btn.ghost}`}
+              >
+                Kapat
+              </button>
+            </div>
           </div>
         </div>
       )}

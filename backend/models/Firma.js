@@ -26,6 +26,8 @@ const FirmaSchema = new mongoose.Schema(
     firmaAdi: { type: String, required: true },
     sgkNo: { type: String },
     adres: { type: String },
+    il: { type: String, default: "" },
+    calisanSayisi: { type: Number, default: null },
     telefon: { type: String },
     sektor: { type: String },
 
