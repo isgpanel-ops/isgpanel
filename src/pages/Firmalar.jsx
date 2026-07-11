@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ExcelJS from "exceljs";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
+import { createWorker } from "tesseract.js";
 import {
   HiPlus,
   HiSearch,
@@ -17,6 +20,8 @@ import { Building2 } from "lucide-react";
 import naceData from "@/data/naceTR.json";
 import { useFirmalar } from "../context/FirmaContext";
 import ConfirmModal from "../components/ui/ConfirmModal";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // =========================
 // API
@@ -128,6 +133,136 @@ const downloadBlob = (blob, filename) => {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+};
+
+const normalizeSearchText = (value) =>
+  String(value || "")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+const getOcrLines = (text) =>
+  normalizeSearchText(text)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+const includesAny = (text, keys) => {
+  const hay = String(text || "").toLocaleLowerCase("tr-TR");
+  return keys.some((key) => hay.includes(String(key).toLocaleLowerCase("tr-TR")));
+};
+
+const valueNearLabel = (lines, labels) => {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!includesAny(line, labels)) continue;
+
+    const afterColon = line.split(/[:：]/).slice(1).join(":").trim();
+    if (afterColon && !includesAny(afterColon, labels)) return afterColon;
+
+    for (let j = i + 1; j < Math.min(lines.length, i + 5); j += 1) {
+      const candidate = lines[j];
+      if (!includesAny(candidate, labels)) return candidate;
+    }
+  }
+  return "";
+};
+
+const normalizeHazardFromText = (text) => {
+  const upper = String(text || "").toLocaleUpperCase("tr-TR");
+  if (upper.includes("ÇOK TEHLİKELİ") || upper.includes("COK TEHLIKELI")) {
+    return "Çok Tehlikeli";
+  }
+  if (upper.includes("AZ TEHLİKELİ") || upper.includes("AZ TEHLIKELI")) {
+    return "Az Tehlikeli";
+  }
+  if (upper.includes("TEHLİKELİ") || upper.includes("TEHLIKELI")) {
+    return "Tehlikeli";
+  }
+  return "";
+};
+
+const parseFirmaFromOcrText = (text) => {
+  const lines = getOcrLines(text);
+  const all = lines.join("\n");
+  const sgkMatch =
+    all.match(/\b\d{20,30}\b/) ||
+    all.replace(/\s+/g, "").match(/\d{20,30}/);
+  const dateMatch =
+    all.match(/\b\d{1,2}[./-]\d{1,2}[./-]\d{4}\b/) ||
+    all.match(/\b\d{4}-\d{2}-\d{2}\b/);
+
+  const firmaAdi = valueNearLabel(lines, [
+    "Hizmet Alan İşyeri Unvanı",
+    "Hizmet Alan Isyeri Unvani",
+    "İşyeri Unvanı",
+    "Isyeri Unvani",
+    "Unvanı",
+  ]);
+  const adres = valueNearLabel(lines, [
+    "Hizmet Alan İşyeri Adresi",
+    "Hizmet Alan Isyeri Adresi",
+    "İşyeri Adresi",
+    "Isyeri Adresi",
+    "Adresi",
+  ]);
+  const hazardText =
+    valueNearLabel(lines, [
+      "Güncel Tehlike Sınıfı",
+      "Guncel Tehlike Sinifi",
+      "Tehlike Sınıfı",
+      "Tehlike Sinifi",
+    ]) || all;
+  const dateText =
+    valueNearLabel(lines, [
+      "Sözleşme Onay Tarihi",
+      "Sozlesme Onay Tarihi",
+      "Sözleşme Başlangıç Tarihi",
+      "Sozlesme Baslangic Tarihi",
+    ]) || dateMatch?.[0] || "";
+
+  const tehlike = normalizeHazardFromText(hazardText);
+  const hazirlama = toInputDate(dateText);
+  const sgk = digitsOnly(sgkMatch?.[0] || "");
+
+  return {
+    firmaAdi,
+    sgkSicilNo: sgk,
+    sgkNo: sgk,
+    adres,
+    tehlike,
+    hazirlama,
+    gecerlilik: hazirlama && tehlike ? computeValidity(hazirlama, tehlike) : "",
+  };
+};
+
+const readPdfWithOcr = async (file, onProgress) => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const worker = await createWorker("tur+eng");
+  const pageLimit = Math.min(pdf.numPages || 1, 2);
+  const texts = [];
+
+  try {
+    for (let pageNo = 1; pageNo <= pageLimit; pageNo += 1) {
+      onProgress?.(`PDF sayfası okunuyor (${pageNo}/${pageLimit})...`);
+      const page = await pdf.getPage(pageNo);
+      const viewport = page.getViewport({ scale: 2.2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      onProgress?.(`OCR yapılıyor (${pageNo}/${pageLimit})...`);
+      const result = await worker.recognize(canvas);
+      texts.push(result?.data?.text || "");
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  return parseFirmaFromOcrText(texts.join("\n"));
 };
 
 // Geçerlilik / durum yardımcıları
@@ -312,6 +447,7 @@ export default function Firmalar() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState("");
   const pdfInputRef = useRef(null);
   const bulkInputRef = useRef(null);
   const [detail, setDetail] = useState(null);
@@ -604,22 +740,36 @@ export default function Firmalar() {
 
     try {
       setPdfLoading(true);
+      setPdfStatus("PDF metni kontrol ediliyor...");
       const fd = new FormData();
       fd.append("file", file);
       const res = await axios.post(`${API_URL}/firma/parse-iskatip-pdf`, fd, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const parsed = res.data?.firma || {};
+      let parsed = res.data?.firma || {};
       if (!parsed.firmaAdi && !parsed.sgkSicilNo && !parsed.sgkNo) {
-        openInfo(
-          "Bilgilendirme",
-          "PDF içinden metin okunamadı. Bu dosya taranmış/görsel PDF ise otomatik doldurma için metin içeren İSG-KATİP PDF'i gerekir."
-        );
+        parsed = await readPdfWithOcr(file, setPdfStatus);
+      }
+
+      if (!parsed.firmaAdi && !parsed.sgkSicilNo && !parsed.sgkNo) {
+        openInfo("Bilgilendirme", "PDF okunamadı. Dosya çok düşük kaliteliyse Excel aktarımı kullanın.");
         return;
       }
       applyParsedFirma(parsed);
       openInfo("Bilgilendirme", "PDF okundu ve firma formu dolduruldu.");
     } catch (err) {
+      if (err?.response?.status === 422) {
+        try {
+          const parsed = await readPdfWithOcr(file, setPdfStatus);
+          if (parsed.firmaAdi || parsed.sgkSicilNo || parsed.sgkNo) {
+            applyParsedFirma(parsed);
+            openInfo("Bilgilendirme", "PDF OCR ile okundu ve firma formu dolduruldu.");
+            return;
+          }
+        } catch (ocrErr) {
+          console.error("PDF OCR hatası:", ocrErr);
+        }
+      }
       openInfo(
         "Hata",
         err?.response?.data?.message ||
@@ -627,6 +777,7 @@ export default function Firmalar() {
       );
     } finally {
       setPdfLoading(false);
+      setPdfStatus("");
     }
   };
 
@@ -1103,7 +1254,7 @@ export default function Firmalar() {
                 className={`${btn.base} ${btn.ghost} bg-white`}
               >
                 <HiDocumentText className="h-3.5 w-3.5" />
-                {pdfLoading ? "PDF okunuyor..." : "İSG-KATİP PDF'den Otomatik Doldur"}
+                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "İSG-KATİP PDF'den Otomatik Doldur"}
               </button>
             </div>
 
