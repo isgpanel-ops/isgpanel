@@ -8,6 +8,7 @@ const fontkit = require("@pdf-lib/fontkit");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const PdfJob = require("../models/PdfJob");
+const { embedBoldFont } = require("../utils/pdfFonts");
 const safe = (v) => (v ?? "").toString();
 
 const TRANSPARENT_1PX =
@@ -781,10 +782,7 @@ async function placeRoleSignaturesOnPdf(pdfBuffer, payload = {}, req = null) {
   const hekimImage = await embedImageFromDataUrl(pdfDoc, hekimImza);
   
 
-  const fontBytes = fs.readFileSync(
-    path.join(findProjectRoot(), "isg_prosedur_template", "fonts", "NotoSans-Bold.ttf")
-  );
-  const boldFont = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
   const uzmanStamp = buildUzmanStampData(payload);
   const hekimStamp = buildHekimStampData(payload);

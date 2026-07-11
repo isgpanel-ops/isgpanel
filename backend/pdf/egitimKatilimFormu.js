@@ -7,6 +7,7 @@ const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
+const { embedBoldFont } = require("../utils/pdfFonts");
 
 const OUT_DIR = path.join(__dirname, "..", "temp_pdfs");
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -573,11 +574,7 @@ async function placeRoleSignaturesOnPdf(pdfBuffer, payload = {}) {
   const uzmanImage = await embedImageFromDataUrl(pdfDoc, uzmanImza);
   const hekimImage = await embedImageFromDataUrl(pdfDoc, hekimImza);
   
-const fontBytes = fs.readFileSync(
-  path.join(findProjectRoot(), "isg_prosedur_template", "fonts", "NotoSans-Bold.ttf")
-);
-
-  const boldFont = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
   const uzmanStamp = buildUzmanStampData(payload);
   const hekimStamp = buildHekimStampData(payload);

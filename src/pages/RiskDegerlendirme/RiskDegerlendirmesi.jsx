@@ -2105,6 +2105,8 @@ const saveToDocs = async () => {
     category: "risk",
     subCategory: "degerlendirme",
     title: "Risk Değerlendirmesi",
+    type: "Risk DeÄŸerlendirmesi",
+    belgeTuru: "Risk DeÄŸerlendirmesi",
     year,
     createdBy,
 createdByName: createdBy,
@@ -2149,6 +2151,11 @@ createdByUserId: userObj?._id || userObj?.id,
     firmaAdi,
     kategori: "Risk Değerlendirmesi",
     baslik: `${firmaAdi} - Risk Değerlendirmesi`,
+    category: "risk",
+    subCategory: "degerlendirme",
+    title: "Risk DeÄŸerlendirmesi",
+    type: "Risk DeÄŸerlendirmesi",
+    belgeTuru: "Risk DeÄŸerlendirmesi",
     yil: year,
     durum: "Hazır",
     olusturan: createdBy,
@@ -2167,6 +2174,7 @@ createdByUserId: userObj?._id || userObj?.id,
   try {
     window.dispatchEvent(new Event("documentsUpdated"));
     window.dispatchEvent(new Event("ticari_docs_refresh"));
+    window.dispatchEvent(new Event("belgelerimUpdated"));
   } catch {}
 
   showInfo("Belgelerim, Risk Değerlendirme sekmesine kaydedildi ✅");
@@ -2219,6 +2227,8 @@ createdByUserId: userObj?._id || userObj?.id,
         category: "risk",
         subCategory: "degerlendirme",
         title: "Risk Değerlendirmesi",
+        type: "Risk DeÄŸerlendirmesi",
+        belgeTuru: "Risk DeÄŸerlendirmesi",
         year,
        createdBy,
 createdByName: createdBy,
@@ -2263,6 +2273,11 @@ createdByUserId: userObj?._id || userObj?.id,
         firmaAdi,
         kategori: "Risk Değerlendirmesi",
         baslik: `${firmaAdi} - Risk Değerlendirmesi`,
+        category: "risk",
+        subCategory: "degerlendirme",
+        title: "Risk DeÄŸerlendirmesi",
+        type: "Risk DeÄŸerlendirmesi",
+        belgeTuru: "Risk DeÄŸerlendirmesi",
         yil: year,
         durum: "Hazır",
         olusturan: createdBy,
@@ -2281,6 +2296,7 @@ createdByUserId: userObj?._id || userObj?.id,
      try {
   window.dispatchEvent(new Event("documentsUpdated"));
   window.dispatchEvent(new Event("ticari_docs_refresh"));
+  window.dispatchEvent(new Event("belgelerimUpdated"));
 } catch {}
 
       showInfo("Belgelerim, Risk Değerlendirme sekmesine kaydedildi ✅");

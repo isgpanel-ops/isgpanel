@@ -5,6 +5,7 @@ const Mustache = require("mustache");
 const puppeteer = require("puppeteer");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
+const { embedBoldFont } = require("../utils/pdfFonts");
 
 const TEMP_DIR = path.join(__dirname, "temp");
 
@@ -449,13 +450,7 @@ async function placeSignatures(pdfPath, payload) {
 
   const pages = pdfDoc.getPages();
 
-  const fontPath = path.join(__dirname, "../fonts/NotoSans-Bold.ttf");
-  if (!fs.existsSync(fontPath)) {
-    throw new Error("Font bulunamadı: " + fontPath);
-  }
-
-  const fontBytes = fs.readFileSync(fontPath);
-  const boldFont = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
   const imzalar = payload?.imzalar || {};
 

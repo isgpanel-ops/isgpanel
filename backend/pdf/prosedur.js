@@ -5,6 +5,7 @@ const QRCode = require("qrcode");
 const crypto = require("crypto");
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
+const { embedBoldFont } = require("../utils/pdfFonts");
 /* =========================
    BROWSER REUSE
    ========================= */
@@ -439,14 +440,7 @@ pdfDoc.registerFontkit(fontkit);
   const imzalar = data?.imzalar || {};
 
 
-const fontPath = path.join(__dirname, "../fonts/NotoSans-Bold.ttf");
-
-if (!fs.existsSync(fontPath)) {
-  throw new Error("Font bulunamadı: " + fontPath);
-}
-
-const fontBytes = fs.readFileSync(fontPath);
-const boldFont = await pdfDoc.embedFont(fontBytes);
+const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
 
   async function embedImage(dataUrl) {

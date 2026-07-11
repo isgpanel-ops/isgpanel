@@ -4,6 +4,7 @@ const path = require("path");
 const { chromium } = require("playwright");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
+const { embedBoldFont } = require("../utils/pdfFonts");
 
 function toUpperTR(value) {
   return String(value || "").toLocaleUpperCase("tr-TR");
@@ -237,10 +238,7 @@ async function placeSignatures(pdfPath, payload = {}) {
     bilgi: 560,
   };
 
-  const fontBytes = fs.readFileSync(
-    path.join(process.cwd(), "isg_prosedur_template", "fonts", "NotoSans-Bold.ttf")
-  );
-  const boldFont = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
     pages.forEach((page, index) => {
     for (const role of roles) {

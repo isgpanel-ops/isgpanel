@@ -471,10 +471,49 @@ export default function RiskBelgeleri() {
     setConfirmOpen(true);
   };
 
+  const readLocalRiskDocs = () => {
+    try {
+      const raw = localStorage.getItem("belgelerim_risk_listesi");
+      const list = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(list)) return [];
+
+      return list.map((doc) => ({
+        ...doc,
+        category: doc?.category || "risk",
+        subCategory: doc?.subCategory || "degerlendirme",
+        title: doc?.title || doc?.baslik || "Risk Değerlendirmesi",
+        durum: doc?.durum || (doc?.status === "arsiv" ? "Arşivde" : "Hazır"),
+        status: doc?.status || "hazir",
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  const mergeRiskDocs = (serverDocs, localDocs) => {
+    const merged = [];
+    const seen = new Set();
+
+    [...(serverDocs || []), ...(localDocs || [])].forEach((doc) => {
+      const key = String(
+        doc?._id ||
+          doc?.id ||
+          doc?.fileUrl ||
+          `${doc?.firmaId || ""}-${doc?.tarih || doc?.createdAt || ""}-${doc?.fileName || doc?.baslik || doc?.title || ""}`
+      );
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      merged.push(doc);
+    });
+
+    return merged;
+  };
+
   const fetchDocs = async () => {
     const token = getAuthToken();
+    const localRiskDocs = readLocalRiskDocs();
     if (!token) {
-      setDocs([]);
+      setDocs(localRiskDocs);
       return;
     }
 
@@ -490,7 +529,7 @@ export default function RiskBelgeleri() {
       if (!res.ok) {
         const text = await res.text();
         console.error("Server risk belgeleri çekilemedi:", text);
-        setDocs([]);
+        setDocs(localRiskDocs);
         return;
       }
 
@@ -520,10 +559,10 @@ export default function RiskBelgeleri() {
         );
       });
 
-      setDocs(riskList);
+      setDocs(mergeRiskDocs(riskList, localRiskDocs));
     } catch (e) {
       console.error("Server risk belgeleri çekilemedi:", e);
-      setDocs([]);
+      setDocs(localRiskDocs);
     }
   };
 
@@ -532,9 +571,13 @@ export default function RiskBelgeleri() {
 
     const onRefresh = () => fetchDocs();
     window.addEventListener("ticari_docs_refresh", onRefresh);
+    window.addEventListener("documentsUpdated", onRefresh);
+    window.addEventListener("belgelerimUpdated", onRefresh);
 
     return () => {
       window.removeEventListener("ticari_docs_refresh", onRefresh);
+      window.removeEventListener("documentsUpdated", onRefresh);
+      window.removeEventListener("belgelerimUpdated", onRefresh);
     };
   }, [selectedFirm?.id, selectedFirm?._id]);
 

@@ -5,6 +5,7 @@ const puppeteer = require("puppeteer");
 const { PDFDocument, rgb } = require("pdf-lib");
 const QRCode = require("qrcode");
 const fontkit = require("@pdf-lib/fontkit");
+const { embedBoldFont } = require("../utils/pdfFonts");
 
 /* <body> içeriğini alır */
 function readBodyOnly(filePath) {
@@ -436,13 +437,7 @@ async function placeSignatures(pdfPath, data) {
   const pages = pdfDoc.getPages();
   const imzalar = data?.imzalar || {};
 
-  const fontPath = path.join(__dirname, "../fonts/NotoSans-Bold.ttf");
-  if (!fs.existsSync(fontPath)) {
-    throw new Error("Font bulunamadı: " + fontPath);
-  }
-
-  const fontBytes = fs.readFileSync(fontPath);
-  const boldFont = await pdfDoc.embedFont(fontBytes);
+  const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
   async function embedImage(dataUrl) {
     if (!dataUrl || typeof dataUrl !== "string") return null;
