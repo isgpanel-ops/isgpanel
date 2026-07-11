@@ -88,6 +88,37 @@ const getExcelCellValue = (cell) => {
   return String(value).trim();
 };
 
+const normalizeExcelHeader = (value) =>
+  String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/[ıİ]/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ş/g, "s")
+    .replace(/ü/g, "u")
+    .replace(/[^a-z0-9]/g, "");
+
+const getHeaderMap = (worksheet) => {
+  const map = new Map();
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell((cell, colNumber) => {
+    const key = normalizeExcelHeader(getExcelCellValue(cell));
+    if (key) map.set(key, colNumber);
+  });
+  return map;
+};
+
+const getCellByHeader = (row, headerMap, aliases, fallbackCol = null) => {
+  const normalizedAliases = aliases.map(normalizeExcelHeader);
+  for (const [key, col] of headerMap.entries()) {
+    if (normalizedAliases.some((alias) => key === alias || key.includes(alias))) {
+      return getExcelCellValue(row.getCell(col));
+    }
+  }
+  return fallbackCol ? getExcelCellValue(row.getCell(fallbackCol)) : "";
+};
+
 const downloadBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -586,7 +617,15 @@ export default function Firmalar() {
       const res = await axios.post(`${API_URL}/firma/parse-iskatip-pdf`, fd, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      applyParsedFirma(res.data?.firma || {});
+      const parsed = res.data?.firma || {};
+      if (!parsed.firmaAdi && !parsed.sgkSicilNo && !parsed.sgkNo) {
+        openInfo(
+          "Bilgilendirme",
+          "PDF içinden metin okunamadı. Bu dosya taranmış/görsel PDF ise otomatik doldurma için metin içeren İSG-KATİP PDF'i gerekir."
+        );
+        return;
+      }
+      applyParsedFirma(parsed);
       openInfo("Bilgilendirme", "PDF okundu ve firma formu dolduruldu.");
     } catch (err) {
       openInfo(
@@ -651,16 +690,34 @@ export default function Firmalar() {
       const ws = wb.worksheets[0];
       if (!ws) throw new Error("Excel sayfası bulunamadı");
 
+      const headerMap = getHeaderMap(ws);
       const rows = [];
       ws.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const firmaAdi = getExcelCellValue(row.getCell(1));
-        const sgkSicilNo = digitsOnly(getExcelCellValue(row.getCell(2)));
-        const il = getExcelCellValue(row.getCell(3));
-        const adres = getExcelCellValue(row.getCell(4));
-        const calisanSayisi = getExcelCellValue(row.getCell(5));
-        const tehlike = getExcelCellValue(row.getCell(6));
-        const sozlesmeOnayTarihi = getExcelCellValue(row.getCell(7));
+        const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan İşyeri Unvanı", "Unvan"], 1);
+        const sgkSicilNo = digitsOnly(
+          getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan İşyeri SGK/DETSİS No", "SGK DETSİS No"], 2)
+        );
+        const il = getCellByHeader(row, headerMap, ["İl", "Hizmet Alan İşyeri İli"], 3);
+        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], null);
+        const calisanSayisi = getCellByHeader(
+          row,
+          headerMap,
+          ["Çalışan Sayısı", "Güncel Çalışan Sayısı", "Hizmet Alan İşyeri Çalışan Sayısı"],
+          4
+        );
+        const tehlike = getCellByHeader(
+          row,
+          headerMap,
+          ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"],
+          5
+        );
+        const sozlesmeOnayTarihi = getCellByHeader(
+          row,
+          headerMap,
+          ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"],
+          6
+        );
         if (![firmaAdi, sgkSicilNo, il, adres, calisanSayisi, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
 
         const nace = inferNaceFromSgk(sgkSicilNo);
