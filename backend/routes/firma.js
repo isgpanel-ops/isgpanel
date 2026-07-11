@@ -593,6 +593,7 @@ router.post("/bulk", auth, async (req, res) => {
     const existingSgk = new Set(existing.map((f) => digitsOnly(f.sgkNo)).filter(Boolean));
     const seenInExcel = new Set();
     const inserted = [];
+    const insertedFirmDocs = [];
     const duplicates = [];
     const invalidRows = [];
 
@@ -650,6 +651,7 @@ router.post("/bulk", auth, async (req, res) => {
 
       const firm = await Firma.create(doc);
       existingSgk.add(sgkNo);
+      insertedFirmDocs.push(firm);
       inserted.push(normalizeFirmaOut(firm.toObject?.() || firm));
 
       if (isTicariUser(user) && FirmUser) {
@@ -658,6 +660,41 @@ router.post("/bulk", auth, async (req, res) => {
           { $set: { isActive: true, assignedBy: user._id } },
           { upsert: true }
         );
+      }
+    }
+
+    if (isTicariUser(user) && createNotification && insertedFirmDocs.length) {
+      try {
+        const admins = await User.find({ organization: orgId })
+          .select("_id role name fullName adSoyad personal email")
+          .lean();
+        const adminIds = admins
+          .filter((a) => roleOf(a) === "ticari_admin")
+          .map((a) => String(a._id));
+
+        if (adminIds.length) {
+          const creatorName = pickUserDisplayName(user);
+          await Promise.all(
+            insertedFirmDocs.flatMap((firm) =>
+              adminIds.map((adminId) =>
+                createNotification({
+                  userId: adminId,
+                  firmId: firm._id,
+                  type: "event",
+                  module: "ticari",
+                  title: "Firma eklendi",
+                  message: `${creatorName} kullanıcısı ${upTR(firm.firmaAdi)} firmasını toplu yükleme ile ekledi.`,
+                  severity: "info",
+                  link: "",
+                  dueDate: new Date(),
+                  key: `corp_firma_bulk_created:${String(orgId)}:${String(firm._id)}:admin:${String(adminId)}`,
+                })
+              )
+            )
+          );
+        }
+      } catch (notifyErr) {
+        console.error("Toplu firma bildirim hatası:", notifyErr);
       }
     }
 

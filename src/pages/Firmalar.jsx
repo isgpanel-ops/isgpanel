@@ -192,14 +192,14 @@ const parseFirmaFromOcrText = (text) => {
     all.match(/\b\d{1,2}[./-]\d{1,2}[./-]\d{4}\b/) ||
     all.match(/\b\d{4}-\d{2}-\d{2}\b/);
 
-  const firmaAdi = valueNearLabel(lines, [
+  let firmaAdi = valueNearLabel(lines, [
     "Hizmet Alan İşyeri Unvanı",
     "Hizmet Alan Isyeri Unvani",
     "İşyeri Unvanı",
     "Isyeri Unvani",
     "Unvanı",
   ]);
-  const adres = valueNearLabel(lines, [
+  let adres = valueNearLabel(lines, [
     "Hizmet Alan İşyeri Adresi",
     "Hizmet Alan Isyeri Adresi",
     "İşyeri Adresi",
@@ -224,6 +224,29 @@ const parseFirmaFromOcrText = (text) => {
   const tehlike = normalizeHazardFromText(hazardText);
   const hazirlama = toInputDate(dateText);
   const sgk = digitsOnly(sgkMatch?.[0] || "");
+
+  if (sgk && (!firmaAdi || !adres)) {
+    const sgkLineIndex = lines.findIndex((line) => digitsOnly(line).includes(sgk.slice(0, 14)));
+    const nearby = lines.slice(Math.max(0, sgkLineIndex - 14), Math.min(lines.length, sgkLineIndex + 18));
+    const companyKeywords = /(LİMİTED|LIMITED|ANONİM|ANONIM|ŞİRKET|SIRKET|TİCARET|TICARET|SANAYİ|SANAYI|LTD|A\.Ş|AŞ|POLİKLİNİK|POLIKLINIK|MERKEZ|MERKEZİ|MERKEZI|HİZMET|HIZMET)/i;
+    const addressKeywords = /(MAH|MAHALLE|CAD|CADDE|SOK|SOKAK|BULVAR|NO[:\s]|KAT|DAİRE|DAIRE|ANKARA|İSTANBUL|ISTANBUL|İZMİR|IZMIR|ADRES)/i;
+    const noiseKeywords = /(HİZMET ALAN|HIZMET ALAN|İŞYERİ|ISYERI|SGK|DETS|TEHLİKE|TEHLIKE|SÖZLEŞME|SOZLESME|TARİH|TARIH|ÇALIŞAN|CALISAN|SAYISI)/i;
+
+    if (!firmaAdi) {
+      const companyLine =
+        nearby.find((line) => companyKeywords.test(line) && !noiseKeywords.test(line)) ||
+        nearby.find((line) => {
+          const clean = line.replace(/[0-9/.,:-]/g, "").trim();
+          return clean.length >= 8 && clean === clean.toLocaleUpperCase("tr-TR") && !noiseKeywords.test(line);
+        });
+      firmaAdi = companyLine || "";
+    }
+
+    if (!adres) {
+      const addressLine = nearby.find((line) => addressKeywords.test(line) && !noiseKeywords.test(line));
+      adres = addressLine || "";
+    }
+  }
 
   return {
     firmaAdi,
@@ -755,6 +778,15 @@ export default function Firmalar() {
         openInfo("Bilgilendirme", "PDF okunamadı. Dosya çok düşük kaliteliyse Excel aktarımı kullanın.");
         return;
       }
+
+      const parsedSgk = digitsOnly(parsed.sgkSicilNo || parsed.sgkNo);
+      const duplicate = safeFirmalar.some(
+        (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
+      );
+      if (parsedSgk && duplicate) {
+        openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+        return;
+      }
       applyParsedFirma(parsed);
       openInfo("Bilgilendirme", "PDF okundu ve firma formu dolduruldu.");
     } catch (err) {
@@ -762,6 +794,14 @@ export default function Firmalar() {
         try {
           const parsed = await readPdfWithOcr(file, setPdfStatus);
           if (parsed.firmaAdi || parsed.sgkSicilNo || parsed.sgkNo) {
+            const parsedSgk = digitsOnly(parsed.sgkSicilNo || parsed.sgkNo);
+            const duplicate = safeFirmalar.some(
+              (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
+            );
+            if (parsedSgk && duplicate) {
+              openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+              return;
+            }
             applyParsedFirma(parsed);
             openInfo("Bilgilendirme", "PDF OCR ile okundu ve firma formu dolduruldu.");
             return;

@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
+import ExcelJS from "exceljs";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
+import { createWorker } from "tesseract.js";
 import {
   HiPlus,
   HiSearch,
@@ -6,16 +10,201 @@ import {
   HiUserAdd,
   HiPencilAlt,
   HiTrash,
+  HiUpload,
+  HiDownload,
+  HiDocumentText,
+  HiX,
 } from "react-icons/hi";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const API_BASE =
   (import.meta?.env?.VITE_API_URL || "").trim().replace(/\/$/, "") ||
   "https://api.isgpanel.tr";
 
 const upTR = (s) => (s || "").toLocaleUpperCase("tr-TR");
+const digitsOnly = (s) => (s || "").replace(/\D/g, "");
+
+const toInputDate = (v) => {
+  if (!v) return "";
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}$/.test(s)) {
+    const [d, m, y] = s.split(/[./-]/);
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+
+const computeValidity = (hazirlama, tehlike) => {
+  if (!hazirlama) return "";
+  const t = new Date(hazirlama);
+  const addYears =
+    tehlike === "Az Tehlikeli" ? 6 : tehlike === "Tehlikeli" ? 4 : 2;
+  t.setFullYear(t.getFullYear() + addYears);
+  return t.toISOString().slice(0, 10);
+};
+
+const inferNaceFromSgk = (sgk) => {
+  const only = digitsOnly(sgk);
+  return only.length >= 7 ? only.slice(1, 7) : "";
+};
+
+const normalizeHazardFromText = (text) => {
+  const upper = String(text || "").toLocaleUpperCase("tr-TR");
+  if (upper.includes("ÇOK TEHLİKELİ") || upper.includes("COK TEHLIKELI")) return "Çok Tehlikeli";
+  if (upper.includes("AZ TEHLİKELİ") || upper.includes("AZ TEHLIKELI")) return "Az Tehlikeli";
+  if (upper.includes("TEHLİKELİ") || upper.includes("TEHLIKELI")) return "Tehlikeli";
+  return "";
+};
+
+const getExcelCellValue = (cell) => {
+  const value = cell?.value;
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === "object") {
+    if (value.text) return String(value.text);
+    if (Array.isArray(value.richText)) return value.richText.map((x) => x.text || "").join("");
+    if (value.result != null) return String(value.result);
+  }
+  return String(value).trim();
+};
+
+const normalizeExcelHeader = (value) =>
+  String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/[ıİ]/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ş/g, "s")
+    .replace(/ü/g, "u")
+    .replace(/[^a-z0-9]/g, "");
+
+const getHeaderMap = (worksheet) => {
+  const map = new Map();
+  worksheet.getRow(1).eachCell((cell, colNumber) => {
+    const key = normalizeExcelHeader(getExcelCellValue(cell));
+    if (key) map.set(key, colNumber);
+  });
+  return map;
+};
+
+const getCellByHeader = (row, headerMap, aliases, fallbackCol = null) => {
+  const normalizedAliases = aliases.map(normalizeExcelHeader);
+  for (const [key, col] of headerMap.entries()) {
+    if (normalizedAliases.some((alias) => key === alias || key.includes(alias))) {
+      return getExcelCellValue(row.getCell(col));
+    }
+  }
+  return fallbackCol ? getExcelCellValue(row.getCell(fallbackCol)) : "";
+};
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+const getOcrLines = (text) =>
+  String(text || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean);
+
+const includesAny = (text, keys) => {
+  const hay = String(text || "").toLocaleLowerCase("tr-TR");
+  return keys.some((key) => hay.includes(String(key).toLocaleLowerCase("tr-TR")));
+};
+
+const valueNearLabel = (lines, labels) => {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!includesAny(line, labels)) continue;
+    const afterColon = line.split(/[:：]/).slice(1).join(":").trim();
+    if (afterColon && !includesAny(afterColon, labels)) return afterColon;
+    for (let j = i + 1; j < Math.min(lines.length, i + 5); j += 1) {
+      if (!includesAny(lines[j], labels)) return lines[j];
+    }
+  }
+  return "";
+};
+
+const parseFirmaFromOcrText = (text) => {
+  const lines = getOcrLines(text);
+  const all = lines.join("\n");
+  const sgkMatch = all.match(/\b\d{20,30}\b/) || all.replace(/\s+/g, "").match(/\d{20,30}/);
+  const dateMatch = all.match(/\b\d{1,2}[./-]\d{1,2}[./-]\d{4}\b/) || all.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  const sgk = digitsOnly(sgkMatch?.[0] || "");
+
+  let firmaAdi = valueNearLabel(lines, ["Hizmet Alan İşyeri Unvanı", "Hizmet Alan Isyeri Unvani", "İşyeri Unvanı", "Unvanı"]);
+  let adres = valueNearLabel(lines, ["Hizmet Alan İşyeri Adresi", "Hizmet Alan Isyeri Adresi", "İşyeri Adresi", "Adresi"]);
+  const hazardText = valueNearLabel(lines, ["Güncel Tehlike Sınıfı", "Guncel Tehlike Sinifi", "Tehlike Sınıfı", "Tehlike Sinifi"]) || all;
+  const dateText = valueNearLabel(lines, ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Sozlesme Onay Tarihi"]) || dateMatch?.[0] || "";
+
+  if (sgk && (!firmaAdi || !adres)) {
+    const sgkLineIndex = lines.findIndex((line) => digitsOnly(line).includes(sgk.slice(0, 14)));
+    const nearby = lines.slice(Math.max(0, sgkLineIndex - 14), Math.min(lines.length, sgkLineIndex + 18));
+    const companyKeywords = /(LİMİTED|LIMITED|ANONİM|ANONIM|ŞİRKET|SIRKET|TİCARET|TICARET|SANAYİ|SANAYI|LTD|A\.Ş|AŞ|POLİKLİNİK|POLIKLINIK|MERKEZ|HİZMET|HIZMET)/i;
+    const addressKeywords = /(MAH|MAHALLE|CAD|CADDE|SOK|SOKAK|BULVAR|NO[:\s]|KAT|DAİRE|DAIRE|ANKARA|İSTANBUL|ISTANBUL|İZMİR|IZMIR|ADRES)/i;
+    const noiseKeywords = /(HİZMET ALAN|HIZMET ALAN|İŞYERİ|ISYERI|SGK|DETS|TEHLİKE|TEHLIKE|SÖZLEŞME|SOZLESME|TARİH|TARIH|ÇALIŞAN|CALISAN|SAYISI)/i;
+    if (!firmaAdi) {
+      firmaAdi = nearby.find((line) => companyKeywords.test(line) && !noiseKeywords.test(line)) || "";
+    }
+    if (!adres) {
+      adres = nearby.find((line) => addressKeywords.test(line) && !noiseKeywords.test(line)) || "";
+    }
+  }
+
+  const tehlike = normalizeHazardFromText(hazardText) || "Tehlikeli";
+  const hazirlama = toInputDate(dateText);
+  return {
+    firmaAdi,
+    sgkNo: sgk,
+    sgkSicilNo: sgk,
+    adres,
+    nace: inferNaceFromSgk(sgk),
+    faaliyet: "",
+    tehlike,
+    hazirlama,
+    gecerlilik: hazirlama ? computeValidity(hazirlama, tehlike) : "",
+  };
+};
+
+const readPdfWithOcr = async (file, onProgress) => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const worker = await createWorker("tur+eng");
+  const texts = [];
+  const pageLimit = Math.min(pdf.numPages || 1, 2);
+  try {
+    for (let pageNo = 1; pageNo <= pageLimit; pageNo += 1) {
+      onProgress?.(`OCR yapılıyor (${pageNo}/${pageLimit})...`);
+      const page = await pdf.getPage(pageNo);
+      const viewport = page.getViewport({ scale: 2.2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: context, viewport }).promise;
+      const result = await worker.recognize(canvas);
+      texts.push(result?.data?.text || "");
+    }
+  } finally {
+    await worker.terminate();
+  }
+  return parseFirmaFromOcrText(texts.join("\n"));
+};
 
 const btn = {
   base: `inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0a2b45]`,
@@ -163,6 +352,16 @@ export default function AdminFirmalar() {
   // assignments endpoint DB'yi güncelliyor ama bildirim üretmiyor.
   // Bu yüzden atama sonrası /api/firma/:id/assign çağırıyoruz.
   const notifyAssignment = async ({ userId, firmIds }) => {
+    const normalizedSgk = digitsOnly(form.sgkNo);
+    const duplicate = (firmalar || []).some((f) => {
+      const fid = f?._id || f?.id || null;
+      return fid !== form._id && digitsOnly(f?.sgkNo || f?.sgkSicilNo) === normalizedSgk;
+    });
+    if (duplicate) {
+      openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+      return;
+    }
+
     try {
       if (!token) return;
       if (!userId) return;
@@ -291,11 +490,21 @@ export default function AdminFirmalar() {
   const [pageSize, setPageSize] = useState(10);
 
   const [openForm, setOpenForm] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [bulkImportLoading, setBulkImportLoading] = useState(false);
+  const [bulkImportResult, setBulkImportResult] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState("");
   const [form, setForm] = useState({
     _id: null,
     firmaAdi: "",
     sgkNo: "",
+    adres: "",
+    nace: "",
+    faaliyet: "",
     tehlike: "Tehlikeli",
+    hazirlama: "",
+    gecerlilik: "",
   });
 
   const [selectedFirms, setSelectedFirms] = useState([]); // firm _id array
@@ -368,7 +577,12 @@ export default function AdminFirmalar() {
       _id: null,
       firmaAdi: "",
       sgkNo: "",
+      adres: "",
+      nace: "",
+      faaliyet: "",
       tehlike: "Tehlikeli",
+      hazirlama: "",
+      gecerlilik: "",
     });
     setOpenForm(true);
   };
@@ -378,7 +592,12 @@ export default function AdminFirmalar() {
       _id: firma._id || firma.id || null,
       firmaAdi: firma.firmaAdi || "",
       sgkNo: firma.sgkNo || firma.sgkSicilNo || "",
+      adres: firma.adres || "",
+      nace: firma.nace || "",
+      faaliyet: firma.faaliyet || "",
       tehlike: firma.tehlike || "Tehlikeli",
+      hazirlama: toInputDate(firma.hazirlama || firma.hazirlamaTarihi),
+      gecerlilik: toInputDate(firma.gecerlilik || firma.gecerlilikTarihi),
     });
     setOpenForm(true);
   };
@@ -403,8 +622,13 @@ export default function AdminFirmalar() {
           `${API_BASE}/api/firma`,
           {
             firmaAdi: form.firmaAdi,
-            sgkNo: form.sgkNo,
+            sgkNo: normalizedSgk,
+            adres: form.adres,
+            nace: form.nace,
+            faaliyet: form.faaliyet,
             tehlike: form.tehlike,
+            hazirlama: form.hazirlama,
+            gecerlilik: form.gecerlilik,
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -414,8 +638,13 @@ export default function AdminFirmalar() {
           `${API_BASE}/api/firma/${form._id}`,
           {
             firmaAdi: form.firmaAdi,
-            sgkNo: form.sgkNo,
+            sgkNo: normalizedSgk,
+            adres: form.adres,
+            nace: form.nace,
+            faaliyet: form.faaliyet,
             tehlike: form.tehlike,
+            hazirlama: form.hazirlama,
+            gecerlilik: form.gecerlilik,
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -529,6 +758,102 @@ export default function AdminFirmalar() {
     openInfo("Bilgilendirme", "Toplu atama yapıldı. Kullanıcı panelinde firmalar görünecek.");
   };
 
+  const applyParsedFirma = (parsed = {}) => {
+    const sgk = digitsOnly(parsed.sgkNo || parsed.sgkSicilNo);
+    const tehlike = parsed.tehlike || "Tehlikeli";
+    const hazirlama = toInputDate(parsed.hazirlama || parsed.sozlesmeOnayTarihi);
+    setForm((prev) => ({
+      ...prev,
+      firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
+      sgkNo: sgk || prev.sgkNo,
+      adres: upTR(parsed.adres || prev.adres),
+      nace: parsed.nace || inferNaceFromSgk(sgk) || prev.nace,
+      faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
+      tehlike,
+      hazirlama: hazirlama || prev.hazirlama,
+      gecerlilik: toInputDate(parsed.gecerlilik) || computeValidity(hazirlama || prev.hazirlama, tehlike),
+    }));
+  };
+
+  const handlePdfSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setPdfLoading(true);
+      setPdfStatus("PDF okunuyor...");
+      const parsed = await readPdfWithOcr(file, setPdfStatus);
+      const sgk = digitsOnly(parsed.sgkNo || parsed.sgkSicilNo);
+      const duplicate = sgk && (firmalar || []).some((f) => digitsOnly(f?.sgkNo || f?.sgkSicilNo) === sgk);
+      if (duplicate) {
+        openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+        return;
+      }
+      if (!parsed.firmaAdi && !sgk) {
+        openInfo("Bilgilendirme", "PDF okunamadı. Dosya çok düşük kaliteliyse Excel aktarımı kullanın.");
+        return;
+      }
+      applyParsedFirma(parsed);
+      openInfo("Bilgilendirme", "PDF okundu ve firma formu dolduruldu.");
+    } catch (err) {
+      console.error("Admin PDF okuma hatası:", err);
+      openInfo("Hata", "PDF okunamadı. Excel aktarımı ile devam edebilirsiniz.");
+    } finally {
+      setPdfLoading(false);
+      setPdfStatus("");
+    }
+  };
+
+  const downloadBulkTemplate = async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Firmalar");
+    ws.addRow(["Firma Adı", "SGK Sicil No", "Adres", "Tehlike Sınıfı", "Sözleşme Onay Tarihi"]);
+    ws.addRow(["ÖRNEK FİRMA LTD. ŞTİ.", "12345678901234567890123456", "Örnek adres", "Tehlikeli", "01.06.2026"]);
+    ws.columns.forEach((col) => {
+      col.width = 24;
+    });
+    const buffer = await wb.xlsx.writeBuffer();
+    downloadBlob(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "isgpanel_toplu_firma_sablonu.xlsx");
+  };
+
+  const handleBulkExcelSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!token) {
+      openInfo("Bilgilendirme", "Token bulunamadı. Lütfen tekrar giriş yapın.");
+      return;
+    }
+    try {
+      setBulkImportLoading(true);
+      setBulkImportResult(null);
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await file.arrayBuffer());
+      const ws = wb.worksheets[0];
+      const headerMap = getHeaderMap(ws);
+      const rows = [];
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan İşyeri Unvanı", "Unvan"], 1);
+        const sgkSicilNo = digitsOnly(getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan İşyeri SGK/DETSİS No", "SGK DETSİS No"], 2));
+        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], 3);
+        const tehlike = getCellByHeader(row, headerMap, ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"], 4);
+        const hazirlama = getCellByHeader(row, headerMap, ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"], 5);
+        if (![firmaAdi, sgkSicilNo, adres, tehlike, hazirlama].some(Boolean)) return;
+        const nace = inferNaceFromSgk(sgkSicilNo);
+        rows.push({ rowNumber, firmaAdi, sgkSicilNo, sgkNo: sgkSicilNo, adres, tehlike, hazirlama, nace });
+      });
+      const res = await axios.post(`${API_BASE}/api/firma/bulk`, { rows }, { headers: { Authorization: `Bearer ${token}` } });
+      setBulkImportResult(res.data || null);
+      await fetchFirms();
+    } catch (err) {
+      console.error("Admin toplu firma ekleme hatası:", err);
+      openInfo("Hata", err.response?.data?.message || "Toplu firma ekleme başarısız oldu.");
+    } finally {
+      setBulkImportLoading(false);
+    }
+  };
+
   // -------------------- render
   return (
     <div className="p-6">
@@ -559,10 +884,22 @@ export default function AdminFirmalar() {
             )}
           </div>
 
-          <button onClick={openAdd} className={`${btn.base} ${btn.primary}`}>
-            <HiPlus className="-ml-0.5 h-3 w-3" />
-            Yeni Firma
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setBulkImportResult(null);
+                setBulkImportOpen(true);
+              }}
+              className={`${btn.base} ${btn.ghost}`}
+            >
+              <HiUpload className="-ml-0.5 h-3 w-3" />
+              Toplu Firma Ekle
+            </button>
+            <button onClick={openAdd} className={`${btn.base} ${btn.primary}`}>
+              <HiPlus className="-ml-0.5 h-3 w-3" />
+              Yeni Firma
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -866,6 +1203,25 @@ export default function AdminFirmalar() {
               {!form._id ? "Yeni Firma Ekle" : "Firmayı Düzenle"}
             </h3>
 
+            <div className="mb-3">
+              <input
+                id="admin-firma-pdf-input"
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={handlePdfSelect}
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById("admin-firma-pdf-input")?.click()}
+                disabled={pdfLoading}
+                className={`${btn.base} ${btn.ghost}`}
+              >
+                <HiDocumentText className="h-3.5 w-3.5" />
+                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "İSG-KATİP PDF'den Otomatik Doldur"}
+              </button>
+            </div>
+
             <form onSubmit={saveForm} className="space-y-3 text-xs">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
@@ -905,6 +1261,43 @@ export default function AdminFirmalar() {
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
                   Tehlike Sınıfı
                 </label>
+                <input
+                  className={`${inputClass} mb-3`}
+                  value={form.adres}
+                  onChange={(e) => setForm((prev) => ({ ...prev, adres: upTR(e.target.value) }))}
+                  placeholder="ADRES"
+                />
+                <input
+                  className={`${inputClass} mb-3`}
+                  value={form.nace}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nace: digitsOnly(e.target.value) }))}
+                  placeholder="NACE"
+                />
+                <input
+                  className={`${inputClass} mb-3`}
+                  value={form.faaliyet}
+                  onChange={(e) => setForm((prev) => ({ ...prev, faaliyet: upTR(e.target.value) }))}
+                  placeholder="FAALİYET"
+                />
+                <input
+                  type="date"
+                  className={`${inputClass} mb-3`}
+                  value={form.hazirlama}
+                  onChange={(e) => {
+                    const hazirlama = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      hazirlama,
+                      gecerlilik: computeValidity(hazirlama, prev.tehlike),
+                    }));
+                  }}
+                />
+                <input
+                  type="date"
+                  className={`${inputClass} mb-3 bg-slate-50`}
+                  value={form.gecerlilik}
+                  readOnly
+                />
                 <select
                   className={selectClass}
                   value={form.tehlike}
@@ -931,6 +1324,60 @@ export default function AdminFirmalar() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* TOPLU FIRMA EKLE MODAL */}
+      {bulkImportOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">Toplu Firma Ekle</h3>
+              <button onClick={() => setBulkImportOpen(false)} className="rounded-lg p-1 hover:bg-slate-100">
+                <HiX className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-500 mb-3">
+              Excel'in ilk satırı başlık satırıdır. Kayıtlar 2. satırdan itibaren okunur.
+            </p>
+
+            <input
+              id="admin-bulk-firma-input"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={handleBulkExcelSelect}
+            />
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button type="button" onClick={downloadBulkTemplate} className={`${btn.base} ${btn.ghost}`}>
+                <HiDownload className="h-3.5 w-3.5" />
+                Örnek Excel Şablonu İndir
+              </button>
+              <button
+                type="button"
+                onClick={() => document.getElementById("admin-bulk-firma-input")?.click()}
+                disabled={bulkImportLoading}
+                className={`${btn.base} ${btn.primary}`}
+              >
+                <HiUpload className="h-3.5 w-3.5" />
+                {bulkImportLoading ? "Yükleniyor..." : "Excel Seç ve Yükle"}
+              </button>
+            </div>
+
+            {bulkImportResult && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                <div className="mb-2 font-semibold text-slate-800">Yükleme Özeti</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>Toplam Satır: <b>{bulkImportResult.totalRows || 0}</b></div>
+                  <div>Başarıyla Eklenen: <b>{bulkImportResult.insertedCount || 0}</b></div>
+                  <div>Mükerrer Kayıt: <b>{bulkImportResult.duplicateCount || 0}</b></div>
+                  <div>Hatalı Satır: <b>{bulkImportResult.invalidCount || 0}</b></div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
