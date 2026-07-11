@@ -299,8 +299,6 @@ export default function Firmalar() {
     firmaAdi: "",
     sgkSicilNo: "",
     adres: "",
-    il: "",
-    calisanSayisi: "",
     nace: "",
     faaliyet: "",
     tehlike: "Az Tehlikeli",
@@ -402,8 +400,6 @@ export default function Firmalar() {
       firmaAdi: firma?.firmaAdi || "",
       sgkSicilNo: firma?.sgkSicilNo || firma?.sgkNo || "",
       adres: firma?.adres || "",
-      il: firma?.il || "",
-      calisanSayisi: firma?.calisanSayisi || "",
       nace:
         firma?.nace ||
         firma?.naceKodu ||
@@ -537,8 +533,6 @@ export default function Firmalar() {
       sgkSicilNo: digitsOnly(form.sgkSicilNo),
       sgkNo: digitsOnly(form.sgkSicilNo),
       adres: upTR(form.adres),
-      il: upTR(form.il),
-      calisanSayisi: form.calisanSayisi ? Number(digitsOnly(form.calisanSayisi)) : null,
       nace: digitsOnly(form.nace),
       faaliyet: upTR(form.faaliyet),
       tehlike: form.tehlike,
@@ -586,8 +580,6 @@ export default function Firmalar() {
       firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
       sgkSicilNo: sgk || prev.sgkSicilNo,
       adres: upTR(parsed.adres || prev.adres),
-      il: upTR(parsed.il || prev.il),
-      calisanSayisi: parsed.calisanSayisi || prev.calisanSayisi,
       nace: nace || prev.nace,
       faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
       tehlike,
@@ -644,18 +636,14 @@ export default function Firmalar() {
     ws.addRow([
       "Firma Adı",
       "SGK Sicil No",
-      "İl",
       "Adres",
-      "Çalışan Sayısı",
       "Tehlike Sınıfı",
       "Sözleşme Onay Tarihi",
     ]);
     ws.addRow([
       "ÖRNEK FİRMA LTD. ŞTİ.",
       "12345678901234567890123456",
-      "ANKARA",
       "Örnek adres",
-      "25",
       "Tehlikeli",
       "01.06.2026",
     ]);
@@ -698,27 +686,22 @@ export default function Firmalar() {
         const sgkSicilNo = digitsOnly(
           getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan İşyeri SGK/DETSİS No", "SGK DETSİS No"], 2)
         );
-        const il = getCellByHeader(row, headerMap, ["İl", "Hizmet Alan İşyeri İli"], 3);
-        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], null);
-        const calisanSayisi = getCellByHeader(
-          row,
-          headerMap,
-          ["Çalışan Sayısı", "Güncel Çalışan Sayısı", "Hizmet Alan İşyeri Çalışan Sayısı"],
-          4
-        );
+        const il = getCellByHeader(row, headerMap, ["İl", "Hizmet Alan İşyeri İli"], null);
+        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], 3);
+        const calisanSayisi = getCellByHeader(row, headerMap, ["Çalışan Sayısı", "Güncel Çalışan Sayısı", "Hizmet Alan İşyeri Çalışan Sayısı"], null);
         const tehlike = getCellByHeader(
           row,
           headerMap,
           ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"],
-          5
+          4
         );
         const sozlesmeOnayTarihi = getCellByHeader(
           row,
           headerMap,
           ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"],
-          6
+          5
         );
-        if (![firmaAdi, sgkSicilNo, il, adres, calisanSayisi, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
+        if (![firmaAdi, sgkSicilNo, adres, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
 
         const nace = inferNaceFromSgk(sgkSicilNo);
         const auto = autoFromNace(nace);
@@ -1167,32 +1150,6 @@ export default function Firmalar() {
                     value={form.adres}
                     onChange={(e) =>
                       setForm({ ...form, adres: upTR(e.target.value) })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">
-                    İl
-                  </label>
-                  <input
-                    className={inputClass}
-                    placeholder="İL"
-                    value={form.il}
-                    onChange={(e) => setForm({ ...form, il: upTR(e.target.value) })}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Çalışan Sayısı
-                  </label>
-                  <input
-                    className={inputClass}
-                    placeholder="ÇALIŞAN SAYISI"
-                    value={form.calisanSayisi}
-                    onChange={(e) =>
-                      setForm({ ...form, calisanSayisi: digitsOnly(e.target.value) })
                     }
                   />
                 </div>
