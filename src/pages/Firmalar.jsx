@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import ExcelJS from "exceljs";
 import * as pdfjsLib from "pdfjs-dist";
@@ -32,14 +32,14 @@ const API_URL =
 const getToken = () => localStorage.getItem("token");
 
 // =========================
-// Yardımcılar
+// YardÄ±mcÄ±lar
 // =========================
 const formatTR = (d) => (d ? new Date(d).toLocaleDateString("tr-TR") : "-");
 const digitsOnly = (s) => (s || "").replace(/\D/g, "");
 const upTR = (s) => (s || "").toLocaleUpperCase("tr-TR");
 const toTitleHazard = (v) => {
   const u = (v || "").toLocaleUpperCase("tr-TR");
-  if (u.includes("ÇOK")) return "Çok Tehlikeli";
+  if (u.includes("Ã‡OK")) return "Ã‡ok Tehlikeli";
   if (u.includes("AZ")) return "Az Tehlikeli";
   return "Tehlikeli";
 };
@@ -53,11 +53,11 @@ const computeValidity = (hazirlama, tehlike) => {
   return t.toISOString().slice(0, 10);
 };
 
-// ✅ type="date" için güvenli tarih dönüştürücü
+// âœ… type="date" iÃ§in gÃ¼venli tarih dÃ¶nÃ¼ÅŸtÃ¼rÃ¼cÃ¼
 // - yyyy-mm-dd => aynen
 // - gg.aa.yyyy => yyyy-mm-dd
 // - ISO / Date parse edilebilir string => yyyy-mm-dd
-// - diğer => ""
+// - diÄŸer => ""
 const toInputDate = (v) => {
   if (!v) return "";
   const s = String(v).trim();
@@ -96,12 +96,12 @@ const getExcelCellValue = (cell) => {
 const normalizeExcelHeader = (value) =>
   String(value || "")
     .toLocaleLowerCase("tr-TR")
-    .replace(/ç/g, "c")
-    .replace(/ğ/g, "g")
-    .replace(/[ıİ]/g, "i")
-    .replace(/ö/g, "o")
-    .replace(/ş/g, "s")
-    .replace(/ü/g, "u")
+    .replace(/Ã§/g, "c")
+    .replace(/ÄŸ/g, "g")
+    .replace(/[Ä±Ä°]/g, "i")
+    .replace(/Ã¶/g, "o")
+    .replace(/ÅŸ/g, "s")
+    .replace(/Ã¼/g, "u")
     .replace(/[^a-z0-9]/g, "");
 
 const getHeaderMap = (worksheet) => {
@@ -152,12 +152,12 @@ const foldText = (value) =>
     .toLocaleLowerCase("tr-TR")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ı/g, "i")
-    .replace(/ğ/g, "g")
-    .replace(/ü/g, "u")
-    .replace(/ş/g, "s")
-    .replace(/ö/g, "o")
-    .replace(/ç/g, "c");
+    .replace(/Ä±/g, "i")
+    .replace(/ÄŸ/g, "g")
+    .replace(/Ã¼/g, "u")
+    .replace(/ÅŸ/g, "s")
+    .replace(/Ã¶/g, "o")
+    .replace(/Ã§/g, "c");
 
 const includesAny = (text, keys) => {
   const hay = foldText(text);
@@ -169,7 +169,7 @@ const valueNearLabel = (lines, labels) => {
     const line = lines[i];
     if (!includesAny(line, labels)) continue;
 
-    const afterColon = line.split(/[:：]/).slice(1).join(":").trim();
+    const afterColon = line.split(/[:ï¼š]/).slice(1).join(":").trim();
     if (afterColon && !includesAny(afterColon, labels)) return afterColon;
 
     for (let j = i + 1; j < Math.min(lines.length, i + 5); j += 1) {
@@ -182,13 +182,13 @@ const valueNearLabel = (lines, labels) => {
 
 const normalizeHazardFromText = (text) => {
   const upper = String(text || "").toLocaleUpperCase("tr-TR");
-  if (upper.includes("ÇOK TEHLİKELİ") || upper.includes("COK TEHLIKELI")) {
-    return "Çok Tehlikeli";
+  if (upper.includes("Ã‡OK TEHLÄ°KELÄ°") || upper.includes("COK TEHLIKELI")) {
+    return "Ã‡ok Tehlikeli";
   }
-  if (upper.includes("AZ TEHLİKELİ") || upper.includes("AZ TEHLIKELI")) {
+  if (upper.includes("AZ TEHLÄ°KELÄ°") || upper.includes("AZ TEHLIKELI")) {
     return "Az Tehlikeli";
   }
-  if (upper.includes("TEHLİKELİ") || upper.includes("TEHLIKELI")) {
+  if (upper.includes("TEHLÄ°KELÄ°") || upper.includes("TEHLIKELI")) {
     return "Tehlikeli";
   }
   return "";
@@ -213,31 +213,31 @@ const parseFirmaFromOcrText = (text) => {
     all.match(/\b\d{4}-\d{2}-\d{2}\b/);
 
   let firmaAdi = valueNearLabel(lines, [
-    "Hizmet Alan İşyeri Unvanı",
+    "Hizmet Alan Ä°ÅŸyeri UnvanÄ±",
     "Hizmet Alan Isyeri Unvani",
-    "İşyeri Unvanı",
+    "Ä°ÅŸyeri UnvanÄ±",
     "Isyeri Unvani",
-    "Unvanı",
+    "UnvanÄ±",
   ]);
   let adres = valueNearLabel(lines, [
-    "Hizmet Alan İşyeri Adresi",
+    "Hizmet Alan Ä°ÅŸyeri Adresi",
     "Hizmet Alan Isyeri Adresi",
-    "İşyeri Adresi",
+    "Ä°ÅŸyeri Adresi",
     "Isyeri Adresi",
     "Adresi",
   ]);
   const hazardText =
     valueNearLabel(lines, [
-      "Güncel Tehlike Sınıfı",
+      "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±",
       "Guncel Tehlike Sinifi",
-      "Tehlike Sınıfı",
+      "Tehlike SÄ±nÄ±fÄ±",
       "Tehlike Sinifi",
     ]) || all;
   const dateText =
     valueNearLabel(lines, [
-      "Sözleşme Onay Tarihi",
+      "SÃ¶zleÅŸme Onay Tarihi",
       "Sozlesme Onay Tarihi",
-      "Sözleşme Başlangıç Tarihi",
+      "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi",
       "Sozlesme Baslangic Tarihi",
     ]) || dateMatch?.[0] || "";
 
@@ -248,9 +248,9 @@ const parseFirmaFromOcrText = (text) => {
   if (sgk && (!firmaAdi || !adres)) {
     const sgkLineIndex = lines.findIndex((line) => digitsOnly(line).includes(sgk.slice(0, 14)));
     const nearby = lines.slice(Math.max(0, sgkLineIndex - 14), Math.min(lines.length, sgkLineIndex + 18));
-    const companyKeywords = /(LİMİTED|LIMITED|ANONİM|ANONIM|ŞİRKET|SIRKET|TİCARET|TICARET|SANAYİ|SANAYI|LTD|A\.Ş|AŞ|POLİKLİNİK|POLIKLINIK|MERKEZ|MERKEZİ|MERKEZI|HİZMET|HIZMET)/i;
-    const addressKeywords = /(MAH|MAHALLE|CAD|CADDE|SOK|SOKAK|BULVAR|NO[:\s]|KAT|DAİRE|DAIRE|ANKARA|İSTANBUL|ISTANBUL|İZMİR|IZMIR|ADRES)/i;
-    const noiseKeywords = /(HİZMET ALAN|HIZMET ALAN|İŞYERİ|ISYERI|SGK|DETS|TEHLİKE|TEHLIKE|SÖZLEŞME|SOZLESME|TARİH|TARIH|ÇALIŞAN|CALISAN|SAYISI)/i;
+    const companyKeywords = /(LÄ°MÄ°TED|LIMITED|ANONÄ°M|ANONIM|ÅÄ°RKET|SIRKET|TÄ°CARET|TICARET|SANAYÄ°|SANAYI|LTD|A\.Å|AÅ|POLÄ°KLÄ°NÄ°K|POLIKLINIK|MERKEZ|MERKEZÄ°|MERKEZI|HÄ°ZMET|HIZMET)/i;
+    const addressKeywords = /(MAH|MAHALLE|CAD|CADDE|SOK|SOKAK|BULVAR|NO[:\s]|KAT|DAÄ°RE|DAIRE|ANKARA|Ä°STANBUL|ISTANBUL|Ä°ZMÄ°R|IZMIR|ADRES)/i;
+    const noiseKeywords = /(HÄ°ZMET ALAN|HIZMET ALAN|Ä°ÅYERÄ°|ISYERI|SGK|DETS|TEHLÄ°KE|TEHLIKE|SÃ–ZLEÅME|SOZLESME|TARÄ°H|TARIH|Ã‡ALIÅAN|CALISAN|SAYISI)/i;
 
     if (!firmaAdi) {
       const companyLine =
@@ -283,12 +283,12 @@ const parseIskatipFirmaFromOcrText = (text) => {
   const lines = getOcrLines(text);
   const all = lines.join("\n");
   const receiverStartIndex = lines.findIndex((line) =>
-    includesAny(line, ["Hizmet Alan İşyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"])
+    includesAny(line, ["Hizmet Alan Ä°ÅŸyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"])
   );
   const receiverEndIndex = lines.findIndex(
     (line, index) =>
       index > receiverStartIndex &&
-      includesAny(line, ["Hizmet Sunan", "Sözleşme Bilgileri", "Sozlesme Bilgileri"])
+      includesAny(line, ["Hizmet Sunan", "SÃ¶zleÅŸme Bilgileri", "Sozlesme Bilgileri"])
   );
   const receiverLines =
     receiverStartIndex >= 0
@@ -309,25 +309,25 @@ const parseIskatipFirmaFromOcrText = (text) => {
     all.match(/\b\d{4}-\d{2}-\d{2}\b/);
   const hazardText =
     valueNearLabel(receiverLines, [
-      "Güncel Tehlike Sınıfı",
+      "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±",
       "Guncel Tehlike Sinifi",
-      "Tehlike Sınıfı",
+      "Tehlike SÄ±nÄ±fÄ±",
       "Tehlike Sinifi",
     ]) || receiverText;
   const dateText =
     valueNearLabel(lines, [
-      "Sözleşme Başlangıç Tarihi",
+      "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi",
       "Sozlesme Baslangic Tarihi",
-      "Sözleşme Onay Tarihi",
+      "SÃ¶zleÅŸme Onay Tarihi",
       "Sozlesme Onay Tarihi",
     ]) || dateMatch?.[0] || "";
 
   let firmaAdi = valueNearLabel(receiverLines, [
-    "Hizmet Alan İşyeri Unvanı",
+    "Hizmet Alan Ä°ÅŸyeri UnvanÄ±",
     "Hizmet Alan Isyeri Unvani",
-    "İşyeri Unvanı",
+    "Ä°ÅŸyeri UnvanÄ±",
     "Isyeri Unvani",
-    "Unvanı",
+    "UnvanÄ±",
     "Unvan",
   ]);
 
@@ -337,8 +337,8 @@ const parseIskatipFirmaFromOcrText = (text) => {
       sgkLineIndex >= 0
         ? receiverLines.slice(Math.max(0, sgkLineIndex - 12), Math.min(receiverLines.length, sgkLineIndex + 12))
         : receiverLines;
-    const companyKeywords = /(LİMİTED|LIMITED|ANONİM|ANONIM|ŞİRKET|SIRKET|TİCARET|TICARET|SANAYİ|SANAYI|LTD|A\.Ş|AŞ|POLİKLİNİK|POLIKLINIK|MERKEZ|MERKEZİ|MERKEZI|HİZMET|HIZMET)/i;
-    const noiseKeywords = /(HİZMET ALAN|HIZMET ALAN|İŞYERİ|ISYERI|SGK|DETS|TEHLİKE|TEHLIKE|SÖZLEŞME|SOZLESME|TARİH|TARIH|ÇALIŞAN|CALISAN|SAYISI|TC KİMLİK|TC KIMLIK)/i;
+    const companyKeywords = /(LÄ°MÄ°TED|LIMITED|ANONÄ°M|ANONIM|ÅÄ°RKET|SIRKET|TÄ°CARET|TICARET|SANAYÄ°|SANAYI|LTD|A\.Å|AÅ|POLÄ°KLÄ°NÄ°K|POLIKLINIK|MERKEZ|MERKEZÄ°|MERKEZI|HÄ°ZMET|HIZMET)/i;
+    const noiseKeywords = /(HÄ°ZMET ALAN|HIZMET ALAN|Ä°ÅYERÄ°|ISYERI|SGK|DETS|TEHLÄ°KE|TEHLIKE|SÃ–ZLEÅME|SOZLESME|TARÄ°H|TARIH|Ã‡ALIÅAN|CALISAN|SAYISI|TC KÄ°MLÄ°K|TC KIMLIK)/i;
     firmaAdi =
       nearby.find((line) => companyKeywords.test(line) && !noiseKeywords.test(line)) ||
       nearby.find((line) => {
@@ -348,7 +348,7 @@ const parseIskatipFirmaFromOcrText = (text) => {
       "";
   }
 
-  firmaAdi = String(firmaAdi || "").replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "").trim();
+  firmaAdi = String(firmaAdi || "").replace(/^(UNVAN|ÃœNVAN|UNVANI|ÃœNVANI)\s*[:\-]?\s*/i, "").trim();
   const tehlike = normalizeCleanHazardFromText(hazardText) || "Tehlikeli";
   const hazirlama = toInputDate(dateText);
 
@@ -380,6 +380,11 @@ const rowValueFromPdfItems = (items, labelKeys) => {
   );
 };
 
+const isLikelyCompanyName = (value) => {
+  const text = foldText(value);
+  return /(limited|anonim|sirket|ticaret|sanayi|ltd|as|osb|apartman|site|yonetici|insaat|dekorasyon|poliklinik|merkez|hizmet)/i.test(text);
+};
+
 const readPdfStructuredFirma = async (file) => {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
@@ -393,14 +398,16 @@ const readPdfStructuredFirma = async (file) => {
     }))
     .filter((item) => item.text);
 
-  const serviceStart = items.find((item) => includesAny(item.text, ["Hizmet Alan İşyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"]));
+  const serviceStart = items.find((item) => includesAny(item.text, ["Hizmet Alan Ä°ÅŸyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"]));
   if (!serviceStart) return null;
-  const nextSection = items.find((item) => item.y < serviceStart.y && includesAny(item.text, ["İmza Bilgileri", "Imza Bilgileri"]));
+  const nextSection = items.find((item) => item.y < serviceStart.y && includesAny(item.text, ["Ä°mza Bilgileri", "Imza Bilgileri"]));
   const serviceItems = items.filter((item) => item.y < serviceStart.y && (!nextSection || item.y > nextSection.y));
-  const dateText = rowValueFromPdfItems(items, ["Sözleşme Başlangıç Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["Sözleşme Onay Tarihi", "Sozlesme Onay Tarihi"]);
-  const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSİS No", "SGK/DETSIS No"]));
-  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["Güncel Tehlike Sınıfı", "Guncel Tehlike Sinifi"]));
-  const firmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
+  const dateText = rowValueFromPdfItems(items, ["SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["SÃ¶zleÅŸme Onay Tarihi", "Sozlesme Onay Tarihi"]);
+  const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSÄ°S No", "SGK/DETSIS No"]));
+  const adres = rowValueFromPdfItems(serviceItems, ["Adres"]);
+  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Guncel Tehlike Sinifi"]));
+  const rawFirmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
+  const firmaAdi = isLikelyCompanyName(rawFirmaAdi) ? rawFirmaAdi : "";
   const hazirlama = toInputDate(dateText);
 
   if (!sgk && !firmaAdi) return null;
@@ -408,6 +415,7 @@ const readPdfStructuredFirma = async (file) => {
     firmaAdi,
     sgkSicilNo: sgk,
     sgkNo: sgk,
+    adres,
     tehlike: tehlike || "Tehlikeli",
     hazirlama,
     gecerlilik: hazirlama ? computeValidity(hazirlama, tehlike || "Tehlikeli") : "",
@@ -429,7 +437,7 @@ const readPdfWithOcr = async (file, onProgress) => {
 
   try {
     for (let pageNo = 1; pageNo <= pageLimit; pageNo += 1) {
-      onProgress?.(`PDF sayfası okunuyor (${pageNo}/${pageLimit})...`);
+      onProgress?.(`PDF sayfasÄ± okunuyor (${pageNo}/${pageLimit})...`);
       const page = await pdf.getPage(pageNo);
       const viewport = page.getViewport({ scale: 2.2 });
       const canvas = document.createElement("canvas");
@@ -438,7 +446,7 @@ const readPdfWithOcr = async (file, onProgress) => {
       canvas.height = Math.ceil(viewport.height);
       await page.render({ canvasContext: context, viewport }).promise;
 
-      onProgress?.(`OCR yapılıyor (${pageNo}/${pageLimit})...`);
+      onProgress?.(`OCR yapÄ±lÄ±yor (${pageNo}/${pageLimit})...`);
       const result = await worker.recognize(canvas);
       texts.push(result?.data?.text || "");
     }
@@ -449,7 +457,7 @@ const readPdfWithOcr = async (file, onProgress) => {
   return parseIskatipFirmaFromOcrText(texts.join("\n"));
 };
 
-// Geçerlilik / durum yardımcıları
+// GeÃ§erlilik / durum yardÄ±mcÄ±larÄ±
 const diffDaysFromToday = (dateStr) => {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -475,7 +483,7 @@ const getStatusFromGecerlilik = (gecerlilik) => {
 
   if (diff < 0) {
     return {
-      label: "Süresi Doldu",
+      label: "SÃ¼resi Doldu",
       color: "bg-slate-100 text-slate-500 border border-slate-200",
     };
   }
@@ -489,19 +497,19 @@ const getStatusFromGecerlilik = (gecerlilik) => {
 
   if (diff <= 180) {
     return {
-      label: "Yaklaşıyor",
+      label: "YaklaÅŸÄ±yor",
       color: "bg-amber-50 text-amber-700 border border-amber-200",
     };
   }
 
   return {
-    label: "Güncel",
+    label: "GÃ¼ncel",
     color: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   };
 };
 
 // =========================
-// Görsel sabitler
+// GÃ¶rsel sabitler
 // =========================
 const brand = {
   primary: "#0a2b45",
@@ -530,11 +538,11 @@ const badgeHazard = (t) => {
 
 export default function Firmalar() {
   // =========================
-  // Kullanıcı türünü algıla (ticari/bireysel ayrımı NET)
+  // KullanÄ±cÄ± tÃ¼rÃ¼nÃ¼ algÄ±la (ticari/bireysel ayrÄ±mÄ± NET)
   // =========================
   const ticariUserLS = safeJson(localStorage.getItem("ticari_user"));
   const bireyselUserLS = safeJson(localStorage.getItem("bireysel_user"));
-  const userLS = safeJson(localStorage.getItem("user")); // genelde login sonrası burada olur
+  const userLS = safeJson(localStorage.getItem("user")); // genelde login sonrasÄ± burada olur
 
   const role = (userLS?.role || "").toString().toLowerCase().trim();
 
@@ -544,11 +552,11 @@ export default function Firmalar() {
   // bireysel uzman: tam yetkili (silme dahil)
   const isBireysel = role === "bireysel" || !!bireyselUserLS;
 
-  // senin istediğin: ticari kullanıcıda silme kapalı; bireyselde dokunmuyoruz => silme açık
+  // senin istediÄŸin: ticari kullanÄ±cÄ±da silme kapalÄ±; bireyselde dokunmuyoruz => silme aÃ§Ä±k
   const canDelete = !isTicariUser;
 
   // =========================
-  // Context (Mongo kaynağı)
+  // Context (Mongo kaynaÄŸÄ±)
   // =========================
   const { firmalar, setFirmalar, selectedFirm, setSelectedFirm, fetchFirmalar } =
     useFirmalar();
@@ -567,7 +575,7 @@ export default function Firmalar() {
     onCancel: null,
   });
 
-  // ✅ Bilgilendirme: iptal butonu yok => soldaki boş kare yok
+  // âœ… Bilgilendirme: iptal butonu yok => soldaki boÅŸ kare yok
   const openInfo = (title, message) => {
     setConfirmData({
       title,
@@ -581,13 +589,13 @@ export default function Firmalar() {
     setConfirmOpen(true);
   };
 
-  // ✅ Uyarı/Onay
+  // âœ… UyarÄ±/Onay
   const openConfirm = ({
     title,
     message,
     onConfirm,
     confirmText = "Tamam",
-    cancelText = "İptal",
+    cancelText = "Ä°ptal",
     variant = "warning",
   }) => {
     setConfirmData({
@@ -606,7 +614,7 @@ export default function Firmalar() {
   };
 
   // =========================
-  // State (UI aynı)
+  // State (UI aynÄ±)
   // =========================
   const [q, setQ] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
@@ -641,7 +649,7 @@ export default function Firmalar() {
   });
 
   // =========================
-  // İlk girişte firmaları çek
+  // Ä°lk giriÅŸte firmalarÄ± Ã§ek
   // =========================
   useEffect(() => {
     fetchFirmalar?.();
@@ -649,15 +657,15 @@ export default function Firmalar() {
   }, []);
 
   // =========================
-  // Filtreleme (aynı)
+  // Filtreleme (aynÄ±)
   // =========================
   const safeFirmalar = Array.isArray(firmalar) ? firmalar : [];
 
   const filtered = useMemo(() => {
     const text = q.trim().toLowerCase();
 
-    // Mongo’dan gelen firmaları “eski UI şekli” gibi kullanacağız
-    // id alanına _id’yi koyup eski kodu bozmuyoruz
+    // Mongoâ€™dan gelen firmalarÄ± â€œeski UI ÅŸekliâ€ gibi kullanacaÄŸÄ±z
+    // id alanÄ±na _idâ€™yi koyup eski kodu bozmuyoruz
     let arr = safeFirmalar.map((f) => ({
       ...f,
       id: f.id || f._id,
@@ -668,7 +676,7 @@ export default function Firmalar() {
         [
           f.firmaAdi,
           f.sgkSicilNo,
-          f.sgkNo, // ✅ admin tarafı sgkNo yazarsa da aransın
+          f.sgkNo, // âœ… admin tarafÄ± sgkNo yazarsa da aransÄ±n
           f.nace,
           f.faaliyet,
           f.adres,
@@ -704,7 +712,7 @@ export default function Firmalar() {
   };
 
   const openEdit = async (firma) => {
-    // 1) Önce eldeki veriyle modalı aç (UI gecikmesin)
+    // 1) Ã–nce eldeki veriyle modalÄ± aÃ§ (UI gecikmesin)
     const id = firma?.id || firma?._id || null;
 
     const rawHaz =
@@ -734,7 +742,7 @@ export default function Firmalar() {
         firma?.activity ||
         "",
       tehlike: firma?.tehlike || "Az Tehlikeli",
-      // ✅ type=date uyumluluğu
+      // âœ… type=date uyumluluÄŸu
       hazirlama: toInputDate(rawHaz),
       gecerlilik: toInputDate(rawGec),
     };
@@ -743,12 +751,12 @@ export default function Firmalar() {
     setUserEdited({ faaliyet: false, tehlike: false });
     setOpen(true);
 
-    // 2) Eğer nace/faaliyet boşsa backend'den detay çek
+    // 2) EÄŸer nace/faaliyet boÅŸsa backend'den detay Ã§ek
     const needDetail =
       !String(baseForm.nace || "").trim() ||
       !String(baseForm.faaliyet || "").trim() ||
-      !String(baseForm.hazirlama || "").trim() || // ✅ tarih boşsa da detay çek
-      !String(baseForm.gecerlilik || "").trim(); // ✅
+      !String(baseForm.hazirlama || "").trim() || // âœ… tarih boÅŸsa da detay Ã§ek
+      !String(baseForm.gecerlilik || "").trim(); // âœ…
 
     if (!id || !needDetail) return;
 
@@ -778,7 +786,7 @@ export default function Firmalar() {
         d.gecerlilik || d.gecerlilikTarihi || d.gecerlilikTarih
       );
 
-      // 3) Modal açıkken formu detayla güncelle
+      // 3) Modal aÃ§Ä±kken formu detayla gÃ¼ncelle
       setForm((prev) => {
         if ((prev?.id || null) !== id) return prev;
         return {
@@ -788,7 +796,7 @@ export default function Firmalar() {
             ? prev.faaliyet
             : detailFaaliyet,
           tehlike: prev.tehlike || d.tehlike || d.tehlikeSinifi || prev.tehlike,
-          // ✅ tarihleri sadece boşsa doldur
+          // âœ… tarihleri sadece boÅŸsa doldur
           hazirlama: String(prev.hazirlama || "").trim()
             ? prev.hazirlama
             : detailHaz,
@@ -798,7 +806,7 @@ export default function Firmalar() {
         };
       });
 
-      // 4) Listeyi de güncelle (bir daha edit boş açılmasın)
+      // 4) Listeyi de gÃ¼ncelle (bir daha edit boÅŸ aÃ§Ä±lmasÄ±n)
       if (typeof setFirmalar === "function") {
         setFirmalar((prev) => {
           const arr = Array.isArray(prev) ? prev : [];
@@ -810,14 +818,14 @@ export default function Firmalar() {
         });
       }
 
-      // 5) Seçili firmayı da güncelle (prosedür/risk ekranları için)
+      // 5) SeÃ§ili firmayÄ± da gÃ¼ncelle (prosedÃ¼r/risk ekranlarÄ± iÃ§in)
       const selId = selectedFirm?.id || selectedFirm?._id || null;
       if (selId && selId === id && typeof setSelectedFirm === "function") {
         await setSelectedFirm({ ...selectedFirm, ...d, id });
       }
     } catch (err) {
       console.warn(
-        "Firma detay çekilemedi (edit):",
+        "Firma detay Ã§ekilemedi (edit):",
         err?.response?.data || err?.message || err
       );
     }
@@ -827,7 +835,7 @@ export default function Firmalar() {
     e.preventDefault();
 
     if (!form.firmaAdi || !form.sgkSicilNo) {
-      openInfo("Bilgilendirme", "Lütfen Firma Adı ve SGK Sicil No giriniz!");
+      openInfo("Bilgilendirme", "LÃ¼tfen Firma AdÄ± ve SGK Sicil No giriniz!");
       return;
     }
 
@@ -837,26 +845,26 @@ export default function Firmalar() {
       return fid !== form.id && digitsOnly(f?.sgkSicilNo || f?.sgkNo) === normalizedSgk;
     });
     if (duplicate) {
-      openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+      openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
       return;
     }
 
     const token = getToken();
     if (!token) {
-      openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+      openInfo("Bilgilendirme", "Oturum bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±nÄ±z.");
       return;
     }
 
     const payload = {
       firmaAdi: upTR(form.firmaAdi),
-      // ✅ backend sgkNo bekliyorsa da sıkıntı olmasın diye ikisini de yolluyoruz
+      // âœ… backend sgkNo bekliyorsa da sÄ±kÄ±ntÄ± olmasÄ±n diye ikisini de yolluyoruz
       sgkSicilNo: digitsOnly(form.sgkSicilNo),
       sgkNo: digitsOnly(form.sgkSicilNo),
       adres: upTR(form.adres),
       nace: digitsOnly(form.nace),
       faaliyet: upTR(form.faaliyet),
       tehlike: form.tehlike,
-      // ✅ zaten yyyy-mm-dd olarak gider
+      // âœ… zaten yyyy-mm-dd olarak gider
       hazirlama: form.hazirlama || "",
       gecerlilik: form.gecerlilik || "",
     };
@@ -880,12 +888,12 @@ export default function Firmalar() {
       setSelectedFirm?.(saved);
 
       setOpen(false);
-      openInfo("Bilgilendirme", "Firma kaydedildi ✅");
+      openInfo("Bilgilendirme", "Firma kaydedildi âœ…");
     } catch (err) {
-      console.error("Firma kaydetme hatası:", err);
+      console.error("Firma kaydetme hatasÄ±:", err);
       openInfo(
         "Hata",
-        "Firma kaydedilirken hata oluştu. (Backend/Yetki/Endpoint kontrol)"
+        "Firma kaydedilirken hata oluÅŸtu. (Backend/Yetki/Endpoint kontrol)"
       );
     }
   };
@@ -899,6 +907,7 @@ export default function Firmalar() {
       ...prev,
       firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
       sgkSicilNo: sgk || prev.sgkSicilNo,
+      adres: upTR(parsed.adres || prev.adres),
       nace: nace || prev.nace,
       faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
       tehlike,
@@ -917,7 +926,7 @@ export default function Firmalar() {
 
     const token = getToken();
     if (!token) {
-      openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+      openInfo("Bilgilendirme", "Oturum bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±nÄ±z.");
       return;
     }
 
@@ -936,7 +945,7 @@ export default function Firmalar() {
       }
 
       if (!parsed.firmaAdi && !parsed.sgkSicilNo && !parsed.sgkNo) {
-        openInfo("Bilgilendirme", "PDF okunamadı. Dosya çok düşük kaliteliyse Excel aktarımı kullanın.");
+        openInfo("Bilgilendirme", "PDF okunamadÄ±. Dosya Ã§ok dÃ¼ÅŸÃ¼k kaliteliyse Excel aktarÄ±mÄ± kullanÄ±n.");
         return;
       }
 
@@ -945,7 +954,7 @@ export default function Firmalar() {
         (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
       );
       if (parsedSgk && duplicate) {
-        openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
         return;
       }
       applyParsedFirma(parsed);
@@ -960,7 +969,7 @@ export default function Firmalar() {
               (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
             );
             if (parsedSgk && duplicate) {
-              openInfo("Bilgilendirme", "Bu SGK Sicil Numarasına ait firma sistemde zaten kayıtlıdır.");
+              openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
               return;
             }
             applyParsedFirma(parsed);
@@ -968,13 +977,13 @@ export default function Firmalar() {
             return;
           }
         } catch (ocrErr) {
-          console.error("PDF OCR hatası:", ocrErr);
+          console.error("PDF OCR hatasÄ±:", ocrErr);
         }
       }
       openInfo(
         "Hata",
         err?.response?.data?.message ||
-          "PDF okunamadı. Dosyanın İSG-KATİP hizmet sözleşmesi PDF'i olduğundan emin olun."
+          "PDF okunamadÄ±. DosyanÄ±n Ä°SG-KATÄ°P hizmet sÃ¶zleÅŸmesi PDF'i olduÄŸundan emin olun."
       );
     } finally {
       setPdfLoading(false);
@@ -986,16 +995,16 @@ export default function Firmalar() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Firmalar");
     ws.addRow([
-      "Firma Adı",
+      "Firma AdÄ±",
       "SGK Sicil No",
       "Adres",
-      "Tehlike Sınıfı",
-      "Sözleşme Onay Tarihi",
+      "Tehlike SÄ±nÄ±fÄ±",
+      "SÃ¶zleÅŸme Onay Tarihi",
     ]);
     ws.addRow([
-      "ÖRNEK FİRMA LTD. ŞTİ.",
+      "Ã–RNEK FÄ°RMA LTD. ÅTÄ°.",
       "12345678901234567890123456",
-      "Örnek adres",
+      "Ã–rnek adres",
       "Tehlikeli",
       "01.06.2026",
     ]);
@@ -1018,7 +1027,7 @@ export default function Firmalar() {
 
     const token = getToken();
     if (!token) {
-      openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+      openInfo("Bilgilendirme", "Oturum bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±nÄ±z.");
       return;
     }
 
@@ -1028,29 +1037,29 @@ export default function Firmalar() {
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(await file.arrayBuffer());
       const ws = wb.worksheets[0];
-      if (!ws) throw new Error("Excel sayfası bulunamadı");
+      if (!ws) throw new Error("Excel sayfasÄ± bulunamadÄ±");
 
       const headerMap = getHeaderMap(ws);
       const rows = [];
       ws.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan İşyeri Unvanı", "Unvan"], 1);
+        const firmaAdi = getCellByHeader(row, headerMap, ["Firma AdÄ±", "Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Unvan"], 1);
         const sgkSicilNo = digitsOnly(
-          getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan İşyeri SGK/DETSİS No", "SGK DETSİS No"], 2)
+          getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan Ä°ÅŸyeri SGK/DETSÄ°S No", "SGK DETSÄ°S No"], 2)
         );
-        const il = getCellByHeader(row, headerMap, ["İl", "Hizmet Alan İşyeri İli"], null);
-        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], 3);
-        const calisanSayisi = getCellByHeader(row, headerMap, ["Çalışan Sayısı", "Güncel Çalışan Sayısı", "Hizmet Alan İşyeri Çalışan Sayısı"], null);
+        const il = getCellByHeader(row, headerMap, ["Ä°l", "Hizmet Alan Ä°ÅŸyeri Ä°li"], null);
+        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan Ä°ÅŸyeri Adresi"], 3);
+        const calisanSayisi = getCellByHeader(row, headerMap, ["Ã‡alÄ±ÅŸan SayÄ±sÄ±", "GÃ¼ncel Ã‡alÄ±ÅŸan SayÄ±sÄ±", "Hizmet Alan Ä°ÅŸyeri Ã‡alÄ±ÅŸan SayÄ±sÄ±"], null);
         const tehlike = getCellByHeader(
           row,
           headerMap,
-          ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"],
+          ["Tehlike SÄ±nÄ±fÄ±", "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Hizmet Alan Ä°ÅŸyeri Tehlike SÄ±nÄ±fÄ±"],
           4
         );
         const sozlesmeOnayTarihi = getCellByHeader(
           row,
           headerMap,
-          ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"],
+          ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "HazÄ±rlama Tarihi"],
           5
         );
         if (![firmaAdi, sgkSicilNo, adres, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
@@ -1073,7 +1082,7 @@ export default function Firmalar() {
       });
 
       if (!rows.length) {
-        openInfo("Bilgilendirme", "Excel içinde eklenecek firma satırı bulunamadı.");
+        openInfo("Bilgilendirme", "Excel iÃ§inde eklenecek firma satÄ±rÄ± bulunamadÄ±.");
         return;
       }
 
@@ -1087,7 +1096,7 @@ export default function Firmalar() {
     } catch (err) {
       openInfo(
         "Hata",
-        err?.response?.data?.message || err?.message || "Toplu firma ekleme başarısız oldu."
+        err?.response?.data?.message || err?.message || "Toplu firma ekleme baÅŸarÄ±sÄ±z oldu."
       );
     } finally {
       setBulkLoading(false);
@@ -1095,22 +1104,22 @@ export default function Firmalar() {
   };
 
   const removeFirm = async (id) => {
-    // ✅ ticari_user kesinlikle silemez
+    // âœ… ticari_user kesinlikle silemez
     if (!canDelete) {
-      openInfo("Bilgilendirme", "Ticari kullanıcı firma silemez.");
+      openInfo("Bilgilendirme", "Ticari kullanÄ±cÄ± firma silemez.");
       return;
     }
 
     openConfirm({
-      title: "Uyarı",
-      message: "Bu firmayı silmek istiyor musunuz?",
+      title: "UyarÄ±",
+      message: "Bu firmayÄ± silmek istiyor musunuz?",
       confirmText: "Sil",
-      cancelText: "İptal",
+      cancelText: "Ä°ptal",
       variant: "warning",
       onConfirm: async () => {
         const token = getToken();
         if (!token) {
-          openInfo("Bilgilendirme", "Oturum bulunamadı. Lütfen tekrar giriş yapınız.");
+          openInfo("Bilgilendirme", "Oturum bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±nÄ±z.");
           return;
         }
 
@@ -1125,12 +1134,12 @@ export default function Firmalar() {
             setSelectedFirm?.(null);
           }
 
-          openInfo("Bilgilendirme", "Firma silindi ✅");
+          openInfo("Bilgilendirme", "Firma silindi âœ…");
         } catch (err) {
-          console.error("Firma silme hatası:", err);
+          console.error("Firma silme hatasÄ±:", err);
           openInfo(
             "Hata",
-            "Firma silinirken hata oluştu. (Backend/Yetki/Endpoint kontrol)"
+            "Firma silinirken hata oluÅŸtu. (Backend/Yetki/Endpoint kontrol)"
           );
         }
       },
@@ -1138,7 +1147,7 @@ export default function Firmalar() {
   };
 
   // =========================
-  // NACE Otomatik Doldurma (aynı)
+  // NACE Otomatik Doldurma (aynÄ±)
   // =========================
   const naceIndex = useMemo(() => {
     const m = new Map();
@@ -1188,15 +1197,15 @@ export default function Firmalar() {
   return (
     <div className="p-3 sm:p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-4">
-        {/* Başlık */}
+        {/* BaÅŸlÄ±k */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div>
               <h2 className="text-xl font-bold text-[#042f4b] mb-4">
-                Firmalarım
+                FirmalarÄ±m
               </h2>
               <p className="text-slate-500 text-xs">
-                Kayıtlı firmaları yönetin, yeni firma ekleyin.
+                KayÄ±tlÄ± firmalarÄ± yÃ¶netin, yeni firma ekleyin.
               </p>
             </div>
           </div>
@@ -1218,7 +1227,7 @@ export default function Firmalar() {
           </div>
         </div>
 
-        {/* Araç Çubuğu */}
+        {/* AraÃ§ Ã‡ubuÄŸu */}
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3">
           <div className="relative">
             <HiSearch className="absolute left-3 top-2 text-slate-400 h-3.5 w-3.5" />
@@ -1243,7 +1252,7 @@ export default function Firmalar() {
             </button>
 
             <div className="hidden md:flex items-center gap-2 text-xs text-slate-500">
-              <span>Göster:</span>
+              <span>GÃ¶ster:</span>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
@@ -1264,12 +1273,12 @@ export default function Firmalar() {
               <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
                 <tr className="text-slate-600">
                   <th className="py-2 px-3 text-left font-semibold border-b">#</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">Firma Adı</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Firma AdÄ±</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">SGK Sicil No</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">Tehlike</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">Hazırlama</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">Geçerlilik</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">İşlemler</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">HazÄ±rlama</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">GeÃ§erlilik</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Ä°ÅŸlemler</th>
                 </tr>
               </thead>
 
@@ -1278,7 +1287,7 @@ export default function Firmalar() {
                   const status = getStatusFromGecerlilik(f.gecerlilik);
                   const isActive = (f.id || f._id) === activeFirmId;
 
-                  // ✅ SGK alanı iki isimden gelebilir
+                  // âœ… SGK alanÄ± iki isimden gelebilir
                   const sgkVal = f.sgkSicilNo || f.sgkNo || "-";
 
                   return (
@@ -1331,7 +1340,7 @@ export default function Firmalar() {
                         </div>
                       </td>
 
-                      {/* İşlemler */}
+                      {/* Ä°ÅŸlemler */}
                       <td className="py-1.5 px-3 align-middle">
                         <div className="flex flex-wrap sm:flex-nowrap gap-1">
                           {/* DETAY */}
@@ -1343,19 +1352,19 @@ export default function Firmalar() {
                             <HiEye className="h-3.5 w-3.5" />
                           </button>
 
-                          {/* DÜZENLE */}
+                          {/* DÃœZENLE */}
                           <button
                             onClick={() => openEdit(f)}
                             className={`${btn.base} ${btn.ghost}`}
-                            title="Düzenle"
+                            title="DÃ¼zenle"
                           >
                             <HiPencil className="h-3.5 w-3.5" />
                           </button>
 
-                          {/* SİLME — sadece ticari_user kapalı */}
+                          {/* SÄ°LME â€” sadece ticari_user kapalÄ± */}
                           {!canDelete ? (
                             <button
-                              onClick={() => openInfo("Bilgilendirme", "Ticari kullanıcı firma silemez.")}
+                              onClick={() => openInfo("Bilgilendirme", "Ticari kullanÄ±cÄ± firma silemez.")}
                               className={`${btn.base} bg-gray-200 text-gray-400 cursor-not-allowed`}
                               title="Silemez"
                             >
@@ -1379,7 +1388,7 @@ export default function Firmalar() {
                 {paged.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
-                      Henüz firma yok.
+                      HenÃ¼z firma yok.
                     </td>
                   </tr>
                 )}
@@ -1392,7 +1401,7 @@ export default function Firmalar() {
             <div className="text-xs text-slate-500">
               Toplam{" "}
               <span className="font-medium text-slate-700">{filtered.length}</span>{" "}
-              kayıt
+              kayÄ±t
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -1417,7 +1426,7 @@ export default function Firmalar() {
         </div>
       </div>
 
-      {/* Modal: Firma Ekle / Düzenle */}
+      {/* Modal: Firma Ekle / DÃ¼zenle */}
       {open && (
         <div className="fixed inset-0 z-[99999] grid place-items-center p-3">
           <div
@@ -1429,7 +1438,7 @@ export default function Firmalar() {
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 <h3 className="text-sm font-semibold tracking-tight">
-                  {form.id ? "Firmayı Düzenle" : "Yeni Firma Kaydı"}
+                  {form.id ? "FirmayÄ± DÃ¼zenle" : "Yeni Firma KaydÄ±"}
                 </h3>
               </div>
               <button
@@ -1455,7 +1464,7 @@ export default function Firmalar() {
                 className={`${btn.base} ${btn.ghost} bg-white`}
               >
                 <HiDocumentText className="h-3.5 w-3.5" />
-                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "İSG-KATİP PDF'den Otomatik Doldur"}
+                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "Ä°SG-KATÄ°P PDF'den Otomatik Doldur"}
               </button>
             </div>
 
@@ -1463,11 +1472,11 @@ export default function Firmalar() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Firma Adı
+                    Firma AdÄ±
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="FİRMA ADI"
+                    placeholder="FÄ°RMA ADI"
                     value={form.firmaAdi}
                     onChange={(e) =>
                       setForm({ ...form, firmaAdi: upTR(e.target.value) })
@@ -1481,7 +1490,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="SGK SİCİL NO"
+                    placeholder="SGK SÄ°CÄ°L NO"
                     value={form.sgkSicilNo}
                     onChange={(e) => {
                       const only = digitsOnly(e.target.value);
@@ -1512,7 +1521,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="OTOMATİK"
+                    placeholder="OTOMATÄ°K"
                     value={form.nace}
                     onChange={(e) => setForm({ ...form, nace: e.target.value })}
                   />
@@ -1524,7 +1533,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="OTOMATİK / MANUEL"
+                    placeholder="OTOMATÄ°K / MANUEL"
                     value={form.faaliyet}
                     onChange={(e) => {
                       setUserEdited((u) => ({ ...u, faaliyet: true }));
@@ -1535,7 +1544,7 @@ export default function Firmalar() {
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Tehlike Sınıfı
+                    Tehlike SÄ±nÄ±fÄ±
                   </label>
                   <select
                     className={selectClass}
@@ -1549,13 +1558,13 @@ export default function Firmalar() {
                   >
                     <option>Az Tehlikeli</option>
                     <option>Tehlikeli</option>
-                    <option>Çok Tehlikeli</option>
+                    <option>Ã‡ok Tehlikeli</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Hazırlama Tarihi
+                    HazÄ±rlama Tarihi
                   </label>
                   <input
   type="date"
@@ -1574,7 +1583,7 @@ export default function Firmalar() {
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Geçerlilik Tarihi
+                    GeÃ§erlilik Tarihi
                   </label>
                   <input
   type="date"
@@ -1591,7 +1600,7 @@ export default function Firmalar() {
                   onClick={() => setOpen(false)}
                   className={`${btn.base} ${btn.ghost}`}
                 >
-                  İptal
+                  Ä°ptal
                 </button>
                 <button type="submit" className={`${btn.base} ${btn.success}`}>
                   Kaydet
@@ -1635,7 +1644,7 @@ export default function Firmalar() {
               />
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                Excel'in ilk satırı başlık satırıdır. Kayıtlar 2. satırdan itibaren okunur.
+                Excel'in ilk satÄ±rÄ± baÅŸlÄ±k satÄ±rÄ±dÄ±r. KayÄ±tlar 2. satÄ±rdan itibaren okunur.
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1645,7 +1654,7 @@ export default function Firmalar() {
                   className={`${btn.base} ${btn.ghost}`}
                 >
                   <HiDownload className="h-3.5 w-3.5" />
-                  Örnek Excel Şablonu İndir
+                  Ã–rnek Excel Åablonu Ä°ndir
                 </button>
                 <button
                   type="button"
@@ -1654,18 +1663,18 @@ export default function Firmalar() {
                   className={`${btn.base} ${btn.primary}`}
                 >
                   <HiUpload className="h-3.5 w-3.5" />
-                  {bulkLoading ? "Yükleniyor..." : "Excel Seç ve Yükle"}
+                  {bulkLoading ? "YÃ¼kleniyor..." : "Excel SeÃ§ ve YÃ¼kle"}
                 </button>
               </div>
 
               {bulkResult && (
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="mb-2 font-semibold text-slate-800">Yükleme Özeti</div>
+                  <div className="mb-2 font-semibold text-slate-800">YÃ¼kleme Ã–zeti</div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>Toplam Satır: <b>{bulkResult.totalRows || 0}</b></div>
-                    <div>Başarıyla Eklenen: <b>{bulkResult.insertedCount || 0}</b></div>
-                    <div>Mükerrer Kayıt: <b>{bulkResult.duplicateCount || 0}</b></div>
-                    <div>Hatalı Satır: <b>{bulkResult.invalidCount || 0}</b></div>
+                    <div>Toplam SatÄ±r: <b>{bulkResult.totalRows || 0}</b></div>
+                    <div>BaÅŸarÄ±yla Eklenen: <b>{bulkResult.insertedCount || 0}</b></div>
+                    <div>MÃ¼kerrer KayÄ±t: <b>{bulkResult.duplicateCount || 0}</b></div>
+                    <div>HatalÄ± SatÄ±r: <b>{bulkResult.invalidCount || 0}</b></div>
                   </div>
                 </div>
               )}
@@ -1694,7 +1703,7 @@ export default function Firmalar() {
           <div className="relative w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-2 bg-slate-50">
               <h3 className="text-sm font-semibold tracking-tight text-slate-800">
-                Firma Detayları
+                Firma DetaylarÄ±
               </h3>
               <button
                 onClick={() => setDetail(null)}
@@ -1706,7 +1715,7 @@ export default function Firmalar() {
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
               <div>
-                <span className="text-slate-500">Firma Adı:</span>{" "}
+                <span className="text-slate-500">Firma AdÄ±:</span>{" "}
                 <span className="font-medium">{detail.firmaAdi}</span>
               </div>
 
@@ -1745,12 +1754,12 @@ export default function Firmalar() {
               </div>
 
               <div>
-                <span className="text-slate-500">Hazırlama:</span>{" "}
+                <span className="text-slate-500">HazÄ±rlama:</span>{" "}
                 <span className="font-medium">{formatTR(detail.hazirlama)}</span>
               </div>
 
               <div>
-                <span className="text-slate-500">Geçerlilik:</span>{" "}
+                <span className="text-slate-500">GeÃ§erlilik:</span>{" "}
                 <span className="font-medium">{formatTR(detail.gecerlilik)}</span>
                 <span
                   className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
@@ -1774,7 +1783,7 @@ export default function Firmalar() {
         </div>
       )}
 
-      {/* ✅ ConfirmModal (alert/confirm yerine) */}
+      {/* âœ… ConfirmModal (alert/confirm yerine) */}
       <ConfirmModal
         open={confirmOpen}
         title={confirmData.title}
@@ -1789,7 +1798,7 @@ export default function Firmalar() {
   );
 }
 
-// küçük güvenli json parse
+// kÃ¼Ã§Ã¼k gÃ¼venli json parse
 function safeJson(v) {
   try {
     return v ? JSON.parse(v) : null;

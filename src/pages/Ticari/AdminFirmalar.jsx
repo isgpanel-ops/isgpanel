@@ -312,6 +312,11 @@ const rowValueFromPdfItems = (items, labelKeys) => {
   );
 };
 
+const isLikelyCompanyName = (value) => {
+  const text = foldText(value);
+  return /(limited|anonim|sirket|ticaret|sanayi|ltd|as|osb|apartman|site|yonetici|insaat|dekorasyon|poliklinik|merkez|hizmet)/i.test(text);
+};
+
 const readPdfStructuredFirma = async (file) => {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
@@ -331,9 +336,11 @@ const readPdfStructuredFirma = async (file) => {
   const serviceItems = items.filter((item) => item.y < serviceStart.y && (!nextSection || item.y > nextSection.y));
   const dateText = rowValueFromPdfItems(items, ["SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["SÃ¶zleÅŸme Onay Tarihi", "Sozlesme Onay Tarihi"]);
   const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSÄ°S No", "SGK/DETSIS No"]));
+  const adres = rowValueFromPdfItems(serviceItems, ["Adres"]);
   const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Guncel Tehlike Sinifi"]));
   const nace = inferNaceFromSgk(sgk);
-  const firmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ãœnvan", "Unvani"])).replace(/^(UNVAN|ÃœNVAN|UNVANI|ÃœNVANI)\s*[:\-]?\s*/i, "");
+  const rawFirmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
+  const firmaAdi = isLikelyCompanyName(rawFirmaAdi) ? rawFirmaAdi : "";
   const hazirlama = toInputDate(dateText);
 
   if (!sgk && !firmaAdi) return null;
@@ -341,6 +348,7 @@ const readPdfStructuredFirma = async (file) => {
     firmaAdi,
     sgkNo: sgk,
     sgkSicilNo: sgk,
+    adres,
     nace,
     faaliyet: "",
     tehlike: tehlike || "Tehlikeli",
@@ -976,6 +984,7 @@ export default function AdminFirmalar() {
       ...prev,
       firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
       sgkNo: sgk || prev.sgkNo,
+      adres: upTR(parsed.adres || prev.adres),
       nace: parsed.nace || inferNaceFromSgk(sgk) || prev.nace,
       faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
       tehlike,
