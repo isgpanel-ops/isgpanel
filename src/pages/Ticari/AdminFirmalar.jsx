@@ -122,9 +122,29 @@ const getOcrLines = (text) =>
     .map((line) => line.replace(/[ \t]+/g, " ").trim())
     .filter(Boolean);
 
+const foldText = (value) =>
+  String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+
+const normalizeCleanHazardFromText = (text) => {
+  const folded = foldText(text);
+  if (folded.includes("cok tehlikeli")) return "\u00c7ok Tehlikeli";
+  if (folded.includes("az tehlikeli")) return "Az Tehlikeli";
+  if (folded.includes("tehlikeli")) return "Tehlikeli";
+  return "";
+};
+
 const includesAny = (text, keys) => {
-  const hay = String(text || "").toLocaleLowerCase("tr-TR");
-  return keys.some((key) => hay.includes(String(key).toLocaleLowerCase("tr-TR")));
+  const hay = foldText(text);
+  return keys.some((key) => hay.includes(foldText(key)));
 };
 
 const valueNearLabel = (lines, labels) => {
@@ -166,13 +186,98 @@ const parseFirmaFromOcrText = (text) => {
     }
   }
 
-  const tehlike = normalizeHazardFromText(hazardText) || "Tehlikeli";
+  const tehlike = normalizeCleanHazardFromText(hazardText) || "Tehlikeli";
   const hazirlama = toInputDate(dateText);
   return {
     firmaAdi,
     sgkNo: sgk,
     sgkSicilNo: sgk,
     adres,
+    nace: inferNaceFromSgk(sgk),
+    faaliyet: "",
+    tehlike,
+    hazirlama,
+    gecerlilik: hazirlama ? computeValidity(hazirlama, tehlike) : "",
+  };
+};
+
+const parseIskatipFirmaFromOcrText = (text) => {
+  const lines = getOcrLines(text);
+  const all = lines.join("\n");
+  const receiverStartIndex = lines.findIndex((line) =>
+    includesAny(line, ["Hizmet Alan İşyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"])
+  );
+  const receiverEndIndex = lines.findIndex(
+    (line, index) =>
+      index > receiverStartIndex &&
+      includesAny(line, ["Hizmet Sunan", "Sözleşme Bilgileri", "Sozlesme Bilgileri"])
+  );
+  const receiverLines =
+    receiverStartIndex >= 0
+      ? lines.slice(
+          receiverStartIndex,
+          receiverEndIndex > receiverStartIndex ? receiverEndIndex : Math.min(lines.length, receiverStartIndex + 45)
+        )
+      : lines;
+  const receiverText = receiverLines.join("\n");
+  const sgkMatch =
+    receiverText.match(/\b\d{20,30}\b/) ||
+    receiverText.replace(/\s+/g, "").match(/\d{20,30}/) ||
+    all.match(/\b\d{20,30}\b/) ||
+    all.replace(/\s+/g, "").match(/\d{20,30}/);
+  const sgk = digitsOnly(sgkMatch?.[0] || "");
+  const dateMatch =
+    all.match(/\b\d{1,2}[./-]\d{1,2}[./-]\d{4}\b/) ||
+    all.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  const hazardText =
+    valueNearLabel(receiverLines, [
+      "Güncel Tehlike Sınıfı",
+      "Guncel Tehlike Sinifi",
+      "Tehlike Sınıfı",
+      "Tehlike Sinifi",
+    ]) || receiverText;
+  const dateText =
+    valueNearLabel(lines, [
+      "Sözleşme Başlangıç Tarihi",
+      "Sozlesme Baslangic Tarihi",
+      "Sözleşme Onay Tarihi",
+      "Sozlesme Onay Tarihi",
+    ]) || dateMatch?.[0] || "";
+
+  let firmaAdi = valueNearLabel(receiverLines, [
+    "Hizmet Alan İşyeri Unvanı",
+    "Hizmet Alan Isyeri Unvani",
+    "İşyeri Unvanı",
+    "Isyeri Unvani",
+    "Unvanı",
+    "Unvan",
+  ]);
+
+  if (sgk && !firmaAdi) {
+    const sgkLineIndex = receiverLines.findIndex((line) => digitsOnly(line).includes(sgk.slice(0, 14)));
+    const nearby =
+      sgkLineIndex >= 0
+        ? receiverLines.slice(Math.max(0, sgkLineIndex - 12), Math.min(receiverLines.length, sgkLineIndex + 12))
+        : receiverLines;
+    const companyKeywords = /(LİMİTED|LIMITED|ANONİM|ANONIM|ŞİRKET|SIRKET|TİCARET|TICARET|SANAYİ|SANAYI|LTD|A\.Ş|AŞ|POLİKLİNİK|POLIKLINIK|MERKEZ|MERKEZİ|MERKEZI|HİZMET|HIZMET)/i;
+    const noiseKeywords = /(HİZMET ALAN|HIZMET ALAN|İŞYERİ|ISYERI|SGK|DETS|TEHLİKE|TEHLIKE|SÖZLEŞME|SOZLESME|TARİH|TARIH|ÇALIŞAN|CALISAN|SAYISI|TC KİMLİK|TC KIMLIK)/i;
+    firmaAdi =
+      nearby.find((line) => companyKeywords.test(line) && !noiseKeywords.test(line)) ||
+      nearby.find((line) => {
+        const clean = line.replace(/[0-9/.,:-]/g, "").trim();
+        return clean.length >= 8 && clean === clean.toLocaleUpperCase("tr-TR") && !noiseKeywords.test(line);
+      }) ||
+      "";
+  }
+
+  firmaAdi = String(firmaAdi || "").replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "").trim();
+  const tehlike = normalizeCleanHazardFromText(hazardText) || "Tehlikeli";
+  const hazirlama = toInputDate(dateText);
+
+  return {
+    firmaAdi,
+    sgkNo: sgk,
+    sgkSicilNo: sgk,
     nace: inferNaceFromSgk(sgk),
     faaliyet: "",
     tehlike,
@@ -203,7 +308,7 @@ const readPdfWithOcr = async (file, onProgress) => {
   } finally {
     await worker.terminate();
   }
-  return parseFirmaFromOcrText(texts.join("\n"));
+  return parseIskatipFirmaFromOcrText(texts.join("\n"));
 };
 
 const btn = {
@@ -766,7 +871,6 @@ export default function AdminFirmalar() {
       ...prev,
       firmaAdi: upTR(parsed.firmaAdi || prev.firmaAdi),
       sgkNo: sgk || prev.sgkNo,
-      adres: upTR(parsed.adres || prev.adres),
       nace: parsed.nace || inferNaceFromSgk(sgk) || prev.nace,
       faaliyet: upTR(parsed.faaliyet || prev.faaliyet),
       tehlike,
