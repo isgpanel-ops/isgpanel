@@ -362,7 +362,65 @@ const parseIskatipFirmaFromOcrText = (text) => {
   };
 };
 
+const stripPdfValue = (value) =>
+  String(value || "")
+    .replace(/^[:\s-]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const rowValueFromPdfItems = (items, labelKeys) => {
+  const label = items.find((item) => includesAny(item.text, labelKeys));
+  if (!label) return "";
+  return stripPdfValue(
+    items
+      .filter((item) => Math.abs(item.y - label.y) <= 3 && item.x > label.x + 40 && !includesAny(item.text, labelKeys))
+      .sort((a, b) => a.x - b.x)
+      .map((item) => item.text)
+      .join(" ")
+  );
+};
+
+const readPdfStructuredFirma = async (file) => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const page = await pdf.getPage(1);
+  const content = await page.getTextContent();
+  const items = (content.items || [])
+    .map((item) => ({
+      text: stripPdfValue(item.str),
+      x: Math.round(item.transform?.[4] || 0),
+      y: Math.round(item.transform?.[5] || 0),
+    }))
+    .filter((item) => item.text);
+
+  const serviceStart = items.find((item) => includesAny(item.text, ["Hizmet Alan İşyeri Bilgileri", "Hizmet Alan Isyeri Bilgileri"]));
+  if (!serviceStart) return null;
+  const nextSection = items.find((item) => item.y < serviceStart.y && includesAny(item.text, ["İmza Bilgileri", "Imza Bilgileri"]));
+  const serviceItems = items.filter((item) => item.y < serviceStart.y && (!nextSection || item.y > nextSection.y));
+  const dateText = rowValueFromPdfItems(items, ["Sözleşme Başlangıç Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["Sözleşme Onay Tarihi", "Sozlesme Onay Tarihi"]);
+  const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSİS No", "SGK/DETSIS No"]));
+  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["Güncel Tehlike Sınıfı", "Guncel Tehlike Sinifi"]));
+  const firmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
+  const hazirlama = toInputDate(dateText);
+
+  if (!sgk && !firmaAdi) return null;
+  return {
+    firmaAdi,
+    sgkSicilNo: sgk,
+    sgkNo: sgk,
+    tehlike: tehlike || "Tehlikeli",
+    hazirlama,
+    gecerlilik: hazirlama ? computeValidity(hazirlama, tehlike || "Tehlikeli") : "",
+  };
+};
+
 const readPdfWithOcr = async (file, onProgress) => {
+  onProgress?.("PDF metni okunuyor...");
+  const structured = await readPdfStructuredFirma(file);
+  if (structured?.firmaAdi || structured?.sgkSicilNo || structured?.sgkNo) {
+    return structured;
+  }
+
   const bytes = new Uint8Array(await file.arrayBuffer());
   const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
   const worker = await createWorker("tur+eng");
