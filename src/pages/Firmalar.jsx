@@ -39,7 +39,7 @@ const digitsOnly = (s) => (s || "").replace(/\D/g, "");
 const upTR = (s) => (s || "").toLocaleUpperCase("tr-TR");
 const toTitleHazard = (v) => {
   const u = (v || "").toLocaleUpperCase("tr-TR");
-  if (u.includes("Ã‡OK")) return "Ã‡ok Tehlikeli";
+  if (u.includes("Ã‡OK")) return "Çok Tehlikeli";
   if (u.includes("AZ")) return "Az Tehlikeli";
   return "Tehlikeli";
 };
@@ -183,7 +183,7 @@ const valueNearLabel = (lines, labels) => {
 const normalizeHazardFromText = (text) => {
   const upper = String(text || "").toLocaleUpperCase("tr-TR");
   if (upper.includes("Ã‡OK TEHLÄ°KELÄ°") || upper.includes("COK TEHLIKELI")) {
-    return "Ã‡ok Tehlikeli";
+    return "Çok Tehlikeli";
   }
   if (upper.includes("AZ TEHLÄ°KELÄ°") || upper.includes("AZ TEHLIKELI")) {
     return "Az Tehlikeli";
@@ -228,9 +228,9 @@ const parseFirmaFromOcrText = (text) => {
   ]);
   const hazardText =
     valueNearLabel(lines, [
-      "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±",
+      "GÃ¼ncel Tehlike Sınıfı",
       "Guncel Tehlike Sinifi",
-      "Tehlike SÄ±nÄ±fÄ±",
+      "Tehlike Sınıfı",
       "Tehlike Sinifi",
     ]) || all;
   const dateText =
@@ -309,9 +309,9 @@ const parseIskatipFirmaFromOcrText = (text) => {
     all.match(/\b\d{4}-\d{2}-\d{2}\b/);
   const hazardText =
     valueNearLabel(receiverLines, [
-      "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±",
+      "GÃ¼ncel Tehlike Sınıfı",
       "Guncel Tehlike Sinifi",
-      "Tehlike SÄ±nÄ±fÄ±",
+      "Tehlike Sınıfı",
       "Tehlike Sinifi",
     ]) || receiverText;
   const dateText =
@@ -405,7 +405,7 @@ const readPdfStructuredFirma = async (file) => {
   const dateText = rowValueFromPdfItems(items, ["SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["SÃ¶zleÅŸme Onay Tarihi", "Sozlesme Onay Tarihi"]);
   const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSÄ°S No", "SGK/DETSIS No"]));
   const adres = rowValueFromPdfItems(serviceItems, ["Adres"]);
-  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Guncel Tehlike Sinifi"]));
+  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike Sınıfı", "Guncel Tehlike Sinifi"]));
   const rawFirmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
   const firmaAdi = isLikelyCompanyName(rawFirmaAdi) ? rawFirmaAdi : "";
   const hazirlama = toInputDate(dateText);
@@ -457,7 +457,7 @@ const readPdfWithOcr = async (file, onProgress) => {
   return parseIskatipFirmaFromOcrText(texts.join("\n"));
 };
 
-// GeÃ§erlilik / durum yardÄ±mcÄ±larÄ±
+// Geçerlilik / durum yardÄ±mcÄ±larÄ±
 const diffDaysFromToday = (dateStr) => {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -595,7 +595,7 @@ export default function Firmalar() {
     message,
     onConfirm,
     confirmText = "Tamam",
-    cancelText = "Ä°ptal",
+    cancelText = "İptal",
     variant = "warning",
   }) => {
     setConfirmData({
@@ -818,7 +818,7 @@ export default function Firmalar() {
         });
       }
 
-      // 5) SeÃ§ili firmayÄ± da gÃ¼ncelle (prosedÃ¼r/risk ekranlarÄ± iÃ§in)
+      // 5) SeÃ§ili firmayı da gÃ¼ncelle (prosedÃ¼r/risk ekranlarÄ± iÃ§in)
       const selId = selectedFirm?.id || selectedFirm?._id || null;
       if (selId && selId === id && typeof setSelectedFirm === "function") {
         await setSelectedFirm({ ...selectedFirm, ...d, id });
@@ -835,7 +835,7 @@ export default function Firmalar() {
     e.preventDefault();
 
     if (!form.firmaAdi || !form.sgkSicilNo) {
-      openInfo("Bilgilendirme", "LÃ¼tfen Firma AdÄ± ve SGK Sicil No giriniz!");
+      openInfo("Bilgilendirme", "LÃ¼tfen Firma Adı ve SGK Sicil No giriniz!");
       return;
     }
 
@@ -845,7 +845,7 @@ export default function Firmalar() {
       return fid !== form.id && digitsOnly(f?.sgkSicilNo || f?.sgkNo) === normalizedSgk;
     });
     if (duplicate) {
-      openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
+      openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayıtlÄ±dÄ±r.");
       return;
     }
 
@@ -954,7 +954,7 @@ export default function Firmalar() {
         (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
       );
       if (parsedSgk && duplicate) {
-        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
+        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayıtlÄ±dÄ±r.");
         return;
       }
       applyParsedFirma(parsed);
@@ -969,7 +969,7 @@ export default function Firmalar() {
               (f) => digitsOnly(f?.sgkSicilNo || f?.sgkNo) === parsedSgk
             );
             if (parsedSgk && duplicate) {
-              openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
+              openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayıtlÄ±dÄ±r.");
               return;
             }
             applyParsedFirma(parsed);
@@ -983,7 +983,7 @@ export default function Firmalar() {
       openInfo(
         "Hata",
         err?.response?.data?.message ||
-          "PDF okunamadÄ±. DosyanÄ±n Ä°SG-KATÄ°P hizmet sÃ¶zleÅŸmesi PDF'i olduÄŸundan emin olun."
+          "PDF okunamadÄ±. DosyanÄ±n İSG-KATİP hizmet sÃ¶zleÅŸmesi PDF'i olduÄŸundan emin olun."
       );
     } finally {
       setPdfLoading(false);
@@ -995,10 +995,10 @@ export default function Firmalar() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Firmalar");
     ws.addRow([
-      "Firma AdÄ±",
+      "Firma Adı",
       "SGK Sicil No",
       "Adres",
-      "Tehlike SÄ±nÄ±fÄ±",
+      "Tehlike Sınıfı",
       "SÃ¶zleÅŸme Onay Tarihi",
     ]);
     ws.addRow([
@@ -1043,7 +1043,7 @@ export default function Firmalar() {
       const rows = [];
       ws.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const firmaAdi = getCellByHeader(row, headerMap, ["Firma AdÄ±", "Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Unvan"], 1);
+        const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Unvan"], 1);
         const sgkSicilNo = digitsOnly(
           getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan Ä°ÅŸyeri SGK/DETSÄ°S No", "SGK DETSÄ°S No"], 2)
         );
@@ -1053,13 +1053,13 @@ export default function Firmalar() {
         const tehlike = getCellByHeader(
           row,
           headerMap,
-          ["Tehlike SÄ±nÄ±fÄ±", "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Hizmet Alan Ä°ÅŸyeri Tehlike SÄ±nÄ±fÄ±"],
+          ["Tehlike Sınıfı", "GÃ¼ncel Tehlike Sınıfı", "Hizmet Alan Ä°ÅŸyeri Tehlike Sınıfı"],
           4
         );
         const sozlesmeOnayTarihi = getCellByHeader(
           row,
           headerMap,
-          ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "HazÄ±rlama Tarihi"],
+          ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Hazırlama Tarihi"],
           5
         );
         if (![firmaAdi, sgkSicilNo, adres, tehlike, sozlesmeOnayTarihi].some(Boolean)) return;
@@ -1112,9 +1112,9 @@ export default function Firmalar() {
 
     openConfirm({
       title: "UyarÄ±",
-      message: "Bu firmayÄ± silmek istiyor musunuz?",
+      message: "Bu firmayı silmek istiyor musunuz?",
       confirmText: "Sil",
-      cancelText: "Ä°ptal",
+      cancelText: "İptal",
       variant: "warning",
       onConfirm: async () => {
         const token = getToken();
@@ -1202,10 +1202,10 @@ export default function Firmalar() {
           <div className="flex items-center gap-2">
             <div>
               <h2 className="text-xl font-bold text-[#042f4b] mb-4">
-                FirmalarÄ±m
+                Firmalarım
               </h2>
               <p className="text-slate-500 text-xs">
-                KayÄ±tlÄ± firmalarÄ± yÃ¶netin, yeni firma ekleyin.
+                Kayıtlı firmaları yönetin, yeni firma ekleyin.
               </p>
             </div>
           </div>
@@ -1273,12 +1273,12 @@ export default function Firmalar() {
               <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
                 <tr className="text-slate-600">
                   <th className="py-2 px-3 text-left font-semibold border-b">#</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">Firma AdÄ±</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Firma Adı</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">SGK Sicil No</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">Tehlike</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">HazÄ±rlama</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">GeÃ§erlilik</th>
-                  <th className="py-2 px-3 text-left font-semibold border-b">Ä°ÅŸlemler</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Hazırlama</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Geçerlilik</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">İşlemler</th>
                 </tr>
               </thead>
 
@@ -1340,7 +1340,7 @@ export default function Firmalar() {
                         </div>
                       </td>
 
-                      {/* Ä°ÅŸlemler */}
+                      {/* İşlemler */}
                       <td className="py-1.5 px-3 align-middle">
                         <div className="flex flex-wrap sm:flex-nowrap gap-1">
                           {/* DETAY */}
@@ -1401,7 +1401,7 @@ export default function Firmalar() {
             <div className="text-xs text-slate-500">
               Toplam{" "}
               <span className="font-medium text-slate-700">{filtered.length}</span>{" "}
-              kayÄ±t
+              kayıt
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -1438,7 +1438,7 @@ export default function Firmalar() {
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 <h3 className="text-sm font-semibold tracking-tight">
-                  {form.id ? "FirmayÄ± DÃ¼zenle" : "Yeni Firma KaydÄ±"}
+                  {form.id ? "Firmayı Düzenle" : "Yeni Firma Kaydı"}
                 </h3>
               </div>
               <button
@@ -1449,34 +1449,15 @@ export default function Firmalar() {
               </button>
             </div>
 
-            <div className="border-b bg-slate-50 px-4 py-3">
-              <input
-                ref={pdfInputRef}
-                type="file"
-                accept="application/pdf,.pdf"
-                className="hidden"
-                onChange={handlePdfSelect}
-              />
-              <button
-                type="button"
-                onClick={() => pdfInputRef.current?.click()}
-                disabled={pdfLoading}
-                className={`${btn.base} ${btn.ghost} bg-white`}
-              >
-                <HiDocumentText className="h-3.5 w-3.5" />
-                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "Ä°SG-KATÄ°P PDF'den Otomatik Doldur"}
-              </button>
-            </div>
-
             <form onSubmit={saveForm} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Firma AdÄ±
+                    Firma Adı
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="FÄ°RMA ADI"
+                    placeholder="FİRMA ADI"
                     value={form.firmaAdi}
                     onChange={(e) =>
                       setForm({ ...form, firmaAdi: upTR(e.target.value) })
@@ -1490,7 +1471,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="SGK SÄ°CÄ°L NO"
+                    placeholder="SGK SİCİL NO"
                     value={form.sgkSicilNo}
                     onChange={(e) => {
                       const only = digitsOnly(e.target.value);
@@ -1521,7 +1502,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="OTOMATÄ°K"
+                    placeholder="OTOMATİK"
                     value={form.nace}
                     onChange={(e) => setForm({ ...form, nace: e.target.value })}
                   />
@@ -1533,7 +1514,7 @@ export default function Firmalar() {
                   </label>
                   <input
                     className={inputClass}
-                    placeholder="OTOMATÄ°K / MANUEL"
+                    placeholder="OTOMATİK / MANUEL"
                     value={form.faaliyet}
                     onChange={(e) => {
                       setUserEdited((u) => ({ ...u, faaliyet: true }));
@@ -1544,7 +1525,7 @@ export default function Firmalar() {
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Tehlike SÄ±nÄ±fÄ±
+                    Tehlike Sınıfı
                   </label>
                   <select
                     className={selectClass}
@@ -1558,13 +1539,13 @@ export default function Firmalar() {
                   >
                     <option>Az Tehlikeli</option>
                     <option>Tehlikeli</option>
-                    <option>Ã‡ok Tehlikeli</option>
+                    <option>Çok Tehlikeli</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    HazÄ±rlama Tarihi
+                    Hazırlama Tarihi
                   </label>
                   <input
   type="date"
@@ -1583,7 +1564,7 @@ export default function Firmalar() {
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    GeÃ§erlilik Tarihi
+                    Geçerlilik Tarihi
                   </label>
                   <input
   type="date"
@@ -1600,7 +1581,7 @@ export default function Firmalar() {
                   onClick={() => setOpen(false)}
                   className={`${btn.base} ${btn.ghost}`}
                 >
-                  Ä°ptal
+                  İptal
                 </button>
                 <button type="submit" className={`${btn.base} ${btn.success}`}>
                   Kaydet
@@ -1654,7 +1635,7 @@ export default function Firmalar() {
                   className={`${btn.base} ${btn.ghost}`}
                 >
                   <HiDownload className="h-3.5 w-3.5" />
-                  Ã–rnek Excel Åablonu Ä°ndir
+                  Örnek Excel Şablonu İndir
                 </button>
                 <button
                   type="button"
@@ -1671,10 +1652,10 @@ export default function Firmalar() {
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
                   <div className="mb-2 font-semibold text-slate-800">YÃ¼kleme Ã–zeti</div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>Toplam SatÄ±r: <b>{bulkResult.totalRows || 0}</b></div>
-                    <div>BaÅŸarÄ±yla Eklenen: <b>{bulkResult.insertedCount || 0}</b></div>
-                    <div>MÃ¼kerrer KayÄ±t: <b>{bulkResult.duplicateCount || 0}</b></div>
-                    <div>HatalÄ± SatÄ±r: <b>{bulkResult.invalidCount || 0}</b></div>
+                    <div>Toplam Satır: <b>{bulkResult.totalRows || 0}</b></div>
+                    <div>Başarıyla Eklenen: <b>{bulkResult.insertedCount || 0}</b></div>
+                    <div>Mükerrer Kayıt: <b>{bulkResult.duplicateCount || 0}</b></div>
+                    <div>Hatalı Satır: <b>{bulkResult.invalidCount || 0}</b></div>
                   </div>
                 </div>
               )}
@@ -1703,7 +1684,7 @@ export default function Firmalar() {
           <div className="relative w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-2 bg-slate-50">
               <h3 className="text-sm font-semibold tracking-tight text-slate-800">
-                Firma DetaylarÄ±
+                Firma Detayları
               </h3>
               <button
                 onClick={() => setDetail(null)}
@@ -1715,7 +1696,7 @@ export default function Firmalar() {
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
               <div>
-                <span className="text-slate-500">Firma AdÄ±:</span>{" "}
+                <span className="text-slate-500">Firma Adı:</span>{" "}
                 <span className="font-medium">{detail.firmaAdi}</span>
               </div>
 
@@ -1754,12 +1735,12 @@ export default function Firmalar() {
               </div>
 
               <div>
-                <span className="text-slate-500">HazÄ±rlama:</span>{" "}
+                <span className="text-slate-500">Hazırlama:</span>{" "}
                 <span className="font-medium">{formatTR(detail.hazirlama)}</span>
               </div>
 
               <div>
-                <span className="text-slate-500">GeÃ§erlilik:</span>{" "}
+                <span className="text-slate-500">Geçerlilik:</span>{" "}
                 <span className="font-medium">{formatTR(detail.gecerlilik)}</span>
                 <span
                   className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
@@ -1806,3 +1787,4 @@ function safeJson(v) {
     return null;
   }
 }
+

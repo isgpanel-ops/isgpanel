@@ -64,7 +64,7 @@ const inferNaceFromSgk = (sgk) => {
 
 const normalizeHazardFromText = (text) => {
   const upper = String(text || "").toLocaleUpperCase("tr-TR");
-  if (upper.includes("Ã‡OK TEHLÄ°KELÄ°") || upper.includes("COK TEHLIKELI")) return "Ã‡ok Tehlikeli";
+  if (upper.includes("Ã‡OK TEHLÄ°KELÄ°") || upper.includes("COK TEHLIKELI")) return "Çok Tehlikeli";
   if (upper.includes("AZ TEHLÄ°KELÄ°") || upper.includes("AZ TEHLIKELI")) return "Az Tehlikeli";
   if (upper.includes("TEHLÄ°KELÄ°") || upper.includes("TEHLIKELI")) return "Tehlikeli";
   return "";
@@ -177,7 +177,7 @@ const parseFirmaFromOcrText = (text) => {
 
   let firmaAdi = valueNearLabel(lines, ["Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Hizmet Alan Isyeri Unvani", "Ä°ÅŸyeri UnvanÄ±", "UnvanÄ±"]);
   let adres = valueNearLabel(lines, ["Hizmet Alan Ä°ÅŸyeri Adresi", "Hizmet Alan Isyeri Adresi", "Ä°ÅŸyeri Adresi", "Adresi"]);
-  const hazardText = valueNearLabel(lines, ["GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Guncel Tehlike Sinifi", "Tehlike SÄ±nÄ±fÄ±", "Tehlike Sinifi"]) || all;
+  const hazardText = valueNearLabel(lines, ["GÃ¼ncel Tehlike Sınıfı", "Guncel Tehlike Sinifi", "Tehlike Sınıfı", "Tehlike Sinifi"]) || all;
   const dateText = valueNearLabel(lines, ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Sozlesme Onay Tarihi"]) || dateMatch?.[0] || "";
 
   if (sgk && (!firmaAdi || !adres)) {
@@ -239,9 +239,9 @@ const parseIskatipFirmaFromOcrText = (text) => {
     all.match(/\b\d{4}-\d{2}-\d{2}\b/);
   const hazardText =
     valueNearLabel(receiverLines, [
-      "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±",
+      "GÃ¼ncel Tehlike Sınıfı",
       "Guncel Tehlike Sinifi",
-      "Tehlike SÄ±nÄ±fÄ±",
+      "Tehlike Sınıfı",
       "Tehlike Sinifi",
     ]) || receiverText;
   const dateText =
@@ -337,7 +337,7 @@ const readPdfStructuredFirma = async (file) => {
   const dateText = rowValueFromPdfItems(items, ["SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Sozlesme Baslangic Tarihi"]) || rowValueFromPdfItems(items, ["SÃ¶zleÅŸme Onay Tarihi", "Sozlesme Onay Tarihi"]);
   const sgk = digitsOnly(rowValueFromPdfItems(serviceItems, ["SGK/DETSÄ°S No", "SGK/DETSIS No"]));
   const adres = rowValueFromPdfItems(serviceItems, ["Adres"]);
-  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Guncel Tehlike Sinifi"]));
+  const tehlike = normalizeCleanHazardFromText(rowValueFromPdfItems(serviceItems, ["GÃ¼ncel Tehlike Sınıfı", "Guncel Tehlike Sinifi"]));
   const nace = inferNaceFromSgk(sgk);
   const rawFirmaAdi = stripPdfValue(rowValueFromPdfItems(serviceItems, ["Unvan", "Ünvan", "Unvani"])).replace(/^(UNVAN|ÜNVAN|UNVANI|ÜNVANI)\s*[:\-]?\s*/i, "");
   const firmaAdi = isLikelyCompanyName(rawFirmaAdi) ? rawFirmaAdi : "";
@@ -405,7 +405,7 @@ const badgeHazard = (t) => {
     return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   if (t === "Tehlikeli")
     return "bg-amber-50 text-amber-700 border border-amber-200";
-  if (t === "Ã‡ok Tehlikeli")
+  if (t === "Çok Tehlikeli")
     return "bg-rose-50 text-rose-700 border border-rose-200";
   return "bg-slate-50 text-slate-600 border border-slate-200";
 };
@@ -512,7 +512,7 @@ export default function AdminFirmalar() {
     message,
     onConfirm,
     confirmText = "Tamam",
-    cancelText = "Ä°ptal",
+    cancelText = "İptal",
     variant = "warning",
   }) => {
     setConfirmData({
@@ -643,7 +643,7 @@ export default function AdminFirmalar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // âœ… Atama sonrasÄ± UI'da "AtanmÄ±ÅŸ KullanÄ±cÄ±" hemen gÃ¶rÃ¼nsÃ¼n diye
+  // âœ… Atama sonrasÄ± UI'da "Atanmış Kullanıcı" hemen gÃ¶rÃ¼nsÃ¼n diye
   // firmalar state'inde ilgili firmalara atanmisKullanici alanÄ±nÄ± lokal basÄ±yoruz.
   const applyLocalAssignment = (firmIds = [], userId = "") => {
     const ids = new Set((firmIds || []).map((x) => String(x)));
@@ -831,7 +831,7 @@ export default function AdminFirmalar() {
         return fid !== form._id && digitsOnly(f?.sgkNo || f?.sgkSicilNo) === normalizedSgk;
       });
       if (duplicate) {
-        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
+        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayıtlÄ±dÄ±r.");
         return;
       }
 
@@ -882,7 +882,7 @@ export default function AdminFirmalar() {
       title: "UyarÄ±",
       message: "FirmayÄ± silmek istediÄŸinize emin misiniz?",
       confirmText: "Sil",
-      cancelText: "Ä°ptal",
+      cancelText: "İptal",
       variant: "warning",
       onConfirm: async () => {
         try {
@@ -1004,7 +1004,7 @@ export default function AdminFirmalar() {
       const sgk = digitsOnly(parsed.sgkNo || parsed.sgkSicilNo);
       const duplicate = sgk && (firmalar || []).some((f) => digitsOnly(f?.sgkNo || f?.sgkSicilNo) === sgk);
       if (duplicate) {
-        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayÄ±tlÄ±dÄ±r.");
+        openInfo("Bilgilendirme", "Bu SGK Sicil NumarasÄ±na ait firma sistemde zaten kayıtlÄ±dÄ±r.");
         return;
       }
       if (!parsed.firmaAdi && !sgk) {
@@ -1025,7 +1025,7 @@ export default function AdminFirmalar() {
   const downloadBulkTemplate = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Firmalar");
-    ws.addRow(["Firma AdÄ±", "SGK Sicil No", "Adres", "Tehlike SÄ±nÄ±fÄ±", "SÃ¶zleÅŸme Onay Tarihi"]);
+    ws.addRow(["Firma Adı", "SGK Sicil No", "Adres", "Tehlike Sınıfı", "SÃ¶zleÅŸme Onay Tarihi"]);
     ws.addRow(["Ã–RNEK FÄ°RMA LTD. ÅTÄ°.", "12345678901234567890123456", "Ã–rnek adres", "Tehlikeli", "01.06.2026"]);
     ws.columns.forEach((col) => {
       col.width = 24;
@@ -1052,11 +1052,11 @@ export default function AdminFirmalar() {
       const rows = [];
       ws.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const firmaAdi = getCellByHeader(row, headerMap, ["Firma AdÄ±", "Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Unvan"], 1);
+        const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan Ä°ÅŸyeri UnvanÄ±", "Unvan"], 1);
         const sgkSicilNo = digitsOnly(getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan Ä°ÅŸyeri SGK/DETSÄ°S No", "SGK DETSÄ°S No"], 2));
         const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan Ä°ÅŸyeri Adresi"], 3);
-        const tehlike = getCellByHeader(row, headerMap, ["Tehlike SÄ±nÄ±fÄ±", "GÃ¼ncel Tehlike SÄ±nÄ±fÄ±", "Hizmet Alan Ä°ÅŸyeri Tehlike SÄ±nÄ±fÄ±"], 4);
-        const hazirlama = getCellByHeader(row, headerMap, ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "HazÄ±rlama Tarihi"], 5);
+        const tehlike = getCellByHeader(row, headerMap, ["Tehlike Sınıfı", "GÃ¼ncel Tehlike Sınıfı", "Hizmet Alan Ä°ÅŸyeri Tehlike Sınıfı"], 4);
+        const hazirlama = getCellByHeader(row, headerMap, ["SÃ¶zleÅŸme Onay Tarihi", "SÃ¶zleÅŸme BaÅŸlangÄ±Ã§ Tarihi", "Hazırlama Tarihi"], 5);
         if (![firmaAdi, sgkSicilNo, adres, tehlike, hazirlama].some(Boolean)) return;
         const nace = inferNaceFromSgk(sgkSicilNo);
         rows.push({ rowNumber, firmaAdi, sgkSicilNo, sgkNo: sgkSicilNo, adres, tehlike, hazirlama, nace });
@@ -1173,7 +1173,7 @@ export default function AdminFirmalar() {
                 className={`${btn.base} ${btn.success}`}
                 disabled={kullanicilar.length === 0}
               >
-                SeÃ§ilen {selectedFirms.length} firmayÄ± ata/deÄŸiÅŸtir
+                Seçilen {selectedFirms.length} firmayı ata/deÄŸiÅŸtir
               </button>
             )}
 
@@ -1228,22 +1228,22 @@ export default function AdminFirmalar() {
                     #
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
-                    Firma AdÄ±
+                    Firma Adı
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
                     SGK Sicil No
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
-                    Tehlike SÄ±nÄ±fÄ±
+                    Tehlike Sınıfı
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
-                    AtanmÄ±ÅŸ KullanÄ±cÄ±
+                    Atanmış Kullanıcı
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
                     Durum
                   </th>
                   <th className="py-2 px-3 text-right font-semibold border-b w-40">
-                    Ä°ÅŸlemler
+                    İşlemler
                   </th>
                 </tr>
               </thead>
@@ -1366,7 +1366,7 @@ export default function AdminFirmalar() {
                       colSpan={8}
                       className="py-6 text-center text-slate-500 text-xs"
                     >
-                      KayÄ±t bulunamadÄ±.
+                      Kayıt bulunamadı.
                     </td>
                   </tr>
                 )}
@@ -1378,7 +1378,7 @@ export default function AdminFirmalar() {
             <div>
               {filtered.length > 0 ? (
                 <span>
-                  GÃ¶sterilen{" "}
+                  Gösterilen{" "}
                   <strong>
                     {(current - 1) * pageSize + 1}-
                     {Math.min(current * pageSize, filtered.length)}
@@ -1386,7 +1386,7 @@ export default function AdminFirmalar() {
                   / Toplam <strong>{filtered.length}</strong> firma
                 </span>
               ) : (
-                <span>HiÃ§ firma yok.</span>
+                <span>Hiç firma yok.</span>
               )}
             </div>
 
@@ -1418,33 +1418,14 @@ export default function AdminFirmalar() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-5">
             <h3 className="text-sm font-semibold mb-3">
-              {!form._id ? "Yeni Firma Ekle" : "FirmayÄ± DÃ¼zenle"}
+              {!form._id ? "Yeni Firma Ekle" : "Firmayı Düzenle"}
             </h3>
-
-            <div className="mb-3">
-              <input
-                id="admin-firma-pdf-input"
-                type="file"
-                accept="application/pdf,.pdf"
-                className="hidden"
-                onChange={handlePdfSelect}
-              />
-              <button
-                type="button"
-                onClick={() => document.getElementById("admin-firma-pdf-input")?.click()}
-                disabled={pdfLoading}
-                className={`${btn.base} ${btn.ghost}`}
-              >
-                <HiDocumentText className="h-3.5 w-3.5" />
-                {pdfLoading ? pdfStatus || "PDF okunuyor..." : "Ä°SG-KATÄ°P PDF'den Otomatik Doldur"}
-              </button>
-            </div>
 
             <form onSubmit={saveForm} className="text-xs">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Firma AdÄ±
+                  Firma Adı
                 </label>
                 <input
                   className={inputClass}
@@ -1455,7 +1436,7 @@ export default function AdminFirmalar() {
                       firmaAdi: (e.target.value || "").toLocaleUpperCase("tr-TR"),
                     }))
                   }
-                  placeholder="FÄ°RMA ADI"
+                  placeholder="FİRMA ADI"
                 />
               </div>
 
@@ -1471,7 +1452,7 @@ export default function AdminFirmalar() {
                     const nace = sgkNo.length >= 7 ? sgkNo.slice(1, 7) : form.nace;
                     setForm((prev) => ({ ...prev, sgkNo, nace }));
                   }}
-                  placeholder="SGK SÄ°CÄ°L NO"
+                  placeholder="SGK SİCİL NO"
                 />
               </div>
 
@@ -1560,7 +1541,7 @@ export default function AdminFirmalar() {
                   onClick={() => setOpenForm(false)}
                   className={`${btn.base} ${btn.ghost}`}
                 >
-                  Ä°ptal
+                  İptal
                 </button>
                 <button type="submit" className={`${btn.base} ${btn.success}`}>
                   Kaydet
@@ -1597,7 +1578,7 @@ export default function AdminFirmalar() {
             <div className="flex flex-wrap gap-2 mb-3">
               <button type="button" onClick={downloadBulkTemplate} className={`${btn.base} ${btn.ghost}`}>
                 <HiDownload className="h-3.5 w-3.5" />
-                Ã–rnek Excel Åablonu Ä°ndir
+                Örnek Excel Şablonu İndir
               </button>
               <button
                 type="button"
@@ -1614,10 +1595,10 @@ export default function AdminFirmalar() {
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                 <div className="mb-2 font-semibold text-slate-800">YÃ¼kleme Ã–zeti</div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>Toplam SatÄ±r: <b>{bulkImportResult.totalRows || 0}</b></div>
-                  <div>BaÅŸarÄ±yla Eklenen: <b>{bulkImportResult.insertedCount || 0}</b></div>
-                  <div>MÃ¼kerrer KayÄ±t: <b>{bulkImportResult.duplicateCount || 0}</b></div>
-                  <div>HatalÄ± SatÄ±r: <b>{bulkImportResult.invalidCount || 0}</b></div>
+                  <div>Toplam Satır: <b>{bulkImportResult.totalRows || 0}</b></div>
+                  <div>Başarıyla Eklenen: <b>{bulkImportResult.insertedCount || 0}</b></div>
+                  <div>Mükerrer Kayıt: <b>{bulkImportResult.duplicateCount || 0}</b></div>
+                  <div>Hatalı Satır: <b>{bulkImportResult.invalidCount || 0}</b></div>
                 </div>
               </div>
             )}
@@ -1631,12 +1612,12 @@ export default function AdminFirmalar() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-4">
             <h3 className="text-sm font-semibold mb-2">Toplu Atama</h3>
             <p className="text-[11px] text-slate-500 mb-3">
-              SeÃ§ilen {selectedFirms.length} firmayÄ± aynÄ± kullanÄ±cÄ±ya atayÄ±n veya
+              Seçilen {selectedFirms.length} firmayı aynÄ± kullanÄ±cÄ±ya atayÄ±n veya
               atamasÄ±nÄ± deÄŸiÅŸtirin.
             </p>
 
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
-              KullanÄ±cÄ± SeÃ§
+              Kullanıcı Seç
             </label>
             <select
               value={selectedUserForBulk}
@@ -1661,7 +1642,7 @@ export default function AdminFirmalar() {
                   kullanicilar.length === 0
                 }
               >
-                AtamayÄ± Yap
+                Atamayı Yap
               </button>
               <button
                 className={`${btn.base} ${btn.ghost} flex-1`}
@@ -1681,7 +1662,7 @@ export default function AdminFirmalar() {
             <h3 className="text-sm font-semibold mb-2">Ata / DeÄŸiÅŸtir</h3>
 
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
-              KullanÄ±cÄ± SeÃ§
+              Kullanıcı Seç
             </label>
             <select
               value={selectedUserForSingle}
@@ -1729,3 +1710,4 @@ export default function AdminFirmalar() {
     </div>
   );
 }
+
