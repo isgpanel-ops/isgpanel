@@ -12,6 +12,21 @@ import {
   UserPlus,
 } from "lucide-react";
 
+const brand = {
+  primary: "#0a2b45",
+  ring: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0a2b45]",
+};
+
+const btn = {
+  base: `inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${brand.ring}`,
+  primary: "bg-[#2563eb] text-white hover:bg-[#1d4ed8]",
+  ghost: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50",
+  success: "bg-[#16a34a] text-white hover:bg-[#15803d]",
+  dark: "bg-[#0a2b45] text-white hover:bg-[#123b5d]",
+};
+
+const inputClass = `w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs shadow-sm placeholder:text-slate-400 focus:border-[#0a2b45] ${brand.ring}`;
+
 const tabs = [
   { key: "atanmamis", label: "Atanmamış Firmalar" },
   { key: "atama_yok", label: "İSG-KATİP Ataması Olmayanlar" },
@@ -71,29 +86,28 @@ function hazardClass(value) {
 
 function StatCard({ title, value, sub, icon: Icon, tone, active, onClick }) {
   const tones = {
-    rose: "border-rose-200 bg-rose-50 text-rose-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    blue: "border-sky-200 bg-sky-50 text-sky-700",
-    slate: "border-slate-200 bg-white text-slate-700",
+    rose: "border-rose-200 bg-rose-50/60 text-rose-700",
+    amber: "border-amber-200 bg-amber-50/70 text-amber-700",
+    emerald: "border-emerald-200 bg-emerald-50/70 text-emerald-700",
+    blue: "border-sky-200 bg-sky-50/70 text-sky-700",
   };
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-[92px] rounded-lg border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        tones[tone] || tones.slate
+      className={`min-h-[78px] rounded-lg border p-3 text-left shadow-sm transition hover:bg-white ${
+        tones[tone]
       } ${active ? "ring-2 ring-[#0a2b45]/20" : ""}`}
     >
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/70">
-          <Icon className="h-5 w-5" />
+      <div className="flex items-center gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white">
+          <Icon className="h-4 w-4" />
         </span>
         <span className="min-w-0">
-          <span className="block text-xs font-semibold">{title}</span>
-          <span className="mt-1 block text-2xl font-bold text-slate-900">{value}</span>
-          <span className="mt-1 block text-[11px] text-slate-600">{sub}</span>
+          <span className="block text-[11px] font-semibold">{title}</span>
+          <span className="block text-xl font-bold text-slate-900">{value}</span>
+          <span className="block truncate text-[10px] text-slate-600">{sub}</span>
         </span>
       </div>
     </button>
@@ -118,13 +132,15 @@ export default function IsgKatipEntegrasyon() {
       const { data } = await axios.get("/api/isg-katip/overview", {
         headers: tokenHeader(),
       });
-      setItems(Array.isArray(data?.items) ? data.items : []);
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+      setItems(nextItems);
       setCounts(data?.counts || {});
       setLastSyncAt(data?.lastSyncAt || null);
-      const first = (data?.items || []).find((item) => item.category === activeTab) || data?.items?.[0] || null;
       setSelected((prev) => {
-        if (!prev) return first;
-        return (data?.items || []).find((item) => item.id === prev.id) || first;
+        if (prev && nextItems.some((item) => item.id === prev.id && item.category === activeTab)) {
+          return nextItems.find((item) => item.id === prev.id) || null;
+        }
+        return nextItems.find((item) => item.category === activeTab) || null;
       });
     } catch (err) {
       setError(err?.response?.data?.message || "İSG-KATİP verileri alınamadı.");
@@ -152,11 +168,14 @@ export default function IsgKatipEntegrasyon() {
   }, [activeTab, items, query]);
 
   useEffect(() => {
-    if (!visibleItems.length) return;
+    if (!visibleItems.length) {
+      setSelected(null);
+      return;
+    }
     if (!selected || !visibleItems.some((item) => item.id === selected.id)) {
       setSelected(visibleItems[0]);
     }
-  }, [selected, visibleItems]);
+  }, [activeTab, selected, visibleItems]);
 
   const sync = async () => {
     setSaving(true);
@@ -205,33 +224,36 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
+  const startDisabled =
+    saving ||
+    !selected?.assignedUserId ||
+    selected?.assignedUserTcKimlikVar === false;
+
   return (
-    <div className="min-h-full bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto max-w-[1500px] space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="p-6">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#0a2b45]">Atama Yönetimi</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Panel kullanıcı atamaları ve İSG-KATİP sözleşme durumları tek merkezde takip edilir.
+            <h2 className="text-xl font-bold text-[#042f4b] mb-1">Atama Yönetimi</h2>
+            <p className="text-slate-500 text-xs">
+              Panel kullanıcı atamalarını ve İSG-KATİP sözleşme durumlarını takip edin.
             </p>
           </div>
-          <div className="rounded-lg border border-sky-200 bg-white p-3 shadow-sm">
-            <div className="text-xs font-semibold text-[#0a2b45]">İSG-KATİP Senkronizasyonu</div>
-            <div className="mt-1 text-[11px] text-slate-500">Son kontrol: {fmtDateTime(lastSyncAt)}</div>
-            <button
-              type="button"
-              onClick={sync}
-              disabled={saving}
-              className="mt-2 inline-flex h-9 items-center gap-2 rounded-md bg-[#0a2b45] px-4 text-xs font-semibold text-white hover:bg-[#123b5d] disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${saving ? "animate-spin" : ""}`} />
+
+          <div className="flex items-center gap-2">
+            <div className="hidden md:block text-right text-[11px] text-slate-500">
+              <div className="font-semibold text-slate-700">İSG-KATİP Senkronizasyonu</div>
+              <div>Son kontrol: {fmtDateTime(lastSyncAt)}</div>
+            </div>
+            <button type="button" onClick={sync} disabled={saving} className={`${btn.base} ${btn.dark}`}>
+              <RefreshCw className={`h-3.5 w-3.5 ${saving ? "animate-spin" : ""}`} />
               Senkronize Et
             </button>
           </div>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
             {error}
           </div>
         )}
@@ -244,8 +266,8 @@ export default function IsgKatipEntegrasyon() {
           <StatCard title="Düşen Atamalar" value={counts.dusen || 0} sub="Yeniden işlem gerekli" icon={AlertTriangle} tone="rose" active={activeTab === "dusen"} onClick={() => setActiveTab("dusen")} />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-          <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
             <div className="flex flex-wrap border-b bg-slate-50">
               {tabs.map((tab) => (
                 <button
@@ -265,12 +287,12 @@ export default function IsgKatipEntegrasyon() {
 
             <div className="flex flex-col gap-3 border-b p-3 md:flex-row md:items-center md:justify-between">
               <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Firma, SGK Sicil No veya kullanıcı ara..."
-                  className="h-9 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0a2b45]"
+                  className={`${inputClass} pl-8`}
                 />
               </div>
               <div className="text-xs text-slate-500">
@@ -280,41 +302,41 @@ export default function IsgKatipEntegrasyon() {
 
             <div className="max-h-[520px] overflow-auto">
               <table className="min-w-[920px] w-full text-xs">
-                <thead className="sticky top-0 bg-white text-slate-500 shadow-sm">
+                <thead className="sticky top-0 bg-slate-50 text-slate-600 z-10">
                   <tr>
-                    <th className="px-3 py-3 text-left font-semibold">#</th>
-                    <th className="px-3 py-3 text-left font-semibold">Firma Adı</th>
-                    <th className="px-3 py-3 text-left font-semibold">SGK Sicil No</th>
-                    <th className="px-3 py-3 text-left font-semibold">Tehlike Sınıfı</th>
-                    <th className="px-3 py-3 text-left font-semibold">Atanan Kullanıcı</th>
-                    <th className="px-3 py-3 text-left font-semibold">İSG-KATİP Durumu</th>
-                    <th className="px-3 py-3 text-right font-semibold">İşlem</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">#</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">Firma Adı</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">SGK Sicil No</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">Tehlike Sınıfı</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">Atanan Kullanıcı</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">İSG-KATİP Durumu</th>
+                    <th className="px-3 py-2 text-right font-semibold border-b">İşlem</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 text-slate-700">
                   {visibleItems.map((item, index) => (
                     <tr
                       key={item.id}
                       onClick={() => setSelected(item)}
                       className={`cursor-pointer hover:bg-slate-50 ${
-                        selected?.id === item.id ? "bg-sky-50/70" : ""
+                        selected?.id === item.id ? "bg-[#0a2b45]/5" : ""
                       }`}
                     >
-                      <td className="px-3 py-3 text-slate-500">{index + 1}</td>
-                      <td className="px-3 py-3 font-semibold text-slate-800">{item.firmaAdi}</td>
-                      <td className="px-3 py-3 tabular-nums text-slate-600">{item.sgkNo || "-"}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2">{index + 1}</td>
+                      <td className="px-3 py-2 font-medium text-slate-800">{item.firmaAdi}</td>
+                      <td className="px-3 py-2 tabular-nums">{item.sgkNo || "-"}</td>
+                      <td className="px-3 py-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${hazardClass(item.tehlike)}`}>
                           {item.tehlike || "-"}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-slate-600">{item.assignedUserName || "-"}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2">{item.assignedUserName || "-"}</td>
+                      <td className="px-3 py-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(item.isgKatipStatus)}`}>
                           {item.isgKatipStatusLabel}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="px-3 py-2 text-right">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -322,8 +344,9 @@ export default function IsgKatipEntegrasyon() {
                             setSelected(item);
                             startAssignment(item);
                           }}
-                          disabled={saving || !item.assignedUserId}
-                          className="inline-flex h-8 items-center gap-1 rounded-md bg-emerald-600 px-3 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                          disabled={saving || !item.assignedUserId || item.assignedUserTcKimlikVar === false}
+                          className={`${btn.base} ${btn.success} !px-2`}
+                          title={!item.assignedUserTcKimlikVar ? "Atanan kullanıcının TC kimlik numarası eksik" : "Atama sürecini başlat"}
                         >
                           <UserPlus className="h-3.5 w-3.5" />
                           Başlat
@@ -343,9 +366,9 @@ export default function IsgKatipEntegrasyon() {
             </div>
           </section>
 
-          <aside className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <aside className="rounded-xl border border-slate-200 bg-white shadow">
             <div className="border-b px-4 py-3">
-              <h2 className="text-sm font-bold text-[#0a2b45]">Firma Detayı</h2>
+              <h3 className="text-sm font-semibold text-[#042f4b]">Firma Detayı</h3>
               <p className="text-xs text-slate-500">Seçili firma ve atama bilgileri</p>
             </div>
             {selected ? (
@@ -372,6 +395,18 @@ export default function IsgKatipEntegrasyon() {
                     <div className="text-slate-500">Atanan Kullanıcı</div>
                     <div className="mt-1 font-semibold text-slate-800">{selected.assignedUserName || "-"}</div>
                   </div>
+                  <div>
+                    <div className="text-slate-500">TC Kimlik</div>
+                    <div className={`mt-1 font-semibold ${selected.assignedUserTcKimlikVar ? "text-emerald-700" : "text-rose-700"}`}>
+                      {selected.assignedUserId ? (selected.assignedUserTcKimlikVar ? "Kayıtlı" : "Eksik") : "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Sertifika</div>
+                    <div className="mt-1 font-semibold text-slate-800">
+                      {selected.assignedUserId ? (selected.assignedUserSertifikaNoVar ? "Kayıtlı" : "Eksik") : "-"}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -383,7 +418,7 @@ export default function IsgKatipEntegrasyon() {
                     value={selected.isgKatipStatus || "kontrol_edilmedi"}
                     onChange={(event) => updateStatus(event.target.value)}
                     disabled={saving}
-                    className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#0a2b45]"
+                    className={inputClass}
                   >
                     {statusOptions.map(([value, label]) => (
                       <option key={value} value={value}>
@@ -395,9 +430,9 @@ export default function IsgKatipEntegrasyon() {
 
                 <button
                   type="button"
-                  onClick={startAssignment}
-                  disabled={saving || !selected.assignedUserId}
-                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#0a2b45] text-sm font-semibold text-white hover:bg-[#123b5d] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  onClick={() => startAssignment(selected)}
+                  disabled={startDisabled}
+                  className={`${btn.base} ${btn.dark} h-10 w-full`}
                 >
                   <UserPlus className="h-4 w-4" />
                   Atama Sürecini Başlat
@@ -405,7 +440,19 @@ export default function IsgKatipEntegrasyon() {
 
                 {!selected.assignedUserId && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
-                    Bu firma için önce panel kullanıcısı atanmalıdır.
+                    Bu firma için önce geçerli bir ticari kullanıcı atanmalıdır.
+                  </div>
+                )}
+
+                {selected.assignedUserId && !selected.assignedUserTcKimlikVar && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                    Atama başlatmak için atanan kullanıcının kişisel bilgilerinde TC kimlik numarası kayıtlı olmalıdır.
+                  </div>
+                )}
+
+                {selected.panelAssignmentProblem && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                    {selected.panelAssignmentProblem}
                   </div>
                 )}
               </div>

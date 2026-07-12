@@ -41,25 +41,30 @@ function ensureAdmin(req, res) {
   return String(orgId);
 }
 
+function isAssignableUser(user) {
+  return roleOf(user) === "ticari_user";
+}
+
+function hasValidTc(user) {
+  const tc = String(user?.personal?.tcKimlik || "").replace(/\D/g, "");
+  return tc.length === 11;
+}
+
 function categoryFor(item) {
   if (!item.assignedUserId) return "atanmamis";
-
   if (item.isgKatipStatus === "atama_onaylandi") return "aktif";
-
   if (
     item.isgKatipStatus === "atama_dustu" ||
     item.isgKatipStatus === "yeniden_atama_gerekli"
   ) {
     return "dusen";
   }
-
   if (
     item.isgKatipStatus === "profesyonel_onayi_bekliyor" ||
     item.isgKatipStatus === "isveren_onayi_bekliyor"
   ) {
     return "onay_bekleyen";
   }
-
   return "atama_yok";
 }
 
@@ -88,7 +93,7 @@ async function buildOverview(orgId) {
   ];
 
   const users = await User.find({ _id: { $in: userIds } })
-    .select("name email role")
+    .select("name email role personal.tcKimlik personal.sertifikaNo")
     .lean();
 
   const userMap = new Map(users.map((user) => [String(user._id), user]));
@@ -99,8 +104,11 @@ async function buildOverview(orgId) {
     const firmId = String(firm._id);
     const link = linkMap.get(firmId) || null;
     const assignment = assignmentMap.get(firmId) || null;
-    const assignedUserId = assignment?.assignedUserId || link?.userId || null;
-    const assignedUser = assignedUserId ? userMap.get(String(assignedUserId)) : null;
+    const rawAssignedUserId = link?.userId || assignment?.assignedUserId || null;
+    const rawAssignedUser = rawAssignedUserId ? userMap.get(String(rawAssignedUserId)) : null;
+    const isValidPanelAssignee = rawAssignedUser && isAssignableUser(rawAssignedUser);
+    const assignedUserId = isValidPanelAssignee ? rawAssignedUserId : null;
+    const assignedUser = assignedUserId ? rawAssignedUser : null;
     const status = assignment?.isgKatipStatus || "kontrol_edilmedi";
 
     const item = {
@@ -116,6 +124,12 @@ async function buildOverview(orgId) {
       assignedUserId: assignedUserId ? String(assignedUserId) : "",
       assignedUserName: assignedUser?.name || assignedUser?.email || "",
       assignedUserRole: assignedUser?.role || "",
+      assignedUserTcKimlikVar: assignedUser ? hasValidTc(assignedUser) : false,
+      assignedUserSertifikaNoVar: Boolean(assignedUser?.personal?.sertifikaNo),
+      panelAssignmentProblem:
+        rawAssignedUserId && !isValidPanelAssignee
+          ? "Atanmış kullanıcı geçerli ticari kullanıcı değil"
+          : "",
       isgKatipStatus: status,
       isgKatipStatusLabel: STATUS_LABELS[status] || status,
       gorevTuru: assignment?.gorevTuru || "is_guvenligi_uzmani",
@@ -169,23 +183,47 @@ router.post("/sync", async (req, res) => {
     if (!orgId) return;
 
     const now = new Date();
-    await IsgKatipAssignment.updateMany(
-      { organization: orgId },
-      {
-        $set: { lastSyncAt: now, lastError: "" },
-        $push: {
-          logs: {
-            action: "manual_sync",
-            message: "Manuel senkronizasyon kontrolü çalıştırıldı",
-            by: req.user._id || req.user.id || null,
-            at: now,
+    const overviewBefore = await buildOverview(orgId);
+    const assignedItems = overviewBefore.items.filter((item) => item.assignedUserId);
+
+    if (assignedItems.length > 0) {
+      await IsgKatipAssignment.bulkWrite(
+        assignedItems.map((item) => ({
+          updateOne: {
+            filter: {
+              organization: orgId,
+              firmaId: item.firmaId,
+              gorevTuru: item.gorevTuru || "is_guvenligi_uzmani",
+            },
+            update: {
+              $set: {
+                assignedUserId: item.assignedUserId,
+                lastSyncAt: now,
+                lastError: "",
+              },
+              $setOnInsert: {
+                organization: orgId,
+                firmaId: item.firmaId,
+                gorevTuru: item.gorevTuru || "is_guvenligi_uzmani",
+                isgKatipStatus: "atama_yok",
+              },
+              $push: {
+                logs: {
+                  action: "manual_sync",
+                  message: "Manuel senkronizasyon kontrolü çalıştırıldı",
+                  by: req.user._id || req.user.id || null,
+                  at: now,
+                },
+              },
+            },
+            upsert: true,
           },
-        },
-      }
-    );
+        }))
+      );
+    }
 
     const overview = await buildOverview(orgId);
-    return res.json({ ok: true, ...overview });
+    return res.json({ ok: true, ...overview, lastSyncAt: overview.lastSyncAt || now });
   } catch (err) {
     console.error("ISG-KATIP sync hata:", err);
     return res.status(500).json({ message: "Senkronizasyon başlatılamadı" });
@@ -273,6 +311,21 @@ router.post("/:firmaId/start", async (req, res) => {
 
     if (!activeLink?.userId) {
       return res.status(400).json({ message: "Önce firmaya kullanıcı atayın" });
+    }
+
+    const assignedUser = await User.findById(activeLink.userId)
+      .select("role personal.tcKimlik personal.sertifikaNo")
+      .lean();
+
+    if (!isAssignableUser(assignedUser)) {
+      return res.status(400).json({ message: "Atanan kullanıcı geçerli ticari kullanıcı değil" });
+    }
+
+    if (!hasValidTc(assignedUser)) {
+      return res.status(400).json({
+        message:
+          "Atama başlatmak için atanan kullanıcının TC kimlik numarası kişisel bilgilerinde kayıtlı olmalı",
+      });
     }
 
     const now = new Date();
