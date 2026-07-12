@@ -223,7 +223,9 @@ export default function IsgKatipEntegrasyon() {
     : selected?.firmaId
     ? [selected.firmaId]
     : [];
-  const isStartTab = activeTab === "atanmamis" || activeTab === "atama_yok";
+  const isPanelAssignmentTab = activeTab === "atanmamis";
+  const isKatipStartTab = activeTab === "atama_yok";
+  const isStartTab = isPanelAssignmentTab || isKatipStartTab;
   const isApprovalTab = activeTab === "onay_bekleyen";
   const isActiveTab = activeTab === "aktif";
   const isFallenTab = activeTab === "dusen";
@@ -240,6 +242,7 @@ export default function IsgKatipEntegrasyon() {
     activeTab === "atanmamis"
       ? item.category === "atanmamis" || item.category === "dusen"
       : item.category === activeTab;
+  const actionLabel = isPanelAssignmentTab ? "Panel Atamasını Kaydet" : "Atama Sürecini Başlat";
 
   useEffect(() => {
     if (!visibleItems.length) {
@@ -438,6 +441,26 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
+  const handleBulkPrimaryAction = () => {
+    if (isPanelAssignmentTab) {
+      if (isUzmanMode) {
+        assignUser(bulkUserId);
+        return;
+      }
+      saveManualAssignee();
+      return;
+    }
+    startAssignment();
+  };
+
+  const handleSingleManualPrimaryAction = () => {
+    if (isPanelAssignmentTab) {
+      saveManualAssignee();
+      return;
+    }
+    startAssignment(selected);
+  };
+
   const selectSavedPerson = (personId) => {
     const person = savedPeople.find((item) => item.id === personId);
     if (!person) return;
@@ -465,7 +488,7 @@ export default function IsgKatipEntegrasyon() {
 
   const startDisabled =
     saving ||
-    !isStartTab ||
+    !isKatipStartTab ||
     (isBulkMode
       ? selectedFirmaIds.length === 0 || (isUzmanMode ? !bulkUzmanReady : !bulkManualReady)
       : !selected ||
@@ -698,11 +721,11 @@ export default function IsgKatipEntegrasyon() {
                     {isStartTab && (
                       <button
                         type="button"
-                        onClick={() => startAssignment()}
-                        disabled={startDisabled}
+                        onClick={handleBulkPrimaryAction}
+                        disabled={isPanelAssignmentTab ? saving || !bulkUserId : startDisabled}
                         className={`${btn.base} ${btn.primary} mt-2 w-full`}
                       >
-                        Atama Sürecini Başlat
+                        {actionLabel}
                       </button>
                     )}
                     {bulkUserId && selectedBulkUser && !selectedBulkUser.tcKimlikVar && (
@@ -787,11 +810,11 @@ export default function IsgKatipEntegrasyon() {
                       {isStartTab && (
                         <button
                           type="button"
-                          onClick={() => startAssignment()}
-                          disabled={startDisabled}
+                          onClick={handleBulkPrimaryAction}
+                          disabled={isPanelAssignmentTab ? saving || !manualFormValid : startDisabled}
                           className={`${btn.base} ${btn.primary} w-full`}
                         >
-                          Atama Sürecini Başlat
+                          {actionLabel}
                         </button>
                       )}
                       {isStartTab && !bulkManualReady && (
@@ -975,11 +998,11 @@ export default function IsgKatipEntegrasyon() {
                       {isStartTab && (
                         <button
                           type="button"
-                          onClick={() => startAssignment(selected)}
-                          disabled={startDisabled}
+                          onClick={handleSingleManualPrimaryAction}
+                          disabled={isPanelAssignmentTab ? saving || !manualFormValid : startDisabled}
                           className={`${btn.base} ${btn.primary} w-full`}
                         >
-                          Atama Sürecini Başlat
+                          {actionLabel}
                         </button>
                       )}
                     </div>
@@ -1044,7 +1067,7 @@ export default function IsgKatipEntegrasyon() {
                   </button>
                 )}
 
-                {isStartTab && isUzmanMode && (
+                {isKatipStartTab && isUzmanMode && (
                   <button
                     type="button"
                     onClick={() => startAssignment(selected)}
