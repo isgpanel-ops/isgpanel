@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <title>İSG-KATİP Senkronizasyonu</title>
+    <style>
+      body {
+        width: 320px;
+        margin: 0;
+        font-family: Arial, sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      header {
+        padding: 12px 14px;
+        color: #fff;
+        background: #0a2b45;
+        font-weight: 700;
+      }
+      main {
+        padding: 14px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 4px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 8px;
+        font-size: 12px;
+      }
+      button {
+        width: 100%;
+        margin-top: 12px;
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 10px;
+        color: white;
+        background: #2563eb;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .note {
+        margin-top: 10px;
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <header>İSG-KATİP Senkronizasyonu</header>
+    <main>
+      <label for="apiBase">API Adresi</label>
+      <input id="apiBase" value="https://api.isgpanel.tr" />
+
+      <label for="token">Panel Token</label>
+      <input id="token" type="password" placeholder="İSG Panel oturum tokenı" />
+
+      <button id="syncBtn">Açık Sayfayı Senkronize Et</button>
+
+      <div class="note">
+        Bu eklenti şifre veya e-Devlet bilgisi kaydetmez. Sadece açık İSG-KATİP
+        sayfasındaki tablo metnini okur ve SGK numarasına göre panele aktarır.
+      </div>
+      <div id="status"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

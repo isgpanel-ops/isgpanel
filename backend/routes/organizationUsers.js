@@ -49,7 +49,7 @@ router.get("/:orgId/users", async (req, res) => {
     }
 
     const users = await User.find({ organization: orgId }).select(
-      "name email role createdAt"
+      "name email role createdAt personal.tcKimlik personal.sertifikaNo"
     );
 
     res.json({
@@ -77,7 +77,7 @@ router.get("/:orgId/users", async (req, res) => {
 router.post("/:orgId/users", async (req, res) => {
   try {
     const { orgId } = req.params;
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, tcKimlik } = req.body;
 
     const org = await Organization.findById(orgId);
     if (!org) {
@@ -115,6 +115,9 @@ const user = await User.create({
   organization: org._id,
   planCode: org.planCode,
   subscriptionEnd: org.subscriptionEnd,
+  personal: {
+    tcKimlik: String(tcKimlik || "").replace(/\D/g, ""),
+  },
 });
 
 // ✅ Anlık "Bilgiler eksik" bildirimi (ticari_user)
@@ -158,6 +161,7 @@ res.status(201).json({
     name: user.name,
     email: user.email,
     role: user.role,
+    personal: user.personal,
     createdAt: user.createdAt,
   },
 }); 
@@ -176,7 +180,7 @@ res.status(201).json({
 router.put("/:orgId/users/:userId", async (req, res) => {
   try {
     const { orgId, userId } = req.params;
-    const { name, email, role, password } = req.body;
+    const { name, email, role, password, tcKimlik } = req.body;
 
     const user = await User.findOne({ _id: userId, organization: orgId });
     if (!user) {
@@ -186,6 +190,10 @@ router.put("/:orgId/users/:userId", async (req, res) => {
     if (name) user.name = upTR(name);
     if (email) user.email = email;
     if (role) user.role = role;
+    if (tcKimlik !== undefined) {
+      user.personal = user.personal || {};
+      user.personal.tcKimlik = String(tcKimlik || "").replace(/\D/g, "");
+    }
 
    let renewedPlainPassword = "";
 

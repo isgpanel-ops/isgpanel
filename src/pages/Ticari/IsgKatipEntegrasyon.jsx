@@ -22,7 +22,7 @@ const btn = {
   primary: "bg-[#2563eb] text-white hover:bg-[#1d4ed8]",
   ghost: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50",
   success: "bg-[#16a34a] text-white hover:bg-[#15803d]",
-  dark: "bg-[#0a2b45] text-white hover:bg-[#123b5d]",
+  dark: "bg-[#2563eb] text-white hover:bg-[#1d4ed8]",
 };
 
 const inputClass = `w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs shadow-sm placeholder:text-slate-400 focus:border-[#0a2b45] ${brand.ring}`;
@@ -397,8 +397,8 @@ export default function IsgKatipEntegrasyon() {
                   </div>
                   <div>
                     <div className="text-slate-500">TC Kimlik</div>
-                    <div className={`mt-1 font-semibold ${selected.assignedUserTcKimlikVar ? "text-emerald-700" : "text-rose-700"}`}>
-                      {selected.assignedUserId ? (selected.assignedUserTcKimlikVar ? "Kayıtlı" : "Eksik") : "-"}
+                    <div className={`mt-1 font-semibold ${selected.assignedUserTcKimlikVar ? "text-slate-800" : "text-rose-700"}`}>
+                      {selected.assignedUserId ? (selected.assignedUserTcKimlik || "Eksik") : "-"}
                     </div>
                   </div>
                   <div>

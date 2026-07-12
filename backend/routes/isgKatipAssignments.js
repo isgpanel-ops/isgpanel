@@ -124,6 +124,7 @@ async function buildOverview(orgId) {
       assignedUserId: assignedUserId ? String(assignedUserId) : "",
       assignedUserName: assignedUser?.name || assignedUser?.email || "",
       assignedUserRole: assignedUser?.role || "",
+      assignedUserTcKimlik: assignedUser?.personal?.tcKimlik || "",
       assignedUserTcKimlikVar: assignedUser ? hasValidTc(assignedUser) : false,
       assignedUserSertifikaNoVar: Boolean(assignedUser?.personal?.sertifikaNo),
       panelAssignmentProblem:
@@ -227,6 +228,94 @@ router.post("/sync", async (req, res) => {
   } catch (err) {
     console.error("ISG-KATIP sync hata:", err);
     return res.status(500).json({ message: "Senkronizasyon başlatılamadı" });
+  }
+});
+
+router.post("/extension-sync", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (rows.length === 0) {
+      return res.status(400).json({ message: "Senkronize edilecek kayıt bulunamadı" });
+    }
+
+    const sgkList = [
+      ...new Set(rows.map((row) => String(row.sgkNo || "").replace(/\D/g, "")).filter(Boolean)),
+    ];
+
+    const firms = await Firma.find({
+      organization: orgId,
+      $or: [{ sgkNo: { $in: sgkList } }, { sgkSicilNo: { $in: sgkList } }],
+    })
+      .select("_id sgkNo sgkSicilNo")
+      .lean();
+
+    const firmBySgk = new Map();
+    firms.forEach((firm) => {
+      if (firm.sgkNo) firmBySgk.set(String(firm.sgkNo).replace(/\D/g, ""), firm);
+      if (firm.sgkSicilNo) firmBySgk.set(String(firm.sgkSicilNo).replace(/\D/g, ""), firm);
+    });
+
+    const now = new Date();
+    const ops = [];
+    let matched = 0;
+
+    rows.forEach((row) => {
+      const sgkNo = String(row.sgkNo || "").replace(/\D/g, "");
+      const firm = firmBySgk.get(sgkNo);
+      if (!firm) return;
+      matched += 1;
+
+      const status = STATUS_LABELS[row.isgKatipStatus]
+        ? row.isgKatipStatus
+        : "kontrol_edilmedi";
+
+      ops.push({
+        updateOne: {
+          filter: {
+            organization: orgId,
+            firmaId: firm._id,
+            gorevTuru: row.gorevTuru || "is_guvenligi_uzmani",
+          },
+          update: {
+            $set: {
+              organization: orgId,
+              firmaId: firm._id,
+              isgKatipStatus: status,
+              sozlesmeId: row.sozlesmeId || "",
+              calismaSuresi: row.calismaSuresi || "",
+              lastSyncAt: now,
+              lastError: "",
+            },
+            $push: {
+              logs: {
+                action: "extension_sync",
+                message: "Tarayıcı eklentisi ile senkronize edildi",
+                by: req.user._id || req.user.id || null,
+                at: now,
+              },
+            },
+          },
+          upsert: true,
+        },
+      });
+    });
+
+    if (ops.length > 0) await IsgKatipAssignment.bulkWrite(ops);
+
+    const overview = await buildOverview(orgId);
+    return res.json({
+      ok: true,
+      received: rows.length,
+      matched,
+      unmatched: rows.length - matched,
+      ...overview,
+    });
+  } catch (err) {
+    console.error("ISG-KATIP extension sync hata:", err);
+    return res.status(500).json({ message: "Eklenti senkronizasyonu kaydedilemedi" });
   }
 });
 
