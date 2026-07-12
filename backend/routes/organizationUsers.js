@@ -105,7 +105,7 @@ router.post("/:orgId/users", async (req, res) => {
   const plainPassword = String(password || "123456").trim();
 const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-const allowedRoles = ["ticari_user", "isyeri_hekimi"];
+const allowedRoles = ["ticari_user", "isyeri_hekimi", "diger_saglik_personeli"];
 
 const user = await User.create({
   name: upTR(name),

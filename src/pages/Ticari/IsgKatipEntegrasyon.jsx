@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   AlertTriangle,
@@ -43,6 +43,12 @@ const statusOptions = [
   ["atama_onaylandi", "Atama Onaylandı"],
   ["atama_dustu", "Atama Düştü"],
   ["yeniden_atama_gerekli", "Yeniden Atama Gerekli"],
+];
+
+const gorevTurleri = [
+  { key: "is_guvenligi_uzmani", label: "İş Güvenliği Uzmanı", short: "Uzman" },
+  { key: "isyeri_hekimi", label: "İşyeri Hekimi", short: "Hekim" },
+  { key: "diger_saglik_personeli", label: "Diğer Sağlık Personeli", short: "DSP" },
 ];
 
 function tokenHeader() {
@@ -117,6 +123,8 @@ function StatCard({ title, value, sub, icon: Icon, tone, active, onClick }) {
 export default function IsgKatipEntegrasyon() {
   const [items, setItems] = useState([]);
   const [counts, setCounts] = useState({});
+  const [candidateUsers, setCandidateUsers] = useState([]);
+  const [gorevTuru, setGorevTuru] = useState("is_guvenligi_uzmani");
   const [activeTab, setActiveTab] = useState("atanmamis");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
@@ -131,10 +139,12 @@ export default function IsgKatipEntegrasyon() {
     try {
       const { data } = await axios.get("/api/isg-katip/overview", {
         headers: tokenHeader(),
+        params: { gorevTuru },
       });
       const nextItems = Array.isArray(data?.items) ? data.items : [];
       setItems(nextItems);
       setCounts(data?.counts || {});
+      setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
       setLastSyncAt(data?.lastSyncAt || null);
       setSelected((prev) => {
         if (prev && nextItems.some((item) => item.id === prev.id && item.category === activeTab)) {
@@ -152,7 +162,7 @@ export default function IsgKatipEntegrasyon() {
   useEffect(() => {
     loadOverview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [gorevTuru]);
 
   const visibleItems = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("tr-TR");
@@ -181,9 +191,14 @@ export default function IsgKatipEntegrasyon() {
     setSaving(true);
     setError("");
     try {
-      const { data } = await axios.post("/api/isg-katip/sync", {}, { headers: tokenHeader() });
+      const { data } = await axios.post(
+        "/api/isg-katip/sync",
+        { gorevTuru },
+        { headers: tokenHeader() }
+      );
       setItems(Array.isArray(data?.items) ? data.items : []);
       setCounts(data?.counts || {});
+      setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
       setLastSyncAt(data?.lastSyncAt || new Date().toISOString());
     } catch (err) {
       setError(err?.response?.data?.message || "Senkronizasyon çalıştırılamadı.");
@@ -199,7 +214,7 @@ export default function IsgKatipEntegrasyon() {
     try {
       await axios.patch(
         `/api/isg-katip/${selected.firmaId}/status`,
-        { isgKatipStatus: status },
+        { isgKatipStatus: status, gorevTuru },
         { headers: tokenHeader() }
       );
       await loadOverview();
@@ -215,10 +230,37 @@ export default function IsgKatipEntegrasyon() {
     setSaving(true);
     setError("");
     try {
-      await axios.post(`/api/isg-katip/${target.firmaId}/start`, {}, { headers: tokenHeader() });
+      await axios.post(
+        `/api/isg-katip/${target.firmaId}/start`,
+        { gorevTuru },
+        { headers: tokenHeader() }
+      );
       await loadOverview();
     } catch (err) {
       setError(err?.response?.data?.message || "Atama süreci başlatılamadı.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const assignUser = async (userId) => {
+    if (!selected?.firmaId || !userId) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { data } = await axios.post(
+        `/api/isg-katip/${selected.firmaId}/assign-user`,
+        { userId, gorevTuru },
+        { headers: tokenHeader() }
+      );
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+      setItems(nextItems);
+      setCounts(data?.counts || {});
+      setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setLastSyncAt(data?.lastSyncAt || lastSyncAt);
+      setSelected(nextItems.find((item) => item.id === selected.id) || null);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Kullanıcı ataması kaydedilemedi.");
     } finally {
       setSaving(false);
     }
@@ -257,6 +299,26 @@ export default function IsgKatipEntegrasyon() {
             {error}
           </div>
         )}
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+          <span className="px-2 text-xs font-semibold text-slate-600">Görev Türü</span>
+          {gorevTurleri.map((type) => (
+            <button
+              key={type.key}
+              type="button"
+              onClick={() => {
+                setGorevTuru(type.key);
+                setActiveTab("atanmamis");
+              }}
+              className={`${btn.base} ${
+                gorevTuru === type.key ? btn.primary : btn.ghost
+              }`}
+              title={type.label}
+            >
+              {type.short}
+            </button>
+          ))}
+        </div>
 
         <div className="grid gap-3 md:grid-cols-5">
           <StatCard title="Atanmamış Firmalar" value={counts.atanmamis || 0} sub="Kullanıcı atanmayı bekliyor" icon={ShieldAlert} tone="rose" active={activeTab === "atanmamis"} onClick={() => setActiveTab("atanmamis")} />
@@ -396,6 +458,12 @@ export default function IsgKatipEntegrasyon() {
                     <div className="mt-1 font-semibold text-slate-800">{selected.assignedUserName || "-"}</div>
                   </div>
                   <div>
+                    <div className="text-slate-500">Görev Türü</div>
+                    <div className="mt-1 font-semibold text-slate-800">
+                      {gorevTurleri.find((type) => type.key === gorevTuru)?.label || "-"}
+                    </div>
+                  </div>
+                  <div>
                     <div className="text-slate-500">TC Kimlik</div>
                     <div className={`mt-1 font-semibold ${selected.assignedUserTcKimlikVar ? "text-slate-800" : "text-rose-700"}`}>
                       {selected.assignedUserId ? (selected.assignedUserTcKimlik || "Eksik") : "-"}
@@ -407,6 +475,27 @@ export default function IsgKatipEntegrasyon() {
                       {selected.assignedUserId ? (selected.assignedUserSertifikaNoVar ? "Kayıtlı" : "Eksik") : "-"}
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 text-xs font-semibold text-slate-700">
+                    Bu Görev İçin Kullanıcı Ata
+                  </div>
+                  <select
+                    value={selected.assignedUserId || ""}
+                    onChange={(event) => assignUser(event.target.value)}
+                    disabled={saving || candidateUsers.length === 0}
+                    className={inputClass}
+                  >
+                    <option value="">
+                      {candidateUsers.length === 0 ? "Uygun kullanıcı yok" : "Kullanıcı seçiniz"}
+                    </option>
+                    {candidateUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} {user.tcKimlik ? `- ${user.tcKimlik}` : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -465,3 +554,4 @@ export default function IsgKatipEntegrasyon() {
     </div>
   );
 }
+

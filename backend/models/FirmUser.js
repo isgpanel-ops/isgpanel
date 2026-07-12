@@ -20,6 +20,12 @@ const FirmUserSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    gorevTuru: {
+      type: String,
+      enum: ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"],
+      default: "is_guvenligi_uzmani",
+      index: true,
+    },
     isActive: { type: Boolean, default: true, index: true },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },

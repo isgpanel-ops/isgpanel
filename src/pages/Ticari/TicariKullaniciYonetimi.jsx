@@ -31,17 +31,21 @@ function getRoleLabel(role, userObj = null) {
   }
 
   if (role === "ticari_user") {
-    return "Ä°ÅŸ GÃ¼venliÄŸi UzmanÄ±";
+    return "İş Güvenliği Uzmanı";
   }
 
   if (role === "isyeri_hekimi") {
-    return "Ä°ÅŸyeri Hekimi";
+    return "İşyeri Hekimi";
+  }
+
+  if (role === "diger_saglik_personeli") {
+    return "Diğer Sağlık Personeli";
   }
 
   return role || "-";
 }
 
-/** Tek admin seÃ§: ticari_admin > admin > isAdmin */
+/** Tek admin seç: ticari_admin > admin > isAdmin */
 function pickPrimaryAdmin(list) {
   const admins = (list || []).filter(isAdminRole);
   if (admins.length === 0) return null;
@@ -55,7 +59,7 @@ function pickPrimaryAdmin(list) {
   return admins[0];
 }
 
-/** âœ… GÃ¼Ã§lÃ¼ ÅŸifre Ã¼retici (crypto varsa onu kullanÄ±r) */
+/**  Güçlü şifre üretici (crypto varsa onu kullanır) */
 function secureRandomInt(max) {
   if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
     const arr = new Uint32Array(1);
@@ -111,7 +115,7 @@ const [newUserPassword, setNewUserPassword] = useState("");
 const [adding, setAdding] = useState(false);
 
 
-  // âœ… Åifre alanÄ± iÃ§in show/hide + kopyalandÄ±
+  //  Şifre alanı için show/hide + kopyalandı
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -135,7 +139,7 @@ const [savingEdit, setSavingEdit] = useState(false);
       : null;
 
   // =========================
-  // âœ… ConfirmModal (Firma silme ile aynÄ± UX)
+  //  ConfirmModal (Firma silme ile aynı UX)
   // =========================
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmData, setConfirmData] = useState({
@@ -166,7 +170,7 @@ const [savingEdit, setSavingEdit] = useState(false);
     message,
     onConfirm,
     confirmText = "Tamam",
-    cancelText = "Ä°ptal",
+    cancelText = "İptal",
     variant = "warning",
   }) => {
     setConfirmData({
@@ -187,7 +191,7 @@ const [savingEdit, setSavingEdit] = useState(false);
   /* fetch */
   useEffect(() => {
     if (!orgId) {
-      setError("Organizasyon bilgisi bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±n.");
+      setError("Organizasyon bilgisi bulunamadı. Lütfen tekrar giriş yapın.");
       setLoading(false);
       return;
     }
@@ -204,8 +208,8 @@ const [savingEdit, setSavingEdit] = useState(false);
         setOrganization(res.data.organization);
         setUsers(res.data.users || []);
       } catch (err) {
-        console.error("KULLANICI LÄ°STE HATASI:", err);
-        setError(err.response?.data?.message || "KullanÄ±cÄ±lar yÃ¼klenirken bir hata oluÅŸtu.");
+        console.error("KULLANICI LİSTE HATASI:", err);
+        setError(err.response?.data?.message || "Kullanıcılar yüklenirken bir hata oluştu.");
       } finally {
         setLoading(false);
       }
@@ -214,39 +218,39 @@ const [savingEdit, setSavingEdit] = useState(false);
     fetchUsers();
   }, [orgId, token]);
 
-  // âœ… Sayfa ilk aÃ§Ä±lÄ±ÅŸta otomatik gÃ¼Ã§lÃ¼ ÅŸifre bas
+  //  Sayfa ilk açılışta otomatik güçlü şifre bas
   useEffect(() => {
     setNewUserPassword(generateStrongPassword(12));
     setShowNewPassword(false);
     setCopied(false);
   }, []);
 
-  /** âœ… TEK ADMIN */
+  /**  TEK ADMIN */
   const primaryAdmin = useMemo(() => pickPrimaryAdmin(users), [users]);
 
-  /** âœ… Admin hariÃ§ kullanÄ±cÄ±lar (kota/koltuk + dropdown + normal tablo) */
+  /**  Admin hariç kullanıcılar (kota/koltuk + dropdown + normal tablo) */
   const nonAdminUsers = useMemo(() => {
     const primaryId = (primaryAdmin?._id || primaryAdmin?.id || "").toString();
 
     return (users || []).filter((u) => {
       if (!isAdminRole(u)) return true;
 
-      // admin ise sadece primaryAdmin'Ä± tabloda gÃ¶stereceÄŸiz, diÄŸer adminleri sakla
+      // admin ise sadece primaryAdmin'ı tabloda göstereceğiz, diğer adminleri sakla
       const uid = (u._id || u.id || "").toString();
       return uid === primaryId;
     });
   }, [users, primaryAdmin]);
 
-  /** Dropdown admin iÃ§ermez */
+  /** Dropdown admin içermez */
   const dropdownUsers = useMemo(() => (users || []).filter((u) => !isAdminRole(u)), [users]);
 
-  /** Ãœst bar filtre objesi (admin yok) */
+  /** Üst bar filtre objesi (admin yok) */
   useEffect(() => {
     const options = [
-      { value: "all", label: "TÃ¼m KullanÄ±cÄ±lar" },
+      { value: "all", label: "Tüm Kullanıcılar" },
       ...dropdownUsers.map((u, idx) => ({
         value: (u._id || u.id || "").toString(),
-        label: `KullanÄ±cÄ± ${idx + 1} - ${upTR(u.name || "")}`,
+        label: `Kullanıcı ${idx + 1} - ${upTR(u.name || "")}`,
       })),
     ];
 
@@ -271,7 +275,7 @@ const [savingEdit, setSavingEdit] = useState(false);
     if (!orgId) return;
 
   if (!newUserName || !newUserEmail || !newUserRole || !newUserPassword) {
-  setError("LÃ¼tfen tÃ¼m alanlarÄ± doldurunuz.");
+  setError("Lütfen tüm alanları doldurunuz.");
   return;
 }
 
@@ -299,13 +303,13 @@ setNewUserEmail("");
 setNewUserTcKimlik("");
 setNewUserRole("ticari_user");
 
-// âœ… KullanÄ±cÄ± eklenince yeni ÅŸifre otomatik Ã¼ret
+//  Kullanıcı eklenince yeni şifre otomatik üret
 setNewUserPassword(generateStrongPassword(12));
       setShowNewPassword(false);
       setCopied(false);
     } catch (err) {
-      console.error("YENÄ° KULLANICI EKLEME HATASI:", err);
-      setError(err.response?.data?.message || "KullanÄ±cÄ± eklenirken bir hata oluÅŸtu.");
+      console.error("YENİ KULLANICI EKLEME HATASI:", err);
+      setError(err.response?.data?.message || "Kullanıcı eklenirken bir hata oluştu.");
     } finally {
       setAdding(false);
     }
@@ -314,7 +318,7 @@ setNewUserPassword(generateStrongPassword(12));
   /* edit open */
   const openEditUser = (u) => {
     if (isAdminRole(u)) {
-      openInfo("Bilgilendirme", "Admin kullanÄ±cÄ± kilitlidir, dÃ¼zenlenemez.");
+      openInfo("Bilgilendirme", "Admin kullanıcı kilitlidir, düzenlenemez.");
       return;
     }
    setEditingUser(u);
@@ -329,13 +333,13 @@ setShowEditPassword(false);
 setEditCopied(false);
   };
 
-  /* update (role gÃ¶nderme yok) */
+  /* update (role gönderme yok) */
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!orgId || !editingUser) return;
 
     if (isAdminRole(editingUser)) {
-      openInfo("Bilgilendirme", "Admin kullanÄ±cÄ± kilitlidir, gÃ¼ncellenemez.");
+      openInfo("Bilgilendirme", "Admin kullanıcı kilitlidir, güncellenemez.");
       return;
     }
 
@@ -370,9 +374,9 @@ const res = await axios.put(
 
       setEditingUser(null);
     } catch (err) {
-      console.error("KULLANICI GÃœNCELLEME HATASI:", err);
-      setError(err.response?.data?.message || "KullanÄ±cÄ± gÃ¼ncellenirken bir hata oluÅŸtu.");
-      openInfo("Hata", err.response?.data?.message || "KullanÄ±cÄ± gÃ¼ncellenirken bir hata oluÅŸtu.");
+      console.error("KULLANICI GÜNCELLEME HATASI:", err);
+      setError(err.response?.data?.message || "Kullanıcı güncellenirken bir hata oluştu.");
+      openInfo("Hata", err.response?.data?.message || "Kullanıcı güncellenirken bir hata oluştu.");
     } finally {
       setSavingEdit(false);
     }
@@ -383,17 +387,17 @@ const res = await axios.put(
     if (!orgId) return;
 
     if (isAdminRole(u)) {
-      openInfo("Bilgilendirme", "Admin kullanÄ±cÄ± kilitlidir, silinemez.");
+      openInfo("Bilgilendirme", "Admin kullanıcı kilitlidir, silinemez.");
       return;
     }
 
     const userId = (u._id || u.id || "").toString();
 
     openConfirm({
-      title: "UyarÄ±",
-      message: `${upTR(u.name || "")} kullanÄ±cÄ±sÄ±nÄ± silmek istediÄŸinize emin misiniz?`,
+      title: "Uyarı",
+      message: `${upTR(u.name || "")} kullanıcısını silmek istediğinize emin misiniz?`,
       confirmText: "Sil",
-      cancelText: "Ä°ptal",
+      cancelText: "İptal",
       variant: "warning",
       onConfirm: async () => {
         try {
@@ -406,11 +410,11 @@ const res = await axios.put(
           setUsers((prev) => prev.filter((x) => (x._id || x.id || "").toString() !== userId));
           setSelectedUserId((prevSel) => (prevSel === userId ? "all" : prevSel));
 
-          // Ä°stersen kaldÄ±rÄ±rÄ±z; silindi bilgisi
-          openInfo("Bilgilendirme", "KullanÄ±cÄ± silindi âœ…");
+          // İstersen kaldırırız; silindi bilgisi
+          openInfo("Bilgilendirme", "Kullanıcı silindi ");
         } catch (err) {
-          console.error("KULLANICI SÄ°LME HATASI:", err);
-          const msg = err.response?.data?.message || "KullanÄ±cÄ± silinirken bir hata oluÅŸtu.";
+          console.error("KULLANICI SİLME HATASI:", err);
+          const msg = err.response?.data?.message || "Kullanıcı silinirken bir hata oluştu.";
           setError(msg);
           openInfo("Hata", msg);
         }
@@ -421,15 +425,16 @@ const res = await axios.put(
   if (!user) {
     return (
       <div className="p-6">
-        <p>GiriÅŸ yapÄ±lmamÄ±ÅŸ gÃ¶rÃ¼nÃ¼yor. LÃ¼tfen tekrar giriÅŸ yapÄ±n.</p>
+        <p>Giriş yapılmamış görünüyor. Lütfen tekrar giriş yapın.</p>
       </div>
     );
   }
 
-  /** âœ… Koltuk hesabÄ±: admin hariÃ§ */
+  /**  Koltuk hesabı: admin hariç */
   const uzmanSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "ticari_user").length;
   
   const hekimSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "isyeri_hekimi").length;
+  const dspSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "diger_saglik_personeli").length;
 
 const toplamKullanici = (users || []).filter((u) => !isAdminRole(u)).length;
 
@@ -439,7 +444,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
 
  
 
-  /** âœ… Tablo filtre */
+  /**  Tablo filtre */
   const filteredUsers = (nonAdminUsers || [])
     .filter((u) => {
       if (!searchTerm) return true;
@@ -450,7 +455,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
       selectedUserId === "all" ? true : (u._id || u.id || "").toString() === selectedUserId
     );
 
-  /** normal numaralandÄ±rma (admin = "-") */
+  /** normal numaralandırma (admin = "-") */
   const normalIds = filteredUsers
     .filter((u) => !isAdminRole(u))
     .map((u) => (u._id || u.id || "").toString());
@@ -459,9 +464,9 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     <div className="p-6">
       <div className="mx-auto max-w-7xl space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-[#042f4b] mb-1">KullanÄ±cÄ± YÃ¶netimi</h2>
+          <h2 className="text-xl font-bold text-[#042f4b] mb-1">Kullanıcı Yönetimi</h2>
           <p className="text-slate-500 text-xs">
-            Admin kullanÄ±cÄ± kilitlidir ve koltuk hakkÄ±na dahil deÄŸildir (UIâ€™da tek admin gÃ¶sterilir).
+            Admin kullanıcı kilitlidir ve koltuk hakkına dahil değildir (UI'da tek admin gösterilir).
           </p>
         </div>
 
@@ -469,9 +474,9 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
   <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 text-xs text-slate-700">
     <div className="font-semibold text-sm text-slate-800 mb-1">{organization.name}</div>
 
-    <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-5">
   <p>
-    <span className="font-medium">KullanÄ±cÄ± Limiti:</span>{" "}
+    <span className="font-medium">Kullanıcı Limiti:</span>{" "}
     {toplamKullanici} / {maxKullanici || 0}{" "}
     {maxKullanici > 0 && (
       <span className="text-slate-500">(Kalan koltuk: {kalanKoltuk})</span>
@@ -487,6 +492,10 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
   </p>
 
   <p>
+    <span className="font-medium">DSP:</span> {dspSayisi}
+  </p>
+
+  <p>
     <span className="font-medium">Admin:</span>{" "}
     {primaryAdmin ? upTR(primaryAdmin.name || "") : "-"}
   </p>
@@ -497,34 +506,34 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
 
         {error && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            âš  {error}
+             {error}
           </div>
         )}
 
         {/* Dropdown: admin yok */}
         <div className="flex items-center justify-end text-xs text-slate-600 mb-1">
-          <span className="mr-2">KullanÄ±cÄ± SeÃ§:</span>
+          <span className="mr-2">Kullanıcı Seç:</span>
           <select
             className={inputClass + " w-48"}
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
           >
-            <option value="all">TÃ¼m KullanÄ±cÄ±lar</option>
+            <option value="all">Tüm Kullanıcılar</option>
             {dropdownUsers.map((u, idx) => (
               <option key={u._id || u.id} value={u._id || u.id}>
-                {`KullanÄ±cÄ± ${idx + 1} - ${upTR(u.name || "")}`}
+                {`Kullanıcı ${idx + 1} - ${upTR(u.name || "")}`}
               </option>
             ))}
           </select>
         </div>
 
         {loading ? (
-          <p className="text-xs text-slate-600">YÃ¼kleniyor...</p>
+          <p className="text-xs text-slate-600">Yükleniyor...</p>
         ) : (
           <>
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
               <div className="px-3 py-2 border-b bg-slate-50/80">
-                <h3 className="text-sm font-semibold text-slate-800">KullanÄ±cÄ±lar</h3>
+                <h3 className="text-sm font-semibold text-slate-800">Kullanıcılar</h3>
               </div>
 
               <div className="max-h-[60vh] overflow-auto">
@@ -536,8 +545,8 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                       <th className="py-2 px-3 text-left font-semibold border-b">TC Kimlik No</th>
                       <th className="py-2 px-3 text-left font-semibold border-b">Email</th>
                       <th className="py-2 px-3 text-left font-semibold border-b">Rol</th>
-                      <th className="py-2 px-3 text-left font-semibold border-b">KayÄ±t Tarihi</th>
-                      <th className="py-2 px-3 text-right font-semibold border-b">Ä°ÅŸlemler</th>
+                      <th className="py-2 px-3 text-left font-semibold border-b">Kayıt Tarihi</th>
+                      <th className="py-2 px-3 text-right font-semibold border-b">İşlemler</th>
                     </tr>
                   </thead>
 
@@ -554,7 +563,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                             {upTR(u.name || "")}{" "}
                             {isAdm && (
                               <span className="ml-2 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                                KÄ°LÄ°TLÄ° ADMIN
+                                KİLİTLİ ADMIN
                               </span>
                             )}
                           </td>
@@ -571,7 +580,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                                 onClick={() => openEditUser(u)}
                                 disabled={isAdm}
                               >
-                                DÃ¼zenle
+                                Düzenle
                               </button>
                               <button
                                 className={`${btnBase} bg-rose-600 text-white hover:bg-rose-700`}
@@ -589,7 +598,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                     {filteredUsers.length === 0 && (
                       <tr>
                         <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
-                          Filtreye uygun kullanÄ±cÄ± bulunamadÄ±.
+                          Filtreye uygun kullanıcı bulunamadı.
                         </td>
                       </tr>
                     )}
@@ -598,12 +607,12 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
               </div>
             </div>
 
-            {/* Yeni kullanÄ±cÄ± */}
+            {/* Yeni kullanıcı */}
             <div className="rounded-xl border border-slate-200 bg-white shadow p-4">
               <div className="mb-3">
-                <h3 className="text-sm font-semibold text-slate-800">Yeni KullanÄ±cÄ± Ekle</h3>
+                <h3 className="text-sm font-semibold text-slate-800">Yeni Kullanıcı Ekle</h3>
                <p className="text-[11px] text-slate-500">
-  Bu ekrandan admin oluÅŸturulamaz. KullanÄ±cÄ± eklerken rol seÃ§ebilirsiniz.
+  Bu ekrandan admin oluşturulamaz. Kullanıcı eklerken rol seçebilirsiniz.
 </p>
               </div>
 
@@ -650,22 +659,21 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     value={newUserRole}
     onChange={(e) => setNewUserRole(e.target.value)}
   >
-    <option value="ticari_user">Ä°ÅŸ GÃ¼venliÄŸi UzmanÄ±</option>
-    <option value="isyeri_hekimi" disabled>
-    Ä°ÅŸyeri Hekimi (YakÄ±nda)
-  </option>
+    <option value="ticari_user">İş Güvenliği Uzmanı</option>
+    <option value="isyeri_hekimi">İşyeri Hekimi</option>
+    <option value="diger_saglik_personeli">Diğer Sağlık Personeli</option>
   </select>
 </div>
 
-                {/* âœ… Åifre alanÄ± (otomatik Ã¼ret + gÃ¶z + yenile + kopyala) */}
+                {/*  Şifre alanı (otomatik üret + göz + yenile + kopyala) */}
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Åifre</label>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Şifre</label>
 
                   <div className="relative">
                     <input
                       type={showNewPassword ? "text" : "password"}
                       className={inputClass + " pr-[86px]"}
-                      placeholder="GeÃ§ici ÅŸifre"
+                      placeholder="Geçici şifre"
                       value={newUserPassword}
                       onChange={(e) => {
                         setNewUserPassword(e.target.value);
@@ -674,10 +682,10 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                       autoComplete="new-password"
                     />
 
-                    {/* GÃ¶z ikon */}
+                    {/* Göz ikon */}
                     <button
                       type="button"
-                      title={showNewPassword ? "Åifreyi gizle" : "Åifreyi gÃ¶ster"}
+                      title={showNewPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                       onClick={() => setShowNewPassword((v) => !v)}
                       className="absolute right-[44px] top-1/2 -translate-y-1/2 rounded-md p-1.5 hover:bg-slate-100 text-slate-600"
                     >
@@ -726,7 +734,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                     {/* Yenile */}
                     <button
                       type="button"
-                      title="Yeni ÅŸifre Ã¼ret"
+                      title="Yeni şifre üret"
                       onClick={() => {
                         setNewUserPassword(generateStrongPassword(12));
                         setShowNewPassword(false);
@@ -740,9 +748,9 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
 
                   <div className="mt-1 flex items-center justify-between">
                     <p className="text-[10px] text-slate-500">
-                      Otomatik Ã¼retilir (min 8) â€¢ BÃ¼yÃ¼k/kÃ¼Ã§Ã¼k harf, rakam ve Ã¶zel karakter iÃ§erir.
+                      Otomatik üretilir (min 8) • Büyük/küçük harf, rakam ve özel karakter içerir.
                            <p className="text-[10px] text-slate-500 mt-1">
-  OluÅŸturulan ÅŸifre kullanÄ±cÄ±ya mail iletilecektir. Åifreyi kopyalamayÄ± veya not almayÄ± unutmayÄ±nÄ±z.
+  Oluşturulan şifre kullanıcıya mail iletilecektir. Şifreyi kopyalamayı veya not almayı unutmayınız.
 </p>
                     </p>
 
@@ -755,11 +763,11 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                           setCopied(true);
                           setTimeout(() => setCopied(false), 1200);
                         } catch {
-                          // clipboard engellenirse sessiz geÃ§
+                          // clipboard engellenirse sessiz geç
                         }
                       }}
                     >
-                      {copied ? "KopyalandÄ±" : "Kopyala"}
+                      {copied ? "Kopyalandı" : "Kopyala"}
                     </button>
                   </div>
                 </div>
@@ -770,7 +778,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     disabled={adding}
     className={`${btnBase} bg-[#2563eb] text-white hover:bg-[#1d4ed8] min-w-[140px]`}
   >
-    {adding ? "Ekleniyor..." : "KullanÄ±cÄ± Ekle"}
+    {adding ? "Ekleniyor..." : "Kullanıcı Ekle"}
   </button>
 </div>
               </form>
@@ -785,9 +793,9 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setEditingUser(null)} />
           <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-2 bg-gradient-to-r from-[#0a2b45] to-[#0a2b45]/90 text-white">
-              <h3 className="text-sm font-semibold tracking-tight">KullanÄ±cÄ±yÄ± DÃ¼zenle</h3>
+              <h3 className="text-sm font-semibold tracking-tight">Kullanıcıyı Düzenle</h3>
               <button onClick={() => setEditingUser(null)} className="rounded-lg p-1.5 hover:bg-white/10">
-                âœ•
+                ×
               </button>
             </div>
 
@@ -834,15 +842,14 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     value={editForm.role}
     onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
   >
-    <option value="ticari_user">Ä°ÅŸ GÃ¼venliÄŸi UzmanÄ±</option>
-    <option value="isyeri_hekimi" disabled>
-    Ä°ÅŸyeri Hekimi (YakÄ±nda)
-  </option>
+    <option value="ticari_user">İş Güvenliği Uzmanı</option>
+    <option value="isyeri_hekimi">İşyeri Hekimi</option>
+    <option value="diger_saglik_personeli">Diğer Sağlık Personeli</option>
   </select>
 </div>
 
             <div>
-  <label className="block text-[11px] font-medium text-slate-700 mb-1">Åifre</label>
+  <label className="block text-[11px] font-medium text-slate-700 mb-1">Şifre</label>
 
   <div className="relative">
     <input
@@ -853,20 +860,18 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
         setEditForm((f) => ({ ...f, password: e.target.value }));
         setEditCopied(false);
       }}
-      placeholder="Yeni ÅŸifre"
+      placeholder="Yeni şifre"
       autoComplete="new-password"
     />
 
-    {/* ğŸ‘ gÃ¶z */}
     <button
       type="button"
       onClick={() => setShowEditPassword((v) => !v)}
-      className="absolute right-[44px] top-1/2 -translate-y-1/2 rounded-md p-1.5 hover:bg-slate-100 text-slate-600"
+      className="absolute right-[44px] top-1/2 -translate-y-1/2 rounded-md px-1.5 py-1 text-[10px] font-semibold hover:bg-slate-100 text-slate-600"
     >
-      ğŸ‘
+      {showEditPassword ? "Gizle" : "Göster"}
     </button>
 
-    {/* ğŸ” ÅŸifre Ã¼ret */}
     <button
       type="button"
       onClick={() => {
@@ -882,9 +887,9 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
 
   <div className="mt-1 flex items-center justify-between">
     <p className="text-[10px] text-slate-500">
-      GÃ¼Ã§lÃ¼ ÅŸifre otomatik Ã¼retilebilir.
+      Güçlü şifre otomatik üretilebilir.
 <p className="text-[10px] text-slate-500 mt-1">
-  BoÅŸ bÄ±rakÄ±lÄ±rsa mevcut ÅŸifre deÄŸiÅŸmez. Yeni ÅŸifre oluÅŸturduysanÄ±z kullanÄ±cÄ±ya mail iletilecektir. KopyalamayÄ± veya not almayÄ± unutmayÄ±nÄ±z.
+  Boş bırakılırsa mevcut şifre değişmez. Yeni şifre oluşturduysanız kullanıcıya mail iletilecektir. Kopyalamayı veya not almayı unutmayınız.
 </p>
     </p>
 
@@ -899,7 +904,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
         } catch {}
       }}
     >
-      {editCopied ? "KopyalandÄ±" : "Kopyala"}
+      {editCopied ? "Kopyalandı" : "Kopyala"}
     </button>
   </div>
 </div>
@@ -910,7 +915,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                   onClick={() => setEditingUser(null)}
                   className={`${btnBase} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
                 >
-                  Ä°ptal
+                  İptal
                 </button>
                 <button
                   type="submit"
@@ -925,7 +930,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
         </div>
       )}
 
-      {/* âœ… ConfirmModal */}
+      {/*  ConfirmModal */}
       <ConfirmModal
         open={confirmOpen}
         title={confirmData.title}
@@ -939,6 +944,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     </div>
   );
 }
+
 
 
 
