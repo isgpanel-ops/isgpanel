@@ -129,6 +129,9 @@ export default function IsgKatipEntegrasyon() {
   const [activeTab, setActiveTab] = useState("atanmamis");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkUserId, setBulkUserId] = useState("");
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -170,6 +173,12 @@ export default function IsgKatipEntegrasyon() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gorevTuru]);
 
+  useEffect(() => {
+    setSelectedIds([]);
+    setBulkUserId("");
+    setPeopleOpen(false);
+  }, [activeTab, gorevTuru]);
+
   const visibleItems = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("tr-TR");
     return items
@@ -183,6 +192,18 @@ export default function IsgKatipEntegrasyon() {
       });
   }, [activeTab, items, query]);
 
+  const selectedItems = useMemo(() => {
+    const selectedSet = new Set(selectedIds);
+    return visibleItems.filter((item) => selectedSet.has(item.id));
+  }, [selectedIds, visibleItems]);
+
+  const isBulkMode = selectedItems.length > 1;
+  const selectedFirmaIds = isBulkMode
+    ? selectedItems.map((item) => item.firmaId)
+    : selected?.firmaId
+    ? [selected.firmaId]
+    : [];
+
   useEffect(() => {
     if (!visibleItems.length) {
       setSelected(null);
@@ -195,10 +216,10 @@ export default function IsgKatipEntegrasyon() {
 
   useEffect(() => {
     setManualAssigneeForm({
-      adSoyad: selected?.manualAssigneeName || "",
-      tcKimlik: selected?.manualAssigneeTcKimlik || "",
+      adSoyad: isBulkMode ? "" : selected?.manualAssigneeName || "",
+      tcKimlik: isBulkMode ? "" : selected?.manualAssigneeTcKimlik || "",
     });
-  }, [selected?.id, selected?.manualAssigneeName, selected?.manualAssigneeTcKimlik, gorevTuru]);
+  }, [isBulkMode, selected?.id, selected?.manualAssigneeName, selected?.manualAssigneeTcKimlik, gorevTuru]);
 
   const sync = async () => {
     setSaving(true);
@@ -258,22 +279,30 @@ export default function IsgKatipEntegrasyon() {
   };
 
   const assignUser = async (userId) => {
-    if (!selected?.firmaId || !userId) return;
+    if ((!selected?.firmaId && !isBulkMode) || !userId) return;
     setSaving(true);
     setError("");
     try {
-      const { data } = await axios.post(
-        `/api/isg-katip/${selected.firmaId}/assign-user`,
-        { userId, gorevTuru },
-        { headers: tokenHeader() }
-      );
+      const { data } = isBulkMode
+        ? await axios.post(
+            "/api/isg-katip/bulk/assign-user",
+            { userId, gorevTuru, firmaIds: selectedFirmaIds },
+            { headers: tokenHeader() }
+          )
+        : await axios.post(
+            `/api/isg-katip/${selected.firmaId}/assign-user`,
+            { userId, gorevTuru },
+            { headers: tokenHeader() }
+          );
       const nextItems = Array.isArray(data?.items) ? data.items : [];
       setItems(nextItems);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
-      setSelected(nextItems.find((item) => item.id === selected.id) || null);
+      setBulkUserId("");
+      setSelectedIds([]);
+      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find((item) => item.category === activeTab) || null);
     } catch (err) {
       setError(err?.response?.data?.message || "Kullanıcı ataması kaydedilemedi.");
     } finally {
@@ -282,26 +311,34 @@ export default function IsgKatipEntegrasyon() {
   };
 
   const saveManualAssignee = async () => {
-    if (!selected?.firmaId || isUzmanMode) return;
+    if ((!selected?.firmaId && !isBulkMode) || isUzmanMode) return;
     setSaving(true);
     setError("");
     try {
-      const { data } = await axios.post(
-        `/api/isg-katip/${selected.firmaId}/manual-assignee`,
-        {
-          gorevTuru,
-          adSoyad: manualAssigneeForm.adSoyad,
-          tcKimlik: manualAssigneeForm.tcKimlik,
-        },
-        { headers: tokenHeader() }
-      );
+      const payload = {
+        gorevTuru,
+        adSoyad: manualAssigneeForm.adSoyad,
+        tcKimlik: manualAssigneeForm.tcKimlik,
+      };
+      const { data } = isBulkMode
+        ? await axios.post(
+            "/api/isg-katip/bulk/manual-assignee",
+            { ...payload, firmaIds: selectedFirmaIds },
+            { headers: tokenHeader() }
+          )
+        : await axios.post(
+            `/api/isg-katip/${selected.firmaId}/manual-assignee`,
+            payload,
+            { headers: tokenHeader() }
+          );
       const nextItems = Array.isArray(data?.items) ? data.items : [];
       setItems(nextItems);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
-      setSelected(nextItems.find((item) => item.id === selected.id) || null);
+      setSelectedIds([]);
+      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find((item) => item.category === activeTab) || null);
     } catch (err) {
       setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
     } finally {
@@ -337,6 +374,7 @@ export default function IsgKatipEntegrasyon() {
   const startDisabled =
     saving ||
     !selected ||
+    isBulkMode ||
     (isUzmanMode
       ? !selected.assignedUserId || selected.assignedUserTcKimlikVar === false
       : selected.assignedUserTcKimlikVar === false);
@@ -428,7 +466,11 @@ export default function IsgKatipEntegrasyon() {
                 />
               </div>
               <div className="text-xs text-slate-500">
-                {loading ? "Yükleniyor..." : `Toplam ${visibleItems.length} kayıt`}
+                {loading
+                  ? "Yükleniyor..."
+                  : selectedItems.length > 0
+                  ? `${selectedItems.length} firma seçili`
+                  : `Toplam ${visibleItems.length} kayıt`}
               </div>
             </div>
 
@@ -436,6 +478,15 @@ export default function IsgKatipEntegrasyon() {
               <table className="min-w-[920px] w-full text-xs">
                 <thead className="sticky top-0 bg-slate-50 text-slate-600 z-10">
                   <tr>
+                    <th className="px-3 py-2 text-left font-semibold border-b w-10">
+                      <input
+                        type="checkbox"
+                        checked={visibleItems.length > 0 && selectedItems.length === visibleItems.length}
+                        onChange={(event) =>
+                          setSelectedIds(event.target.checked ? visibleItems.map((item) => item.id) : [])
+                        }
+                      />
+                    </th>
                     <th className="px-3 py-2 text-left font-semibold border-b">#</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">Firma Adı</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">SGK Sicil No</th>
@@ -444,7 +495,6 @@ export default function IsgKatipEntegrasyon() {
                       {isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}
                     </th>
                     <th className="px-3 py-2 text-left font-semibold border-b">İSG-KATİP Durumu</th>
-                    <th className="px-3 py-2 text-right font-semibold border-b">Yönetim</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -453,9 +503,23 @@ export default function IsgKatipEntegrasyon() {
                       key={item.id}
                       onClick={() => setSelected(item)}
                       className={`cursor-pointer hover:bg-slate-50 ${
-                        selected?.id === item.id ? "bg-[#0a2b45]/5" : ""
+                        selected?.id === item.id || selectedIds.includes(item.id) ? "bg-[#0a2b45]/5" : ""
                       }`}
                     >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => {
+                            setSelectedIds((prev) =>
+                              event.target.checked
+                                ? [...new Set([...prev, item.id])]
+                                : prev.filter((id) => id !== item.id)
+                            );
+                          }}
+                        />
+                      </td>
                       <td className="px-3 py-2">{index + 1}</td>
                       <td className="px-3 py-2 font-medium text-slate-800">{item.firmaAdi}</td>
                       <td className="px-3 py-2 tabular-nums">{item.sgkNo || "-"}</td>
@@ -468,11 +532,6 @@ export default function IsgKatipEntegrasyon() {
                       <td className="px-3 py-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(item.isgKatipStatus)}`}>
                           {item.isgKatipStatusLabel}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <span className="text-[10px] font-semibold text-slate-500">
-                          Detaydan yönet
                         </span>
                       </td>
                     </tr>
@@ -491,10 +550,160 @@ export default function IsgKatipEntegrasyon() {
 
           <aside className="rounded-xl border border-slate-200 bg-white shadow">
             <div className="border-b px-4 py-3">
-              <h3 className="text-sm font-semibold text-[#042f4b]">Firma Detayı</h3>
-              <p className="text-xs text-slate-500">Seçili firma ve atama bilgileri</p>
+              <h3 className="text-sm font-semibold text-[#042f4b]">
+                {isBulkMode ? "Toplu Firma Seçimi" : "Firma Detayı"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isBulkMode ? "Seçili firmalar için toplu işlem" : "Seçili firma ve atama bilgileri"}
+              </p>
             </div>
-            {selected ? (
+            {isBulkMode ? (
+              <div className="space-y-4 p-4 text-sm">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs font-semibold text-slate-700">
+                    {selectedItems.length} firma seçildi
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedItems.slice(0, 6).map((item) => (
+                      <span
+                        key={item.id}
+                        className="max-w-full truncate rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700"
+                        title={item.firmaAdi}
+                      >
+                        {item.firmaAdi}
+                      </span>
+                    ))}
+                    {selectedItems.length > 6 && (
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">
+                        +{selectedItems.length - 6} firma
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {isUzmanMode ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                      Seçili Firmalara Uzman Ata
+                    </div>
+                    <select
+                      value={bulkUserId}
+                      onChange={(event) => setBulkUserId(event.target.value)}
+                      disabled={saving || candidateUsers.length === 0}
+                      className={inputClass}
+                    >
+                      <option value="">
+                        {candidateUsers.length === 0 ? "Uygun kullanıcı yok" : "Kullanıcı seçiniz"}
+                      </option>
+                      {candidateUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} {user.tcKimlik ? `- ${user.tcKimlik}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => assignUser(bulkUserId)}
+                      disabled={saving || !bulkUserId}
+                      className={`${btn.base} ${btn.primary} mt-2 w-full`}
+                    >
+                      Seçili Firmalara Ata
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                      Seçili Firmalara {selectedGorevLabel} Bilgisi Kaydet
+                    </div>
+
+                    {savedPeople.length > 0 && (
+                      <div className="mb-2 rounded-lg border border-slate-200 bg-white">
+                        <button
+                          type="button"
+                          onClick={() => setPeopleOpen((open) => !open)}
+                          className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] font-semibold text-slate-700"
+                        >
+                          Kayıtlı Kişiler ({savedPeople.length})
+                          <span>{peopleOpen ? "Kapat" : "Aç"}</span>
+                        </button>
+                        {peopleOpen && (
+                          <div className="max-h-44 space-y-1 overflow-auto border-t p-2">
+                            {savedPeople.map((person) => (
+                              <div
+                                key={person.id}
+                                className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-1"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => selectSavedPerson(person.id)}
+                                  className="min-w-0 flex-1 text-left"
+                                >
+                                  <span className="block truncate text-[11px] font-semibold text-slate-800">
+                                    {person.adSoyad}
+                                  </span>
+                                  <span className="block text-[10px] text-slate-500">{person.tcKimlik}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteSavedPerson(person.id)}
+                                  disabled={saving}
+                                  className="rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <input
+                        value={manualAssigneeForm.adSoyad}
+                        onChange={(event) =>
+                          setManualAssigneeForm((form) => ({
+                            ...form,
+                            adSoyad: event.target.value.toLocaleUpperCase("tr-TR"),
+                          }))
+                        }
+                        placeholder="AD SOYAD"
+                        className={inputClass}
+                      />
+                      <input
+                        value={manualAssigneeForm.tcKimlik}
+                        onChange={(event) =>
+                          setManualAssigneeForm((form) => ({
+                            ...form,
+                            tcKimlik: event.target.value.replace(/\D/g, "").slice(0, 11),
+                          }))
+                        }
+                        inputMode="numeric"
+                        maxLength={11}
+                        placeholder="TC KİMLİK NO"
+                        className={inputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={saveManualAssignee}
+                        disabled={saving || !manualAssigneeForm.adSoyad.trim() || manualAssigneeForm.tcKimlik.replace(/\D/g, "").length !== 11}
+                        className={`${btn.base} ${btn.primary} w-full`}
+                      >
+                        Seçili Firmalara Kaydet
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className={`${btn.base} ${btn.ghost} w-full`}
+                >
+                  Seçimi Temizle
+                </button>
+              </div>
+            ) : selected ? (
               <div className="space-y-4 p-4 text-sm">
                 <div>
                   <div className="font-bold text-slate-900">{selected.firmaAdi}</div>
@@ -566,38 +775,45 @@ export default function IsgKatipEntegrasyon() {
                     </div>
                     <div className="space-y-2">
                       {savedPeople.length > 0 && (
-                        <div className="rounded-lg border border-slate-200 bg-white p-2">
-                          <div className="mb-1 text-[11px] font-semibold text-slate-600">
-                            Kayıtlı Kişiler
-                          </div>
-                          <div className="space-y-1">
-                            {savedPeople.map((person) => (
-                              <div
-                                key={person.id}
-                                className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-1"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => selectSavedPerson(person.id)}
-                                  className="min-w-0 flex-1 text-left"
-                                  title="Bu kişiyi forma aktar"
+                        <div className="rounded-lg border border-slate-200 bg-white">
+                          <button
+                            type="button"
+                            onClick={() => setPeopleOpen((open) => !open)}
+                            className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] font-semibold text-slate-700"
+                          >
+                            Kayıtlı Kişiler ({savedPeople.length})
+                            <span>{peopleOpen ? "Kapat" : "Aç"}</span>
+                          </button>
+                          {peopleOpen && (
+                            <div className="max-h-44 space-y-1 overflow-auto border-t p-2">
+                              {savedPeople.map((person) => (
+                                <div
+                                  key={person.id}
+                                  className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-1"
                                 >
-                                  <span className="block truncate text-[11px] font-semibold text-slate-800">
-                                    {person.adSoyad}
-                                  </span>
-                                  <span className="block text-[10px] text-slate-500">{person.tcKimlik}</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => deleteSavedPerson(person.id)}
-                                  disabled={saving}
-                                  className="rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                                >
-                                  Sil
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => selectSavedPerson(person.id)}
+                                    className="min-w-0 flex-1 text-left"
+                                    title="Bu kişiyi forma aktar"
+                                  >
+                                    <span className="block truncate text-[11px] font-semibold text-slate-800">
+                                      {person.adSoyad}
+                                    </span>
+                                    <span className="block text-[10px] text-slate-500">{person.tcKimlik}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteSavedPerson(person.id)}
+                                    disabled={saving}
+                                    className="rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                  >
+                                    Sil
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                       <input

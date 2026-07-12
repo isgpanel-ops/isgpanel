@@ -181,7 +181,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
         }) || null
       : null;
 
-    const rawAssignedUserId = link?.userId || (uzmanMode ? assignment?.assignedUserId : null) || null;
+    const rawAssignedUserId = link?.userId || null;
     const rawAssignedUser = rawAssignedUserId ? userMap.get(String(rawAssignedUserId)) : null;
     const isValidPanelAssignee = rawAssignedUser && isAssignableUser(rawAssignedUser);
     const assignedUserId = isValidPanelAssignee ? rawAssignedUserId : null;
@@ -475,6 +475,191 @@ router.post("/extension-sync", async (req, res) => {
   } catch (err) {
     console.error("ISG-KATIP extension sync hata:", err);
     return res.status(500).json({ message: "Eklenti senkronizasyonu kaydedilemedi" });
+  }
+});
+
+router.post("/bulk/assign-user", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const { userId } = req.body || {};
+    const firmaIds = Array.isArray(req.body?.firmaIds) ? req.body.firmaIds : [];
+    const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
+
+    if (!isUzmanGorevi(gorevTuru)) {
+      return res.status(400).json({
+        message: "Toplu kullanıcı ataması yalnızca iş güvenliği uzmanı için yapılabilir.",
+      });
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(userId))) {
+      return res.status(400).json({ message: "Kullanıcı bilgisi geçersiz" });
+    }
+
+    const validFirmaIds = firmaIds.filter((id) => mongoose.Types.ObjectId.isValid(String(id)));
+    if (validFirmaIds.length === 0) {
+      return res.status(400).json({ message: "Seçili firma bulunamadı" });
+    }
+
+    const user = await User.findOne({ _id: userId, organization: orgId })
+      .select("role personal.tcKimlik personal.sertifikaNo")
+      .lean();
+    if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı" });
+    if (!isAssignableUser(user)) {
+      return res.status(400).json({ message: "Seçilen kullanıcı iş güvenliği uzmanı değil" });
+    }
+
+    const firms = await Firma.find({ _id: { $in: validFirmaIds }, organization: orgId })
+      .select("_id")
+      .lean();
+    const scopedFirmaIds = firms.map((firm) => firm._id);
+    if (scopedFirmaIds.length === 0) {
+      return res.status(400).json({ message: "Organizasyona ait seçili firma bulunamadı" });
+    }
+
+    await FirmUser.updateMany(
+      uzmanLinkFilter({ organization: orgId, firmId: { $in: scopedFirmaIds }, isActive: true }),
+      { $set: { isActive: false } }
+    );
+
+    await FirmUser.bulkWrite(
+      scopedFirmaIds.map((firmaId) => ({
+        updateOne: {
+          filter: { organization: orgId, firmId: firmaId, userId },
+          update: {
+            $set: {
+              organization: orgId,
+              firmId: firmaId,
+              userId,
+              gorevTuru,
+              isActive: true,
+              assignedBy: req.user._id || req.user.id || null,
+            },
+          },
+          upsert: true,
+        },
+      }))
+    );
+
+    const now = new Date();
+    await IsgKatipAssignment.bulkWrite(
+      scopedFirmaIds.map((firmaId) => ({
+        updateOne: {
+          filter: { organization: orgId, firmaId, gorevTuru },
+          update: {
+            $set: {
+              organization: orgId,
+              firmaId,
+              gorevTuru,
+              assignedUserId: userId,
+              isgKatipStatus: "atama_yok",
+              lastSyncAt: now,
+              lastError: "",
+            },
+            $push: {
+              logs: {
+                action: "panel_bulk_assign",
+                message: "İş güvenliği uzmanı seçili firmalara atandı",
+                by: req.user._id || req.user.id || null,
+                at: now,
+              },
+            },
+          },
+          upsert: true,
+        },
+      }))
+    );
+
+    const overview = await buildOverview(orgId, gorevTuru);
+    return res.json({ ok: true, ...overview });
+  } catch (err) {
+    console.error("ISG-KATIP bulk assign user hata:", err);
+    return res.status(500).json({ message: "Toplu kullanıcı ataması kaydedilemedi" });
+  }
+});
+
+router.post("/bulk/manual-assignee", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const firmaIds = Array.isArray(req.body?.firmaIds) ? req.body.firmaIds : [];
+    const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
+    const adSoyad = String(req.body?.adSoyad || "").trim().toLocaleUpperCase("tr-TR");
+    const tcKimlik = normalizeTc(req.body?.tcKimlik);
+
+    if (isUzmanGorevi(gorevTuru)) {
+      return res.status(400).json({ message: "Uzman için kullanıcı listesinden seçim yapılmalıdır." });
+    }
+    if (!adSoyad) {
+      return res.status(400).json({ message: "Ad soyad alanı zorunludur." });
+    }
+    if (!hasValidTcValue(tcKimlik)) {
+      return res.status(400).json({ message: "TC kimlik numarası 11 haneli olmalıdır." });
+    }
+
+    const validFirmaIds = firmaIds.filter((id) => mongoose.Types.ObjectId.isValid(String(id)));
+    if (validFirmaIds.length === 0) {
+      return res.status(400).json({ message: "Seçili firma bulunamadı" });
+    }
+
+    const firms = await Firma.find({ _id: { $in: validFirmaIds }, organization: orgId })
+      .select("_id")
+      .lean();
+    const scopedFirmaIds = firms.map((firm) => firm._id);
+    if (scopedFirmaIds.length === 0) {
+      return res.status(400).json({ message: "Organizasyona ait seçili firma bulunamadı" });
+    }
+
+    await IsgKatipPerson.findOneAndUpdate(
+      { organization: orgId, gorevTuru, tcKimlik },
+      {
+        $set: {
+          organization: orgId,
+          gorevTuru,
+          adSoyad,
+          tcKimlik,
+          isActive: true,
+        },
+      },
+      { upsert: true }
+    );
+
+    const now = new Date();
+    await IsgKatipAssignment.bulkWrite(
+      scopedFirmaIds.map((firmaId) => ({
+        updateOne: {
+          filter: { organization: orgId, firmaId, gorevTuru },
+          update: {
+            $set: {
+              organization: orgId,
+              firmaId,
+              gorevTuru,
+              manualAssignee: { adSoyad, tcKimlik },
+              assignedUserId: null,
+              isgKatipStatus: "atama_yok",
+              lastSyncAt: now,
+              lastError: "",
+            },
+            $push: {
+              logs: {
+                action: "manual_bulk_assignee_save",
+                message: "Görev için kişi bilgisi seçili firmalara kaydedildi",
+                by: req.user._id || req.user.id || null,
+                at: now,
+              },
+            },
+          },
+          upsert: true,
+        },
+      }))
+    );
+
+    const overview = await buildOverview(orgId, gorevTuru);
+    return res.json({ ok: true, ...overview });
+  } catch (err) {
+    console.error("ISG-KATIP bulk manual assignee hata:", err);
+    return res.status(500).json({ message: "Toplu kişi bilgisi kaydedilemedi" });
   }
 });
 
