@@ -532,6 +532,10 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    if (origin.startsWith("chrome-extension://")) {
+      return callback(null, true);
+    }
+
     // ✅ iyzico checkout / callback test ve canlı akışı
     if (origin.includes("iyzipay.com")) {
       return callback(null, true);

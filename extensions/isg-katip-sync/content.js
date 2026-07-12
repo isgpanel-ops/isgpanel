@@ -115,7 +115,7 @@ function rowToRecord(cells) {
     tehlike: findHazardClass(rawText),
     calismaSuresi: findDuration(rawText),
     sozlesmeId: findContractId(rawText),
-    rawText: rawText.slice(0, 1200),
+    rawText: rawText.slice(0, 240),
   };
 }
 
