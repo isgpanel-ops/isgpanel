@@ -20,6 +20,10 @@ const IsgKatipAssignmentSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    manualAssignee: {
+      adSoyad: { type: String, default: "" },
+      tcKimlik: { type: String, default: "" },
+    },
     gorevTuru: {
       type: String,
       enum: ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"],

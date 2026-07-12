@@ -18,6 +18,8 @@ const STATUS_LABELS = {
   yeniden_atama_gerekli: "Yeniden Atama Gerekli",
 };
 
+const GOREV_TURLERI = ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"];
+
 function roleOf(user) {
   return String(user?.role || "").toLowerCase().trim();
 }
@@ -41,28 +43,32 @@ function ensureAdmin(req, res) {
   return String(orgId);
 }
 
+function normalizeGorevTuru(value) {
+  return GOREV_TURLERI.includes(value) ? value : "is_guvenligi_uzmani";
+}
+
+function isUzmanGorevi(gorevTuru) {
+  return normalizeGorevTuru(gorevTuru) === "is_guvenligi_uzmani";
+}
+
+function hasValidTcValue(value) {
+  return String(value || "").replace(/\D/g, "").length === 11;
+}
+
+function hasValidTc(user) {
+  return hasValidTcValue(user?.personal?.tcKimlik);
+}
+
+function normalizeTc(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 11);
+}
+
 function isAssignableUser(user) {
   return roleOf(user) === "ticari_user";
 }
 
-function hasValidTc(user) {
-  const tc = String(user?.personal?.tcKimlik || "").replace(/\D/g, "");
-  return tc.length === 11;
-}
-
-function normalizeGorevTuru(value) {
-  const allowed = ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"];
-  return allowed.includes(value) ? value : "is_guvenligi_uzmani";
-}
-
-function roleForGorevTuru(gorevTuru) {
-  if (gorevTuru === "isyeri_hekimi") return "isyeri_hekimi";
-  if (gorevTuru === "diger_saglik_personeli") return "diger_saglik_personeli";
-  return "ticari_user";
-}
-
 function categoryFor(item) {
-  if (!item.assignedUserId) return "atanmamis";
+  if (!item.hasAssignee) return "atanmamis";
   if (item.isgKatipStatus === "atama_onaylandi") return "aktif";
   if (
     item.isgKatipStatus === "atama_dustu" ||
@@ -81,15 +87,18 @@ function categoryFor(item) {
 
 async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
   const normalizedGorevTuru = normalizeGorevTuru(gorevTuru);
-  const expectedRole = roleForGorevTuru(normalizedGorevTuru);
+  const uzmanMode = isUzmanGorevi(normalizedGorevTuru);
+
   const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
   const firmIds = firms.map((firm) => firm._id);
 
-  const activeLinks = await FirmUser.find({
-    organization: orgId,
-    firmId: { $in: firmIds },
-    isActive: true,
-  }).lean();
+  const activeLinks = uzmanMode
+    ? await FirmUser.find({
+        organization: orgId,
+        firmId: { $in: firmIds },
+        isActive: true,
+      }).lean()
+    : [];
 
   const assignments = await IsgKatipAssignment.find({
     organization: orgId,
@@ -110,13 +119,15 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     .select("name email role personal.tcKimlik personal.sertifikaNo")
     .lean();
 
-  const candidateUsers = await User.find({
-    organization: orgId,
-    role: expectedRole,
-  })
-    .select("name email role personal.tcKimlik personal.sertifikaNo")
-    .sort({ name: 1 })
-    .lean();
+  const candidateUsers = uzmanMode
+    ? await User.find({
+        organization: orgId,
+        role: "ticari_user",
+      })
+        .select("name email role personal.tcKimlik personal.sertifikaNo")
+        .sort({ name: 1 })
+        .lean()
+    : [];
 
   const userMap = new Map(users.map((user) => [String(user._id), user]));
   const linksByFirm = new Map();
@@ -131,17 +142,30 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
   const items = firms.map((firm) => {
     const firmId = String(firm._id);
     const firmLinks = linksByFirm.get(firmId) || [];
-    const link =
-      firmLinks.find((candidate) => {
-        const candidateUser = userMap.get(String(candidate.userId));
-        return roleOf(candidateUser) === expectedRole;
-      }) || null;
     const assignment = assignmentMap.get(firmId) || null;
-    const rawAssignedUserId = link?.userId || assignment?.assignedUserId || null;
+    const manualAssignee = assignment?.manualAssignee || {};
+    const manualName = String(manualAssignee.adSoyad || "").trim();
+    const manualTc = normalizeTc(manualAssignee.tcKimlik);
+    const hasManualAssignee = Boolean(manualName && hasValidTcValue(manualTc));
+
+    const link = uzmanMode
+      ? firmLinks.find((candidate) => {
+          const candidateUser = userMap.get(String(candidate.userId));
+          const linkGorevTuru = candidate.gorevTuru || "is_guvenligi_uzmani";
+          return linkGorevTuru === "is_guvenligi_uzmani" && isAssignableUser(candidateUser);
+        }) || null
+      : null;
+
+    const rawAssignedUserId = link?.userId || (uzmanMode ? assignment?.assignedUserId : null) || null;
     const rawAssignedUser = rawAssignedUserId ? userMap.get(String(rawAssignedUserId)) : null;
     const isValidPanelAssignee = rawAssignedUser && isAssignableUser(rawAssignedUser);
     const assignedUserId = isValidPanelAssignee ? rawAssignedUserId : null;
     const assignedUser = assignedUserId ? rawAssignedUser : null;
+    const assignedName = uzmanMode
+      ? assignedUser?.name || assignedUser?.email || ""
+      : manualName;
+    const assignedTc = uzmanMode ? assignedUser?.personal?.tcKimlik || "" : manualTc;
+    const hasAssignee = uzmanMode ? Boolean(assignedUserId) : hasManualAssignee;
     const status = assignment?.isgKatipStatus || "kontrol_edilmedi";
 
     const item = {
@@ -154,15 +178,20 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
       adres: firm.adres || "",
       hazirlama: firm.hazirlama || null,
       gecerlilik: firm.gecerlilik || null,
+      hasAssignee,
       assignedUserId: assignedUserId ? String(assignedUserId) : "",
-      assignedUserName: assignedUser?.name || assignedUser?.email || "",
+      assignedUserName: assignedName,
+      assignedDisplayName: assignedName,
       assignedUserRole: assignedUser?.role || "",
-      assignedUserTcKimlik: assignedUser?.personal?.tcKimlik || "",
-      assignedUserTcKimlikVar: assignedUser ? hasValidTc(assignedUser) : false,
-      assignedUserSertifikaNoVar: Boolean(assignedUser?.personal?.sertifikaNo),
+      assignedUserTcKimlik: assignedTc,
+      assignedDisplayTcKimlik: assignedTc,
+      assignedUserTcKimlikVar: uzmanMode ? (assignedUser ? hasValidTc(assignedUser) : false) : hasValidTcValue(manualTc),
+      assignedUserSertifikaNoVar: uzmanMode ? Boolean(assignedUser?.personal?.sertifikaNo) : true,
+      manualAssigneeName: manualName,
+      manualAssigneeTcKimlik: manualTc,
       panelAssignmentProblem:
-        rawAssignedUserId && !isValidPanelAssignee
-          ? "Atanmış kullanıcı geçerli ticari kullanıcı değil"
+        uzmanMode && rawAssignedUserId && !isValidPanelAssignee
+          ? "Atanmış kullanıcı geçerli iş güvenliği uzmanı değil"
           : "",
       isgKatipStatus: status,
       isgKatipStatusLabel: STATUS_LABELS[status] || status,
@@ -234,7 +263,7 @@ router.post("/sync", async (req, res) => {
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru || req.query?.gorevTuru);
     const now = new Date();
     const overviewBefore = await buildOverview(orgId, gorevTuru);
-    const assignedItems = overviewBefore.items.filter((item) => item.assignedUserId);
+    const assignedItems = overviewBefore.items.filter((item) => item.hasAssignee);
 
     if (assignedItems.length > 0) {
       await IsgKatipAssignment.bulkWrite(
@@ -247,7 +276,7 @@ router.post("/sync", async (req, res) => {
             },
             update: {
               $set: {
-                assignedUserId: item.assignedUserId,
+                ...(item.assignedUserId ? { assignedUserId: item.assignedUserId } : {}),
                 lastSyncAt: now,
                 lastError: "",
               },
@@ -326,12 +355,13 @@ router.post("/extension-sync", async (req, res) => {
           filter: {
             organization: orgId,
             firmaId: firm._id,
-      gorevTuru: normalizeGorevTuru(row.gorevTuru),
+            gorevTuru: normalizeGorevTuru(row.gorevTuru),
           },
           update: {
             $set: {
               organization: orgId,
               firmaId: firm._id,
+              gorevTuru: normalizeGorevTuru(row.gorevTuru),
               isgKatipStatus: status,
               sozlesmeId: row.sozlesmeId || "",
               calismaSuresi: row.calismaSuresi || "",
@@ -376,7 +406,12 @@ router.post("/:firmaId/assign-user", async (req, res) => {
     const { firmaId } = req.params;
     const { userId } = req.body || {};
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
-    const expectedRole = roleForGorevTuru(gorevTuru);
+
+    if (!isUzmanGorevi(gorevTuru)) {
+      return res.status(400).json({
+        message: "Hekim ve DSP için panel kullanıcısı yerine kişi bilgisi kaydedilmelidir.",
+      });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(String(firmaId))) {
       return res.status(400).json({ message: "Firma bilgisi geçersiz" });
@@ -392,15 +427,15 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       .select("role personal.tcKimlik personal.sertifikaNo")
       .lean();
     if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı" });
-    if (roleOf(user) !== expectedRole) {
-      return res.status(400).json({ message: "Seçilen kullanıcı bu görev türü için uygun değil" });
+    if (!isAssignableUser(user)) {
+      return res.status(400).json({ message: "Seçilen kullanıcı iş güvenliği uzmanı değil" });
     }
 
     const sameRoleFilter = {
       organization: orgId,
       firmId: firmaId,
       isActive: true,
-      $or: [{ gorevTuru }, ...(gorevTuru === "is_guvenligi_uzmani" ? [{ gorevTuru: { $exists: false } }] : [])],
+      $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
     };
 
     await FirmUser.updateMany(sameRoleFilter, { $set: { isActive: false } });
@@ -436,7 +471,7 @@ router.post("/:firmaId/assign-user", async (req, res) => {
         $push: {
           logs: {
             action: "panel_assign",
-            message: "Panel kullanıcısı görev türüne atandı",
+            message: "İş güvenliği uzmanı firmaya atandı",
             by: req.user._id || req.user.id || null,
             at: now,
           },
@@ -450,6 +485,66 @@ router.post("/:firmaId/assign-user", async (req, res) => {
   } catch (err) {
     console.error("ISG-KATIP assign user hata:", err);
     return res.status(500).json({ message: "Kullanıcı ataması kaydedilemedi" });
+  }
+});
+
+router.post("/:firmaId/manual-assignee", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const { firmaId } = req.params;
+    const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
+    const adSoyad = String(req.body?.adSoyad || "").trim().toLocaleUpperCase("tr-TR");
+    const tcKimlik = normalizeTc(req.body?.tcKimlik);
+
+    if (isUzmanGorevi(gorevTuru)) {
+      return res.status(400).json({ message: "Uzman için kullanıcı listesinden seçim yapılmalıdır." });
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(firmaId))) {
+      return res.status(400).json({ message: "Firma bilgisi geçersiz" });
+    }
+    if (!adSoyad) {
+      return res.status(400).json({ message: "Ad soyad alanı zorunludur." });
+    }
+    if (!hasValidTcValue(tcKimlik)) {
+      return res.status(400).json({ message: "TC kimlik numarası 11 haneli olmalıdır." });
+    }
+
+    const firm = await Firma.findOne({ _id: firmaId, organization: orgId }).select("_id").lean();
+    if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
+
+    const now = new Date();
+    await IsgKatipAssignment.findOneAndUpdate(
+      { organization: orgId, firmaId, gorevTuru },
+      {
+        $set: {
+          organization: orgId,
+          firmaId,
+          gorevTuru,
+          manualAssignee: { adSoyad, tcKimlik },
+          assignedUserId: null,
+          isgKatipStatus: "atama_yok",
+          lastSyncAt: now,
+          lastError: "",
+        },
+        $push: {
+          logs: {
+            action: "manual_assignee_save",
+            message: "Görev için kişi bilgisi kaydedildi",
+            by: req.user._id || req.user.id || null,
+            at: now,
+          },
+        },
+      },
+      { upsert: true }
+    );
+
+    const overview = await buildOverview(orgId, gorevTuru);
+    return res.json({ ok: true, ...overview });
+  } catch (err) {
+    console.error("ISG-KATIP manual assignee hata:", err);
+    return res.status(500).json({ message: "Kişi bilgisi kaydedilemedi" });
   }
 });
 
@@ -471,18 +566,22 @@ router.patch("/:firmaId/status", async (req, res) => {
       return res.status(400).json({ message: "İSG-KATİP durumu geçersiz" });
     }
 
-    const activeLink = await FirmUser.findOne({
-      organization: orgId,
-      firmId: firmaId,
-      isActive: true,
-    }).lean();
+    const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
+    const activeLink = isUzmanGorevi(gorevTuru)
+      ? await FirmUser.findOne({
+          organization: orgId,
+          firmId: firmaId,
+          isActive: true,
+          $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
+        }).lean()
+      : null;
 
     const now = new Date();
     const update = {
       organization: orgId,
       firmaId,
-      assignedUserId: activeLink?.userId || req.body?.assignedUserId || null,
-      gorevTuru: normalizeGorevTuru(req.body?.gorevTuru),
+      ...(activeLink?.userId ? { assignedUserId: activeLink.userId } : {}),
+      gorevTuru,
       isgKatipStatus: nextStatus,
       sozlesmeId: req.body?.sozlesmeId || "",
       calismaSuresi: req.body?.calismaSuresi || "",
@@ -491,7 +590,7 @@ router.patch("/:firmaId/status", async (req, res) => {
     };
 
     const assignment = await IsgKatipAssignment.findOneAndUpdate(
-      { organization: orgId, firmaId, gorevTuru: update.gorevTuru },
+      { organization: orgId, firmaId, gorevTuru },
       {
         $set: update,
         $push: {
@@ -527,50 +626,89 @@ router.post("/:firmaId/start", async (req, res) => {
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
 
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru || req.query?.gorevTuru);
-    const expectedRole = roleForGorevTuru(gorevTuru);
+    const now = new Date();
 
-    const activeLinks = await FirmUser.find({
+    if (isUzmanGorevi(gorevTuru)) {
+      const activeLinks = await FirmUser.find({
+        organization: orgId,
+        firmId: firmaId,
+        isActive: true,
+        $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
+      }).lean();
+
+      const users = await User.find({
+        _id: { $in: activeLinks.map((link) => link.userId) },
+      })
+        .select("role personal.tcKimlik personal.sertifikaNo")
+        .lean();
+
+      const userMap = new Map(users.map((user) => [String(user._id), user]));
+      const activeLink =
+        activeLinks.find((link) => isAssignableUser(userMap.get(String(link.userId)))) || null;
+
+      if (!activeLink?.userId) {
+        return res.status(400).json({ message: "Önce firmaya iş güvenliği uzmanı atayın." });
+      }
+
+      const assignedUser = userMap.get(String(activeLink.userId));
+
+      if (!hasValidTc(assignedUser)) {
+        return res.status(400).json({
+          message:
+            "Atama başlatmak için atanan uzmanın TC kimlik numarası kullanıcı bilgilerinde kayıtlı olmalıdır.",
+        });
+      }
+
+      const assignment = await IsgKatipAssignment.findOneAndUpdate(
+        { organization: orgId, firmaId, gorevTuru },
+        {
+          $set: {
+            organization: orgId,
+            firmaId,
+            assignedUserId: activeLink.userId,
+            gorevTuru,
+            isgKatipStatus: "profesyonel_onayi_bekliyor",
+            lastSyncAt: now,
+            lastError: "",
+          },
+          $push: {
+            logs: {
+              action: "assignment_start",
+              message: "İSG-KATİP uzman atama süreci başlatıldı",
+              by: req.user._id || req.user.id || null,
+              at: now,
+            },
+          },
+        },
+        { upsert: true, new: true }
+      ).lean();
+
+      return res.json({ ok: true, assignment });
+    }
+
+    const existingAssignment = await IsgKatipAssignment.findOne({
       organization: orgId,
-      firmId: firmaId,
-      isActive: true,
+      firmaId,
+      gorevTuru,
     }).lean();
 
-    const users = await User.find({
-      _id: { $in: activeLinks.map((link) => link.userId) },
-    })
-      .select("role personal.tcKimlik personal.sertifikaNo")
-      .lean();
+    const manualName = String(existingAssignment?.manualAssignee?.adSoyad || "").trim();
+    const manualTc = normalizeTc(existingAssignment?.manualAssignee?.tcKimlik);
 
-    const userMap = new Map(users.map((user) => [String(user._id), user]));
-    const activeLink =
-      activeLinks.find((link) => roleOf(userMap.get(String(link.userId))) === expectedRole) ||
-      null;
-
-    if (!activeLink?.userId) {
-      return res.status(400).json({ message: "Önce firmaya kullanıcı atayın" });
-    }
-
-    const assignedUser = userMap.get(String(activeLink.userId));
-
-    if (!isAssignableUser(assignedUser)) {
-      return res.status(400).json({ message: "Atanan kullanıcı geçerli ticari kullanıcı değil" });
-    }
-
-    if (!hasValidTc(assignedUser)) {
+    if (!manualName || !hasValidTcValue(manualTc)) {
       return res.status(400).json({
-        message:
-          "Atama başlatmak için atanan kullanıcının TC kimlik numarası kişisel bilgilerinde kayıtlı olmalı",
+        message: "Bu görev türü için ad soyad ve 11 haneli TC kimlik kaydedilmelidir.",
       });
     }
 
-    const now = new Date();
     const assignment = await IsgKatipAssignment.findOneAndUpdate(
       { organization: orgId, firmaId, gorevTuru },
       {
         $set: {
           organization: orgId,
           firmaId,
-          assignedUserId: activeLink.userId,
+          assignedUserId: null,
+          manualAssignee: { adSoyad: manualName, tcKimlik: manualTc },
           gorevTuru,
           isgKatipStatus: "profesyonel_onayi_bekliyor",
           lastSyncAt: now,
@@ -579,7 +717,7 @@ router.post("/:firmaId/start", async (req, res) => {
         $push: {
           logs: {
             action: "assignment_start",
-            message: "İSG-KATİP atama süreci başlatıldı",
+            message: "İSG-KATİP manuel kişi atama süreci başlatıldı",
             by: req.user._id || req.user.id || null,
             at: now,
           },

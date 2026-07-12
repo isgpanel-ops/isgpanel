@@ -35,11 +35,11 @@ function getRoleLabel(role, userObj = null) {
   }
 
   if (role === "isyeri_hekimi") {
-    return "İşyeri Hekimi";
+    return "İşyeri Hekimi (Yakında)";
   }
 
   if (role === "diger_saglik_personeli") {
-    return "Diğer Sağlık Personeli";
+    return "Pasif Rol";
   }
 
   return role || "-";
@@ -433,9 +433,6 @@ const res = await axios.put(
   /**  Koltuk hesabı: admin hariç */
   const uzmanSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "ticari_user").length;
   
-  const hekimSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "isyeri_hekimi").length;
-  const dspSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "diger_saglik_personeli").length;
-
 const toplamKullanici = (users || []).filter((u) => !isAdminRole(u)).length;
 
 const maxKullanici = organization ? organization.userLimit : 0;
@@ -474,7 +471,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
   <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 text-xs text-slate-700">
     <div className="font-semibold text-sm text-slate-800 mb-1">{organization.name}</div>
 
-    <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-4">
   <p>
     <span className="font-medium">Kullanıcı Limiti:</span>{" "}
     {toplamKullanici} / {maxKullanici || 0}{" "}
@@ -488,11 +485,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
   </p>
 
   <p>
-    <span className="font-medium">Hekim:</span> {hekimSayisi}
-  </p>
-
-  <p>
-    <span className="font-medium">DSP:</span> {dspSayisi}
+    <span className="font-medium">Hekim:</span> Yakında
   </p>
 
   <p>
@@ -660,8 +653,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     onChange={(e) => setNewUserRole(e.target.value)}
   >
     <option value="ticari_user">İş Güvenliği Uzmanı</option>
-    <option value="isyeri_hekimi">İşyeri Hekimi</option>
-    <option value="diger_saglik_personeli">Diğer Sağlık Personeli</option>
+    <option value="isyeri_hekimi" disabled>İşyeri Hekimi (Yakında)</option>
   </select>
 </div>
 
@@ -843,8 +835,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
   >
     <option value="ticari_user">İş Güvenliği Uzmanı</option>
-    <option value="isyeri_hekimi">İşyeri Hekimi</option>
-    <option value="diger_saglik_personeli">Diğer Sağlık Personeli</option>
+    <option value="isyeri_hekimi" disabled>İşyeri Hekimi (Yakında)</option>
   </select>
 </div>
 

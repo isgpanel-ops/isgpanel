@@ -132,6 +132,10 @@ export default function IsgKatipEntegrasyon() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [manualAssigneeForm, setManualAssigneeForm] = useState({ adSoyad: "", tcKimlik: "" });
+
+  const isUzmanMode = gorevTuru === "is_guvenligi_uzmani";
+  const selectedGorevLabel = gorevTurleri.find((type) => type.key === gorevTuru)?.label || "-";
 
   const loadOverview = async () => {
     setError("");
@@ -170,7 +174,7 @@ export default function IsgKatipEntegrasyon() {
       .filter((item) => item.category === activeTab)
       .filter((item) => {
         if (!q) return true;
-        return [item.firmaAdi, item.sgkNo, item.assignedUserName]
+        return [item.firmaAdi, item.sgkNo, item.assignedUserName, item.assignedDisplayName]
           .join(" ")
           .toLocaleLowerCase("tr-TR")
           .includes(q);
@@ -186,6 +190,13 @@ export default function IsgKatipEntegrasyon() {
       setSelected(visibleItems[0]);
     }
   }, [activeTab, selected, visibleItems]);
+
+  useEffect(() => {
+    setManualAssigneeForm({
+      adSoyad: selected?.manualAssigneeName || "",
+      tcKimlik: selected?.manualAssigneeTcKimlik || "",
+    });
+  }, [selected?.id, selected?.manualAssigneeName, selected?.manualAssigneeTcKimlik, gorevTuru]);
 
   const sync = async () => {
     setSaving(true);
@@ -266,10 +277,39 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
+  const saveManualAssignee = async () => {
+    if (!selected?.firmaId || isUzmanMode) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { data } = await axios.post(
+        `/api/isg-katip/${selected.firmaId}/manual-assignee`,
+        {
+          gorevTuru,
+          adSoyad: manualAssigneeForm.adSoyad,
+          tcKimlik: manualAssigneeForm.tcKimlik,
+        },
+        { headers: tokenHeader() }
+      );
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+      setItems(nextItems);
+      setCounts(data?.counts || {});
+      setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setLastSyncAt(data?.lastSyncAt || lastSyncAt);
+      setSelected(nextItems.find((item) => item.id === selected.id) || null);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const startDisabled =
     saving ||
-    !selected?.assignedUserId ||
-    selected?.assignedUserTcKimlikVar === false;
+    !selected ||
+    (isUzmanMode
+      ? !selected.assignedUserId || selected.assignedUserTcKimlikVar === false
+      : selected.assignedUserTcKimlikVar === false);
 
   return (
     <div className="p-6">
@@ -370,7 +410,9 @@ export default function IsgKatipEntegrasyon() {
                     <th className="px-3 py-2 text-left font-semibold border-b">Firma Adı</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">SGK Sicil No</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">Tehlike Sınıfı</th>
-                    <th className="px-3 py-2 text-left font-semibold border-b">Atanan Kullanıcı</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">
+                      {isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}
+                    </th>
                     <th className="px-3 py-2 text-left font-semibold border-b">İSG-KATİP Durumu</th>
                     <th className="px-3 py-2 text-right font-semibold border-b">İşlem</th>
                   </tr>
@@ -406,9 +448,9 @@ export default function IsgKatipEntegrasyon() {
                             setSelected(item);
                             startAssignment(item);
                           }}
-                          disabled={saving || !item.assignedUserId || item.assignedUserTcKimlikVar === false}
+                          disabled={saving || !item.hasAssignee || item.assignedUserTcKimlikVar === false}
                           className={`${btn.base} ${btn.success} !px-2`}
-                          title={!item.assignedUserTcKimlikVar ? "Atanan kullanıcının TC kimlik numarası eksik" : "Atama sürecini başlat"}
+                          title={!item.assignedUserTcKimlikVar ? "Görev için TC kimlik numarası eksik" : "Atama sürecini başlat"}
                         >
                           <UserPlus className="h-3.5 w-3.5" />
                           Başlat
@@ -454,49 +496,91 @@ export default function IsgKatipEntegrasyon() {
                     <div className="mt-1 font-semibold text-slate-800">{fmtDate(selected.gecerlilik)}</div>
                   </div>
                   <div>
-                    <div className="text-slate-500">Atanan Kullanıcı</div>
-                    <div className="mt-1 font-semibold text-slate-800">{selected.assignedUserName || "-"}</div>
+                    <div className="text-slate-500">{isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}</div>
+                    <div className="mt-1 font-semibold text-slate-800">
+                      {selected.assignedDisplayName || selected.assignedUserName || "-"}
+                    </div>
                   </div>
                   <div>
                     <div className="text-slate-500">Görev Türü</div>
-                    <div className="mt-1 font-semibold text-slate-800">
-                      {gorevTurleri.find((type) => type.key === gorevTuru)?.label || "-"}
-                    </div>
+                    <div className="mt-1 font-semibold text-slate-800">{selectedGorevLabel}</div>
                   </div>
                   <div>
                     <div className="text-slate-500">TC Kimlik</div>
                     <div className={`mt-1 font-semibold ${selected.assignedUserTcKimlikVar ? "text-slate-800" : "text-rose-700"}`}>
-                      {selected.assignedUserId ? (selected.assignedUserTcKimlik || "Eksik") : "-"}
+                      {selected.assignedDisplayTcKimlik || selected.assignedUserTcKimlik || "Eksik"}
                     </div>
                   </div>
                   <div>
                     <div className="text-slate-500">Sertifika</div>
                     <div className="mt-1 font-semibold text-slate-800">
-                      {selected.assignedUserId ? (selected.assignedUserSertifikaNoVar ? "Kayıtlı" : "Eksik") : "-"}
+                      {isUzmanMode ? (selected.assignedUserId ? (selected.assignedUserSertifikaNoVar ? "Kayıtlı" : "Eksik") : "-") : "Panel dışı"}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 text-xs font-semibold text-slate-700">
-                    Bu Görev İçin Kullanıcı Ata
-                  </div>
-                  <select
-                    value={selected.assignedUserId || ""}
-                    onChange={(event) => assignUser(event.target.value)}
-                    disabled={saving || candidateUsers.length === 0}
-                    className={inputClass}
-                  >
-                    <option value="">
-                      {candidateUsers.length === 0 ? "Uygun kullanıcı yok" : "Kullanıcı seçiniz"}
-                    </option>
-                    {candidateUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} {user.tcKimlik ? `- ${user.tcKimlik}` : ""}
+                {isUzmanMode ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                      Bu Görev İçin Kullanıcı Ata
+                    </div>
+                    <select
+                      value={selected.assignedUserId || ""}
+                      onChange={(event) => assignUser(event.target.value)}
+                      disabled={saving || candidateUsers.length === 0}
+                      className={inputClass}
+                    >
+                      <option value="">
+                        {candidateUsers.length === 0 ? "Uygun kullanıcı yok" : "Kullanıcı seçiniz"}
                       </option>
-                    ))}
-                  </select>
-                </div>
+                      {candidateUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} {user.tcKimlik ? `- ${user.tcKimlik}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-700">
+                      {selectedGorevLabel} Bilgisi
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        value={manualAssigneeForm.adSoyad}
+                        onChange={(event) =>
+                          setManualAssigneeForm((form) => ({
+                            ...form,
+                            adSoyad: event.target.value.toLocaleUpperCase("tr-TR"),
+                          }))
+                        }
+                        placeholder="AD SOYAD"
+                        className={inputClass}
+                      />
+                      <input
+                        value={manualAssigneeForm.tcKimlik}
+                        onChange={(event) =>
+                          setManualAssigneeForm((form) => ({
+                            ...form,
+                            tcKimlik: event.target.value.replace(/\D/g, "").slice(0, 11),
+                          }))
+                        }
+                        inputMode="numeric"
+                        maxLength={11}
+                        placeholder="TC KİMLİK NO"
+                        className={inputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={saveManualAssignee}
+                        disabled={saving || !manualAssigneeForm.adSoyad.trim() || manualAssigneeForm.tcKimlik.replace(/\D/g, "").length !== 11}
+                        className={`${btn.base} ${btn.primary} w-full`}
+                      >
+                        Bilgileri Kaydet
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
@@ -527,15 +611,21 @@ export default function IsgKatipEntegrasyon() {
                   Atama Sürecini Başlat
                 </button>
 
-                {!selected.assignedUserId && (
+                {isUzmanMode && !selected.assignedUserId && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
-                    Bu firma için önce geçerli bir ticari kullanıcı atanmalıdır.
+                    Bu firma için önce iş güvenliği uzmanı seçilmelidir.
                   </div>
                 )}
 
-                {selected.assignedUserId && !selected.assignedUserTcKimlikVar && (
+                {isUzmanMode && selected.assignedUserId && !selected.assignedUserTcKimlikVar && (
                   <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                     Atama başlatmak için atanan kullanıcının kişisel bilgilerinde TC kimlik numarası kayıtlı olmalıdır.
+                  </div>
+                )}
+
+                {!isUzmanMode && !selected.assignedUserTcKimlikVar && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                    Bu görev için ad soyad ve 11 haneli TC kimlik kaydedilmelidir.
                   </div>
                 )}
 

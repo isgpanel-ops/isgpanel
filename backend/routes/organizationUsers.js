@@ -4,11 +4,8 @@ const router = express.Router();
 const User = require("../models/User");
 const Organization = require("../models/Organization");
 const bcrypt = require("bcryptjs");
-const {
-  sendUserPasswordMail,
-} = require("../services/mailService");
+const { sendUserPasswordMail } = require("../services/mailService");
 
-// Notification service (yedekli require)
 function safeRequire(paths) {
   for (const p of paths) {
     try {
@@ -29,16 +26,9 @@ const { createNotification } =
     "../services/notifications/notificationService.js",
   ]) || {};
 
-// Türkçe uppercase helper
-const upTR = (str = "") => str.toLocaleUpperCase("tr-TR");
+const upTR = (str = "") => String(str || "").toLocaleUpperCase("tr-TR");
+const activeUserRoles = ["ticari_user"];
 
-
-
-
-// ======================================================
-// 🔹 ORGANİZASYON KULLANICILARINI LİSTELE
-// GET /api/org/:orgId/users
-// ======================================================
 router.get("/:orgId/users", async (req, res) => {
   try {
     const { orgId } = req.params;
@@ -69,11 +59,6 @@ router.get("/:orgId/users", async (req, res) => {
   }
 });
 
-
-// ======================================================
-// 🔹 YENİ UZMAN KULLANICI EKLE
-// POST /api/org/:orgId/users
-// ======================================================
 router.post("/:orgId/users", async (req, res) => {
   try {
     const { orgId } = req.params;
@@ -86,15 +71,13 @@ router.post("/:orgId/users", async (req, res) => {
 
     const existing = await User.findOne({ email });
     if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Bu email ile sistemde zaten kullanıcı var." });
+      return res.status(400).json({ message: "Bu email ile sistemde zaten kullanıcı var." });
     }
 
     const currentUserCount = await User.countDocuments({
-  organization: orgId,
-  role: { $nin: ["ticari_admin", "admin"] },
-});
+      organization: orgId,
+      role: { $nin: ["ticari_admin", "admin"] },
+    });
 
     if (currentUserCount >= org.userLimit) {
       return res.status(400).json({
@@ -102,81 +85,72 @@ router.post("/:orgId/users", async (req, res) => {
       });
     }
 
-  const plainPassword = String(password || "123456").trim();
-const hashedPassword = await bcrypt.hash(plainPassword, 10);
+    const plainPassword = String(password || "123456").trim();
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+    const safeRole = activeUserRoles.includes(role) ? role : "ticari_user";
 
-const allowedRoles = ["ticari_user", "isyeri_hekimi", "diger_saglik_personeli"];
+    const user = await User.create({
+      name: upTR(name),
+      email,
+      password: hashedPassword,
+      role: safeRole,
+      organization: org._id,
+      planCode: org.planCode,
+      subscriptionEnd: org.subscriptionEnd,
+      personal: {
+        tcKimlik: String(tcKimlik || "").replace(/\D/g, ""),
+      },
+    });
 
-const user = await User.create({
-  name: upTR(name),
-  email,
-  password: hashedPassword,
-  role: allowedRoles.includes(role) ? role : "ticari_user",
-  organization: org._id,
-  planCode: org.planCode,
-  subscriptionEnd: org.subscriptionEnd,
-  personal: {
-    tcKimlik: String(tcKimlik || "").replace(/\D/g, ""),
-  },
-});
+    if (createNotification) {
+      await createNotification({
+        userId: user._id,
+        type: "event",
+        module: "genel",
+        title: "Bilgiler eksik",
+        message:
+          "Paneli tam verimli kullanabilmek için kişisel bilgileriniz ve kurumsal bilgilerinizi doldurunuz.",
+        severity: "info",
+        link: "",
+        dueDate: new Date(),
+        key: `welcome_remind_event:${String(user._id)}:v1`,
+      });
+    }
 
-// ✅ Anlık "Bilgiler eksik" bildirimi (ticari_user)
-if (createNotification) {
-  await createNotification({
-    userId: user._id,
-    type: "event",
-    module: "genel",
-    title: "Bilgiler eksik",
-    message:
-      "Paneli tam verimli kullanabilmek için kişisel bilgileriniz ve kurumsal bilgilerinizi doldurunuz.",
-    severity: "info",
-    link: "",
-    dueDate: new Date(),
-    key: `welcome_remind_event:${String(user._id)}:v1`,
-  });
-}
+    try {
+      await sendUserPasswordMail({
+        to: user.email,
+        fullName: user.name,
+        companyName: org.name,
+        password: plainPassword,
+        panelLink:
+          process.env.APP_URL ||
+          process.env.FRONTEND_URL ||
+          process.env.PUBLIC_APP_URL ||
+          "https://www.isgpanel.tr",
+        mode: "created",
+      });
+    } catch (mailErr) {
+      console.error("USER CREATED MAIL ERROR:", mailErr);
+    }
 
-// ✅ kullanıcı oluşturulduktan sonra şifre maili gönder
-try {
-  await sendUserPasswordMail({
-    to: user.email,
-    fullName: user.name,
-    companyName: org.name,
-    password: plainPassword,
-    panelLink:
-      process.env.APP_URL ||
-      process.env.FRONTEND_URL ||
-      process.env.PUBLIC_APP_URL ||
-      "https://www.isgpanel.tr",
-    mode: "created",
-  });
-} catch (mailErr) {
-  console.error("USER CREATED MAIL ERROR:", mailErr);
-}
-
-res.status(201).json({
-  message: "Kullanıcı başarıyla eklendi",
-  user: {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    personal: user.personal,
-    createdAt: user.createdAt,
-  },
-}); 
-
+    res.status(201).json({
+      message: "Kullanıcı başarıyla eklendi",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        personal: user.personal,
+        createdAt: user.createdAt,
+      },
+    });
   } catch (err) {
     console.error("ORG ADD USER ERROR:", err);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
 
-
-// ======================================================
-// 🔹 KULLANICI GÜNCELLE
-// PUT /api/org/:orgId/users/:userId
-// ======================================================
 router.put("/:orgId/users/:userId", async (req, res) => {
   try {
     const { orgId, userId } = req.params;
@@ -189,57 +163,51 @@ router.put("/:orgId/users/:userId", async (req, res) => {
 
     if (name) user.name = upTR(name);
     if (email) user.email = email;
-    if (role) user.role = role;
+    if (role && activeUserRoles.includes(role)) user.role = role;
     if (tcKimlik !== undefined) {
       user.personal = user.personal || {};
       user.personal.tcKimlik = String(tcKimlik || "").replace(/\D/g, "");
     }
 
-   let renewedPlainPassword = "";
+    let renewedPlainPassword = "";
 
-if (password && String(password).trim()) {
-  renewedPlainPassword = String(password).trim();
-  user.password = await bcrypt.hash(renewedPlainPassword, 10);
-}
+    if (password && String(password).trim()) {
+      renewedPlainPassword = String(password).trim();
+      user.password = await bcrypt.hash(renewedPlainPassword, 10);
+    }
 
-await user.save();
+    await user.save();
 
-// ✅ sadece şifre yenilendiyse mail gönder
-if (renewedPlainPassword) {
-  try {
-    const org = await Organization.findById(orgId).select("name");
-    await sendUserPasswordMail({
-      to: user.email,
-      fullName: user.name,
-      companyName: org?.name || "",
-      password: renewedPlainPassword,
-      panelLink:
-        process.env.APP_URL ||
-        process.env.FRONTEND_URL ||
-        process.env.PUBLIC_APP_URL ||
-        "https://www.isgpanel.tr",
-      mode: "renewed",
+    if (renewedPlainPassword) {
+      try {
+        const org = await Organization.findById(orgId).select("name");
+        await sendUserPasswordMail({
+          to: user.email,
+          fullName: user.name,
+          companyName: org?.name || "",
+          password: renewedPlainPassword,
+          panelLink:
+            process.env.APP_URL ||
+            process.env.FRONTEND_URL ||
+            process.env.PUBLIC_APP_URL ||
+            "https://www.isgpanel.tr",
+          mode: "renewed",
+        });
+      } catch (mailErr) {
+        console.error("USER PASSWORD RENEW MAIL ERROR:", mailErr);
+      }
+    }
+
+    res.json({
+      message: "Kullanıcı güncellendi",
+      user,
     });
-  } catch (mailErr) {
-    console.error("USER PASSWORD RENEW MAIL ERROR:", mailErr);
-  }
-}
-
-res.json({
-  message: "Kullanıcı güncellendi",
-  user,
-});
   } catch (err) {
     console.error("ORG UPDATE USER ERROR:", err);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
 
-
-// ======================================================
-// 🔹 KULLANICI SİL
-// DELETE /api/org/:orgId/users/:userId
-// ======================================================
 router.delete("/:orgId/users/:userId", async (req, res) => {
   try {
     const { orgId, userId } = req.params;
@@ -249,11 +217,8 @@ router.delete("/:orgId/users/:userId", async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    // ❌ ticari_admin ve admin asla silinmesin
     if (user.role === "ticari_admin" || user.role === "admin") {
-      return res
-        .status(400)
-        .json({ message: "Ticari admin veya admin kullanıcı silinemez." });
+      return res.status(400).json({ message: "Ticari admin veya admin kullanıcı silinemez." });
     }
 
     await user.deleteOne();
