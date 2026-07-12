@@ -1,5 +1,6 @@
 const apiBaseInput = document.getElementById("apiBase");
 const tokenInput = document.getElementById("token");
+const detectPanelBtn = document.getElementById("detectPanelBtn");
 const syncBtn = document.getElementById("syncBtn");
 const statusEl = document.getElementById("status");
 
@@ -29,6 +30,42 @@ async function readActiveIsgKatipPage(tab) {
   }
 }
 
+async function readPanelToken(tab) {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const directKeys = ["token", "isgpanelToken", "authToken", "accessToken", "jwt"];
+      const readDirect = (storage) => {
+        for (const key of directKeys) {
+          const value = storage.getItem(key);
+          if (value) return value;
+        }
+        return "";
+      };
+      const readNamespaced = (storage) => {
+        for (let i = 0; i < storage.length; i += 1) {
+          const key = storage.key(i);
+          if (!key) continue;
+          if (key.endsWith(":token") || key.endsWith(":authToken") || key.endsWith(":accessToken")) {
+            const value = storage.getItem(key);
+            if (value) return value;
+          }
+        }
+        return "";
+      };
+
+      return (
+        readDirect(window.sessionStorage) ||
+        readDirect(window.localStorage) ||
+        readNamespaced(window.sessionStorage) ||
+        readNamespaced(window.localStorage)
+      );
+    },
+  });
+
+  return String(result?.result || "").trim();
+}
+
 function roleSummary(rows) {
   const labels = {
     is_guvenligi_uzmani: "Uzman",
@@ -48,6 +85,34 @@ function roleSummary(rows) {
 chrome.storage.local.get(["apiBase", "token"], (stored) => {
   if (stored.apiBase) apiBaseInput.value = stored.apiBase;
   if (stored.token) tokenInput.value = stored.token;
+});
+
+detectPanelBtn.addEventListener("click", async () => {
+  detectPanelBtn.disabled = true;
+  setStatus("Panel oturumu aranıyor...");
+
+  try {
+    const tab = await getActiveTab();
+    if (!tab?.url || !tab.url.includes("isgpanel.tr")) {
+      throw new Error("Önce giriş yapılmış İSG Panel sekmesini açın.");
+    }
+
+    const token = await readPanelToken(tab);
+    if (!token) {
+      throw new Error("Bu sekmede panel oturumu bulunamadı. İSG Panel'e tekrar giriş yapıp deneyin.");
+    }
+
+    tokenInput.value = token;
+    await chrome.storage.local.set({
+      apiBase: normalizeApiBase(apiBaseInput.value),
+      token,
+    });
+    setStatus("Panel oturumu tanındı. Şimdi İSG-KATİP sekmesinde senkronize edebilirsiniz.");
+  } catch (error) {
+    setStatus(error?.message || "Panel oturumu tanınamadı.", true);
+  } finally {
+    detectPanelBtn.disabled = false;
+  }
 });
 
 syncBtn.addEventListener("click", async () => {
