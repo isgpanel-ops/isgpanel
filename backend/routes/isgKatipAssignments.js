@@ -5,6 +5,7 @@ const Firma = require("../models/Firma");
 const FirmUser = require("../models/FirmUser");
 const User = require("../models/User");
 const IsgKatipAssignment = require("../models/IsgKatipAssignment");
+const IsgKatipPerson = require("../models/IsgKatipPerson");
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ const STATUS_LABELS = {
 };
 
 const GOREV_TURLERI = ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"];
+const PERSON_GOREV_TURLERI = ["isyeri_hekimi", "diger_saglik_personeli"];
 
 function roleOf(user) {
   return String(user?.role || "").toLowerCase().trim();
@@ -85,6 +87,31 @@ function categoryFor(item) {
   return "atama_yok";
 }
 
+function uzmanLinkFilter(extra = {}) {
+  return {
+    ...extra,
+    $or: [{ gorevTuru: "is_guvenligi_uzmani" }, { gorevTuru: { $exists: false } }],
+  };
+}
+
+async function savedPeople(orgId, gorevTuru) {
+  if (!PERSON_GOREV_TURLERI.includes(gorevTuru)) return [];
+  const people = await IsgKatipPerson.find({
+    organization: orgId,
+    gorevTuru,
+    isActive: true,
+  })
+    .sort({ adSoyad: 1 })
+    .lean();
+
+  return people.map((person) => ({
+    id: String(person._id),
+    adSoyad: person.adSoyad || "",
+    tcKimlik: person.tcKimlik || "",
+    gorevTuru: person.gorevTuru,
+  }));
+}
+
 async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
   const normalizedGorevTuru = normalizeGorevTuru(gorevTuru);
   const uzmanMode = isUzmanGorevi(normalizedGorevTuru);
@@ -93,11 +120,13 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
   const firmIds = firms.map((firm) => firm._id);
 
   const activeLinks = uzmanMode
-    ? await FirmUser.find({
-        organization: orgId,
-        firmId: { $in: firmIds },
-        isActive: true,
-      }).lean()
+    ? await FirmUser.find(
+        uzmanLinkFilter({
+          organization: orgId,
+          firmId: { $in: firmIds },
+          isActive: true,
+        })
+      ).lean()
     : [];
 
   const assignments = await IsgKatipAssignment.find({
@@ -120,10 +149,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     .lean();
 
   const candidateUsers = uzmanMode
-    ? await User.find({
-        organization: orgId,
-        role: "ticari_user",
-      })
+    ? await User.find({ organization: orgId, role: "ticari_user" })
         .select("name email role personal.tcKimlik personal.sertifikaNo")
         .sort({ name: 1 })
         .lean()
@@ -151,8 +177,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     const link = uzmanMode
       ? firmLinks.find((candidate) => {
           const candidateUser = userMap.get(String(candidate.userId));
-          const linkGorevTuru = candidate.gorevTuru || "is_guvenligi_uzmani";
-          return linkGorevTuru === "is_guvenligi_uzmani" && isAssignableUser(candidateUser);
+          return isAssignableUser(candidateUser);
         }) || null
       : null;
 
@@ -161,9 +186,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     const isValidPanelAssignee = rawAssignedUser && isAssignableUser(rawAssignedUser);
     const assignedUserId = isValidPanelAssignee ? rawAssignedUserId : null;
     const assignedUser = assignedUserId ? rawAssignedUser : null;
-    const assignedName = uzmanMode
-      ? assignedUser?.name || assignedUser?.email || ""
-      : manualName;
+    const assignedName = uzmanMode ? assignedUser?.name || assignedUser?.email || "" : manualName;
     const assignedTc = uzmanMode ? assignedUser?.personal?.tcKimlik || "" : manualTc;
     const hasAssignee = uzmanMode ? Boolean(assignedUserId) : hasManualAssignee;
     const status = assignment?.isgKatipStatus || "kontrol_edilmedi";
@@ -185,7 +208,11 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
       assignedUserRole: assignedUser?.role || "",
       assignedUserTcKimlik: assignedTc,
       assignedDisplayTcKimlik: assignedTc,
-      assignedUserTcKimlikVar: uzmanMode ? (assignedUser ? hasValidTc(assignedUser) : false) : hasValidTcValue(manualTc),
+      assignedUserTcKimlikVar: uzmanMode
+        ? assignedUser
+          ? hasValidTc(assignedUser)
+          : false
+        : hasValidTcValue(manualTc),
       assignedUserSertifikaNoVar: uzmanMode ? Boolean(assignedUser?.personal?.sertifikaNo) : true,
       manualAssigneeName: manualName,
       manualAssigneeTcKimlik: manualTc,
@@ -230,6 +257,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     lastSyncAt,
     statusLabels: STATUS_LABELS,
     gorevTuru: normalizedGorevTuru,
+    savedPeople: await savedPeople(orgId, normalizedGorevTuru),
     candidateUsers: candidateUsers.map((user) => ({
       id: String(user._id),
       name: user.name || user.email || "",
@@ -240,6 +268,46 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
       sertifikaNoVar: Boolean(user.personal?.sertifikaNo),
     })),
   };
+}
+
+async function touchSyncForRole(orgId, gorevTuru, actorId) {
+  const now = new Date();
+  const overviewBefore = await buildOverview(orgId, gorevTuru);
+  const assignedItems = overviewBefore.items.filter((item) => item.hasAssignee);
+
+  if (assignedItems.length > 0) {
+    await IsgKatipAssignment.bulkWrite(
+      assignedItems.map((item) => ({
+        updateOne: {
+          filter: { organization: orgId, firmaId: item.firmaId, gorevTuru },
+          update: {
+            $set: {
+              ...(item.assignedUserId ? { assignedUserId: item.assignedUserId } : {}),
+              lastSyncAt: now,
+              lastError: "",
+            },
+            $setOnInsert: {
+              organization: orgId,
+              firmaId: item.firmaId,
+              gorevTuru,
+              isgKatipStatus: "atama_yok",
+            },
+            $push: {
+              logs: {
+                action: "manual_sync",
+                message: "Manuel senkronizasyon kontrolü çalıştırıldı",
+                by: actorId || null,
+                at: now,
+              },
+            },
+          },
+          upsert: true,
+        },
+      }))
+    );
+  }
+
+  return { gorevTuru, touched: assignedItems.length, now };
 }
 
 router.get("/overview", async (req, res) => {
@@ -260,52 +328,64 @@ router.post("/sync", async (req, res) => {
     const orgId = ensureAdmin(req, res);
     if (!orgId) return;
 
-    const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru || req.query?.gorevTuru);
-    const now = new Date();
-    const overviewBefore = await buildOverview(orgId, gorevTuru);
-    const assignedItems = overviewBefore.items.filter((item) => item.hasAssignee);
+    const requestedRole = req.body?.gorevTuru || req.query?.gorevTuru;
+    const currentRole = normalizeGorevTuru(requestedRole);
+    const rolesToSync = req.body?.allRoles === true ? GOREV_TURLERI : [currentRole];
+    const actorId = req.user._id || req.user.id || null;
 
-    if (assignedItems.length > 0) {
-      await IsgKatipAssignment.bulkWrite(
-        assignedItems.map((item) => ({
-          updateOne: {
-            filter: {
-              organization: orgId,
-              firmaId: item.firmaId,
-              gorevTuru,
-            },
-            update: {
-              $set: {
-                ...(item.assignedUserId ? { assignedUserId: item.assignedUserId } : {}),
-                lastSyncAt: now,
-                lastError: "",
-              },
-              $setOnInsert: {
-                organization: orgId,
-                firmaId: item.firmaId,
-                gorevTuru,
-                isgKatipStatus: "atama_yok",
-              },
-              $push: {
-                logs: {
-                  action: "manual_sync",
-                  message: "Manuel senkronizasyon kontrolü çalıştırıldı",
-                  by: req.user._id || req.user.id || null,
-                  at: now,
-                },
-              },
-            },
-            upsert: true,
-          },
-        }))
-      );
+    const roleSummaries = [];
+    for (const role of rolesToSync) {
+      roleSummaries.push(await touchSyncForRole(orgId, role, actorId));
     }
 
-    const overview = await buildOverview(orgId, gorevTuru);
-    return res.json({ ok: true, ...overview, lastSyncAt: overview.lastSyncAt || now });
+    const overview = await buildOverview(orgId, currentRole);
+    return res.json({
+      ok: true,
+      ...overview,
+      roleSummaries,
+      lastSyncAt: overview.lastSyncAt || new Date(),
+    });
   } catch (err) {
     console.error("ISG-KATIP sync hata:", err);
     return res.status(500).json({ message: "Senkronizasyon başlatılamadı" });
+  }
+});
+
+router.get("/people", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const gorevTuru = normalizeGorevTuru(req.query?.gorevTuru);
+    return res.json({ people: await savedPeople(orgId, gorevTuru) });
+  } catch (err) {
+    console.error("ISG-KATIP people hata:", err);
+    return res.status(500).json({ message: "Kayıtlı kişiler alınamadı" });
+  }
+});
+
+router.delete("/people/:personId", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const { personId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(String(personId))) {
+      return res.status(400).json({ message: "Kişi bilgisi geçersiz" });
+    }
+
+    const person = await IsgKatipPerson.findOneAndUpdate(
+      { _id: personId, organization: orgId },
+      { $set: { isActive: false } },
+      { new: true }
+    ).lean();
+
+    if (!person) return res.status(404).json({ message: "Kayıtlı kişi bulunamadı" });
+
+    return res.json({ ok: true, people: await savedPeople(orgId, person.gorevTuru) });
+  } catch (err) {
+    console.error("ISG-KATIP person delete hata:", err);
+    return res.status(500).json({ message: "Kayıtlı kişi silinemedi" });
   }
 });
 
@@ -431,14 +511,10 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       return res.status(400).json({ message: "Seçilen kullanıcı iş güvenliği uzmanı değil" });
     }
 
-    const sameRoleFilter = {
-      organization: orgId,
-      firmId: firmaId,
-      isActive: true,
-      $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
-    };
-
-    await FirmUser.updateMany(sameRoleFilter, { $set: { isActive: false } });
+    await FirmUser.updateMany(
+      uzmanLinkFilter({ organization: orgId, firmId: firmaId, isActive: true }),
+      { $set: { isActive: false } }
+    );
 
     await FirmUser.updateOne(
       { organization: orgId, firmId: firmaId, userId },
@@ -514,6 +590,20 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
     const firm = await Firma.findOne({ _id: firmaId, organization: orgId }).select("_id").lean();
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
 
+    await IsgKatipPerson.findOneAndUpdate(
+      { organization: orgId, gorevTuru, tcKimlik },
+      {
+        $set: {
+          organization: orgId,
+          gorevTuru,
+          adSoyad,
+          tcKimlik,
+          isActive: true,
+        },
+      },
+      { upsert: true }
+    );
+
     const now = new Date();
     await IsgKatipAssignment.findOneAndUpdate(
       { organization: orgId, firmaId, gorevTuru },
@@ -568,12 +658,13 @@ router.patch("/:firmaId/status", async (req, res) => {
 
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
     const activeLink = isUzmanGorevi(gorevTuru)
-      ? await FirmUser.findOne({
-          organization: orgId,
-          firmId: firmaId,
-          isActive: true,
-          $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
-        }).lean()
+      ? await FirmUser.findOne(
+          uzmanLinkFilter({
+            organization: orgId,
+            firmId: firmaId,
+            isActive: true,
+          })
+        ).lean()
       : null;
 
     const now = new Date();
@@ -629,12 +720,13 @@ router.post("/:firmaId/start", async (req, res) => {
     const now = new Date();
 
     if (isUzmanGorevi(gorevTuru)) {
-      const activeLinks = await FirmUser.find({
-        organization: orgId,
-        firmId: firmaId,
-        isActive: true,
-        $or: [{ gorevTuru }, { gorevTuru: { $exists: false } }],
-      }).lean();
+      const activeLinks = await FirmUser.find(
+        uzmanLinkFilter({
+          organization: orgId,
+          firmId: firmaId,
+          isActive: true,
+        })
+      ).lean();
 
       const users = await User.find({
         _id: { $in: activeLinks.map((link) => link.userId) },

@@ -124,6 +124,7 @@ export default function IsgKatipEntegrasyon() {
   const [items, setItems] = useState([]);
   const [counts, setCounts] = useState({});
   const [candidateUsers, setCandidateUsers] = useState([]);
+  const [savedPeople, setSavedPeople] = useState([]);
   const [gorevTuru, setGorevTuru] = useState("is_guvenligi_uzmani");
   const [activeTab, setActiveTab] = useState("atanmamis");
   const [query, setQuery] = useState("");
@@ -149,6 +150,7 @@ export default function IsgKatipEntegrasyon() {
       setItems(nextItems);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || null);
       setSelected((prev) => {
         if (prev && nextItems.some((item) => item.id === prev.id && item.category === activeTab)) {
@@ -204,12 +206,13 @@ export default function IsgKatipEntegrasyon() {
     try {
       const { data } = await axios.post(
         "/api/isg-katip/sync",
-        { gorevTuru },
+        { gorevTuru, allRoles: true },
         { headers: tokenHeader() }
       );
       setItems(Array.isArray(data?.items) ? data.items : []);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || new Date().toISOString());
     } catch (err) {
       setError(err?.response?.data?.message || "Senkronizasyon çalıştırılamadı.");
@@ -268,6 +271,7 @@ export default function IsgKatipEntegrasyon() {
       setItems(nextItems);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setSelected(nextItems.find((item) => item.id === selected.id) || null);
     } catch (err) {
@@ -295,10 +299,36 @@ export default function IsgKatipEntegrasyon() {
       setItems(nextItems);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setSelected(nextItems.find((item) => item.id === selected.id) || null);
     } catch (err) {
       setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectSavedPerson = (personId) => {
+    const person = savedPeople.find((item) => item.id === personId);
+    if (!person) return;
+    setManualAssigneeForm({
+      adSoyad: person.adSoyad || "",
+      tcKimlik: person.tcKimlik || "",
+    });
+  };
+
+  const deleteSavedPerson = async (personId) => {
+    if (!personId) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { data } = await axios.delete(`/api/isg-katip/people/${personId}`, {
+        headers: tokenHeader(),
+      });
+      setSavedPeople(Array.isArray(data?.people) ? data.people : []);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Kayıtlı kişi silinemedi.");
     } finally {
       setSaving(false);
     }
@@ -414,7 +444,7 @@ export default function IsgKatipEntegrasyon() {
                       {isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}
                     </th>
                     <th className="px-3 py-2 text-left font-semibold border-b">İSG-KATİP Durumu</th>
-                    <th className="px-3 py-2 text-right font-semibold border-b">İşlem</th>
+                    <th className="px-3 py-2 text-right font-semibold border-b">Yönetim</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -441,20 +471,9 @@ export default function IsgKatipEntegrasyon() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelected(item);
-                            startAssignment(item);
-                          }}
-                          disabled={saving || !item.hasAssignee || item.assignedUserTcKimlikVar === false}
-                          className={`${btn.base} ${btn.success} !px-2`}
-                          title={!item.assignedUserTcKimlikVar ? "Görev için TC kimlik numarası eksik" : "Atama sürecini başlat"}
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                          Başlat
-                        </button>
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          Detaydan yönet
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -546,6 +565,41 @@ export default function IsgKatipEntegrasyon() {
                       {selectedGorevLabel} Bilgisi
                     </div>
                     <div className="space-y-2">
+                      {savedPeople.length > 0 && (
+                        <div className="rounded-lg border border-slate-200 bg-white p-2">
+                          <div className="mb-1 text-[11px] font-semibold text-slate-600">
+                            Kayıtlı Kişiler
+                          </div>
+                          <div className="space-y-1">
+                            {savedPeople.map((person) => (
+                              <div
+                                key={person.id}
+                                className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-1"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => selectSavedPerson(person.id)}
+                                  className="min-w-0 flex-1 text-left"
+                                  title="Bu kişiyi forma aktar"
+                                >
+                                  <span className="block truncate text-[11px] font-semibold text-slate-800">
+                                    {person.adSoyad}
+                                  </span>
+                                  <span className="block text-[10px] text-slate-500">{person.tcKimlik}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteSavedPerson(person.id)}
+                                  disabled={saving}
+                                  className="rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <input
                         value={manualAssigneeForm.adSoyad}
                         onChange={(event) =>

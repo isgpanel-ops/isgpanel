@@ -3,6 +3,8 @@ const router = express.Router();
 
 const User = require("../models/User");
 const Organization = require("../models/Organization");
+const FirmUser = require("../models/FirmUser");
+const IsgKatipAssignment = require("../models/IsgKatipAssignment");
 const bcrypt = require("bcryptjs");
 const { sendUserPasswordMail } = require("../services/mailService");
 
@@ -220,6 +222,33 @@ router.delete("/:orgId/users/:userId", async (req, res) => {
     if (user.role === "ticari_admin" || user.role === "admin") {
       return res.status(400).json({ message: "Ticari admin veya admin kullanıcı silinemez." });
     }
+
+    const now = new Date();
+
+    await FirmUser.updateMany(
+      { organization: orgId, userId: user._id, isActive: true },
+      { $set: { isActive: false } }
+    );
+
+    await IsgKatipAssignment.updateMany(
+      { organization: orgId, assignedUserId: user._id },
+      {
+        $set: {
+          assignedUserId: null,
+          isgKatipStatus: "kontrol_edilmedi",
+          lastSyncAt: now,
+          lastError: "Atanan kullanıcı silindi",
+        },
+        $push: {
+          logs: {
+            action: "user_deleted_assignment_reset",
+            message: "Atanan kullanıcı silindiği için görev yeniden atama bekliyor",
+            by: req.user?._id || req.user?.id || null,
+            at: now,
+          },
+        },
+      }
+    );
 
     await user.deleteOne();
 

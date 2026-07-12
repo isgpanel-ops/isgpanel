@@ -82,7 +82,7 @@ export default function AdminAtamaBekleyen() {
       setFirmsLoading(true);
       setFirmsError("");
 
-      const res = await axios.get(`${API_BASE}/api/firma`, {
+      const res = await axios.get(`${API_BASE}/api/assignments/admin/unassigned-firms`, {
         headers: { Authorization: token ? `Bearer ${token}` : "" },
       });
 
@@ -163,12 +163,8 @@ export default function AdminAtamaBekleyen() {
   // - atanmisKullanici yoksa
   // - atanmisKullanici var ama artık geçerli uzman değilse (silindi / rol değişti)
   const atamaBekleyen = useMemo(() => {
-    return (firmalar || []).filter((f) => {
-      const assigned = (f.atanmisKullanici || "").toString();
-      if (!assigned) return true;
-      return !expertById.has(assigned);
-    });
-  }, [firmalar, expertById]);
+    return firmalar || [];
+  }, [firmalar]);
 
   // ============ UI ============ //
   const [q, setQ] = useState("");

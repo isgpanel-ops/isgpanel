@@ -10,11 +10,11 @@ const router = express.Router();
 function roleOf(u) {
   return String(u?.role || "").toLowerCase().trim();
 }
+
 function getOrgId(u) {
   return u?.organization || u?.organizationId || null;
 }
 
-// ---- auth middleware (bozmadan)
 async function auth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
@@ -36,14 +36,21 @@ async function auth(req, res, next) {
   }
 }
 
-/**
- * ✅ Admin firmaları kullanıcıya ata/değiştir
- * POST /api/admin/assign-firms
- * body: { userId, firmIds: [] }
- *
- * KURAL: Bir firmada tek aktif kullanıcı olsun.
- * Yeni kullanıcıya atanırken aynı firmadaki diğer aktif atamalar pasife çekilir.
- */
+function uzmanLinkFilter(extra = {}) {
+  return {
+    ...extra,
+    $or: [{ gorevTuru: "is_guvenligi_uzmani" }, { gorevTuru: { $exists: false } }],
+  };
+}
+
+async function validUzmanMap(activeLinks) {
+  const userIds = [...new Set((activeLinks || []).map((x) => String(x.userId)).filter(Boolean))];
+  const users = await User.find({ _id: { $in: userIds }, role: "ticari_user" })
+    .select("name email")
+    .lean();
+  return new Map(users.map((u) => [String(u._id), u]));
+}
+
 router.post("/admin/assign-firms", auth, async (req, res) => {
   try {
     const admin = req.user;
@@ -59,34 +66,41 @@ router.post("/admin/assign-firms", auth, async (req, res) => {
       return res.status(400).json({ message: "userId ve firmIds zorunlu" });
     }
 
-    // hedef kullanıcı aynı org içinde mi?
     const target = await User.findById(userId).lean();
     if (!target) return res.status(404).json({ message: "Kullanıcı bulunamadı" });
     if (String(getOrgId(target)) !== String(orgId)) {
       return res.status(403).json({ message: "Kullanıcı bu organizasyona ait değil" });
     }
+    if (roleOf(target) !== "ticari_user") {
+      return res.status(400).json({ message: "Sadece iş güvenliği uzmanı atanabilir" });
+    }
 
-    // firmalar org’a mı ait?
     const firms = await Firma.find({ _id: { $in: firmIds }, organization: orgId }).lean();
     if (firms.length !== firmIds.length) {
       return res.status(400).json({ message: "Bazı firmalar organizasyona ait değil" });
     }
 
     for (const fid of firmIds) {
-      // 1) o firmadaki tüm aktif atamaları pasife çek
       await FirmUser.updateMany(
-        { organization: orgId, firmId: fid, isActive: true },
+        uzmanLinkFilter({ organization: orgId, firmId: fid, isActive: true }),
         { $set: { isActive: false } }
       );
 
-      // 2) yeni kullanıcıyı aktif ata (upsert)
       await FirmUser.updateOne(
-        { organization: orgId, firmId: fid, userId: userId },
-        { $set: { isActive: true, assignedBy: admin._id } },
+        { organization: orgId, firmId: fid, userId },
+        {
+          $set: {
+            organization: orgId,
+            firmId: fid,
+            userId,
+            gorevTuru: "is_guvenligi_uzmani",
+            isActive: true,
+            assignedBy: admin._id,
+          },
+        },
         { upsert: true }
       );
 
-      // 3) firmayı aktif yap (opsiyonel)
       await Firma.updateOne({ _id: fid }, { $set: { durum: "Aktif" } });
     }
 
@@ -97,19 +111,13 @@ router.post("/admin/assign-firms", auth, async (req, res) => {
   }
 });
 
-/**
- * ✅ Ticari kullanıcıya düşen firmalar
- * GET /api/me/firms
- */
 router.get("/me/firms", auth, async (req, res) => {
   try {
     const u = req.user;
     const orgId = getOrgId(u);
 
-    // bireysel ise legacy davranış: userId ile firmalar
     if (roleOf(u) === "bireysel") {
       const firms = await Firma.find({ userId: u._id }).sort({ firmaAdi: 1 }).lean();
-      // UI uyumu: sgkSicilNo üret
       return res.json(
         firms.map((f) => ({
           ...f,
@@ -119,15 +127,16 @@ router.get("/me/firms", auth, async (req, res) => {
       );
     }
 
-    // ticari_user: pivot’tan çek
     if (roleOf(u) === "ticari_user") {
       if (!orgId) return res.status(400).json({ message: "Organizasyon bulunamadı" });
 
-      const links = await FirmUser.find({
-        organization: orgId,
-        userId: u._id,
-        isActive: true,
-      })
+      const links = await FirmUser.find(
+        uzmanLinkFilter({
+          organization: orgId,
+          userId: u._id,
+          isActive: true,
+        })
+      )
         .select("firmId")
         .lean();
 
@@ -145,7 +154,6 @@ router.get("/me/firms", auth, async (req, res) => {
       );
     }
 
-    // admin kendi panelinde /api/firma kullanıyor ama istersen buradan da döndürebiliriz
     return res.status(403).json({ message: "Bu endpoint kullanıcı içindir" });
   } catch (e) {
     console.error("me/firms hata:", e);
@@ -153,10 +161,6 @@ router.get("/me/firms", auth, async (req, res) => {
   }
 });
 
-/**
- * ✅ Admin panel: firmalar + atanmış kullanıcı adı
- * GET /api/admin/firms-with-assignees
- */
 router.get("/admin/firms-with-assignees", auth, async (req, res) => {
   try {
     const admin = req.user;
@@ -164,22 +168,21 @@ router.get("/admin/firms-with-assignees", auth, async (req, res) => {
 
     const orgId = getOrgId(admin);
     const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
-
     const firmIds = firms.map((f) => f._id);
 
-    const activeLinks = await FirmUser.find({
-      organization: orgId,
-      firmId: { $in: firmIds },
-      isActive: true,
-    }).lean();
+    const activeLinks = await FirmUser.find(
+      uzmanLinkFilter({
+        organization: orgId,
+        firmId: { $in: firmIds },
+        isActive: true,
+      })
+    ).lean();
 
-    const userIds = [...new Set(activeLinks.map((x) => String(x.userId)))];
-    const users = await User.find({ _id: { $in: userIds } }).select("name email").lean();
-    const userMap = new Map(users.map((u) => [String(u._id), u]));
-
+    const userMap = await validUzmanMap(activeLinks);
     const firmToUser = new Map();
-    activeLinks.forEach((l) => {
-      firmToUser.set(String(l.firmId), userMap.get(String(l.userId)) || null);
+    activeLinks.forEach((link) => {
+      const user = userMap.get(String(link.userId));
+      if (user) firmToUser.set(String(link.firmId), user);
     });
 
     return res.json(
@@ -200,30 +203,31 @@ router.get("/admin/firms-with-assignees", auth, async (req, res) => {
   }
 });
 
-/**
- * ✅ Admin panel: atanamayan firmalar (atama bekleyen)
- * GET /api/admin/unassigned-firms
- */
 router.get("/admin/unassigned-firms", auth, async (req, res) => {
   try {
     const admin = req.user;
     if (roleOf(admin) !== "ticari_admin") return res.status(403).json({ message: "Yetkisiz" });
 
     const orgId = getOrgId(admin);
-
     const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
     const firmIds = firms.map((f) => f._id);
 
-    const activeLinks = await FirmUser.find({
-      organization: orgId,
-      firmId: { $in: firmIds },
-      isActive: true,
-    })
-      .select("firmId")
+    const activeLinks = await FirmUser.find(
+      uzmanLinkFilter({
+        organization: orgId,
+        firmId: { $in: firmIds },
+        isActive: true,
+      })
+    )
+      .select("firmId userId")
       .lean();
 
-    const assignedSet = new Set(activeLinks.map((x) => String(x.firmId)));
-
+    const userMap = await validUzmanMap(activeLinks);
+    const assignedSet = new Set(
+      activeLinks
+        .filter((link) => userMap.has(String(link.userId)))
+        .map((link) => String(link.firmId))
+    );
     const unassigned = firms.filter((f) => !assignedSet.has(String(f._id)));
 
     return res.json(
