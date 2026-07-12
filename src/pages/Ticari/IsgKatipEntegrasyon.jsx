@@ -143,6 +143,7 @@ export default function IsgKatipEntegrasyon() {
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkUserId, setBulkUserId] = useState("");
+  const [pendingUserId, setPendingUserId] = useState("");
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -152,6 +153,7 @@ export default function IsgKatipEntegrasyon() {
 
   const isUzmanMode = gorevTuru === "is_guvenligi_uzmani";
   const selectedGorevLabel = gorevTurleri.find((type) => type.key === gorevTuru)?.label || "-";
+  const selectedGorevShort = gorevTurleri.find((type) => type.key === gorevTuru)?.short || "Uzman";
 
   const loadOverview = async () => {
     setError("");
@@ -260,6 +262,10 @@ export default function IsgKatipEntegrasyon() {
       tcKimlik: isBulkMode ? "" : selected?.manualAssigneeTcKimlik || "",
     });
   }, [isBulkMode, selected?.id, selected?.manualAssigneeName, selected?.manualAssigneeTcKimlik, gorevTuru]);
+
+  useEffect(() => {
+    setPendingUserId(isBulkMode ? "" : selected?.assignedUserId || "");
+  }, [isBulkMode, selected?.id, selected?.assignedUserId, gorevTuru]);
 
   const sync = async () => {
     setSaving(true);
@@ -459,6 +465,11 @@ export default function IsgKatipEntegrasyon() {
       return;
     }
     startAssignment(selected);
+  };
+
+  const handleSingleExpertPanelSave = () => {
+    if (!pendingUserId) return;
+    assignUser(pendingUserId);
   };
 
   const selectSavedPerson = (personId) => {
@@ -908,8 +919,12 @@ export default function IsgKatipEntegrasyon() {
                       Bu Görev İçin Kullanıcı Ata
                     </div>
                     <select
-                      value={selected.assignedUserId || ""}
-                      onChange={(event) => assignUser(event.target.value)}
+                      value={isPanelAssignmentTab ? pendingUserId : selected.assignedUserId || ""}
+                      onChange={(event) =>
+                        isPanelAssignmentTab
+                          ? setPendingUserId(event.target.value)
+                          : assignUser(event.target.value)
+                      }
                       disabled={saving || candidateUsers.length === 0}
                       className={inputClass}
                     >
@@ -922,6 +937,16 @@ export default function IsgKatipEntegrasyon() {
                         </option>
                       ))}
                     </select>
+                    {isPanelAssignmentTab && (
+                      <button
+                        type="button"
+                        onClick={handleSingleExpertPanelSave}
+                        disabled={saving || !pendingUserId}
+                        className={`${btn.base} ${btn.primary} mt-2 w-full`}
+                      >
+                        Panel Atamasını Kaydet
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -1017,7 +1042,7 @@ export default function IsgKatipEntegrasyon() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span>Uzman / Profesyonel Onayı</span>
+                        <span>{selectedGorevShort} Onayı</span>
                         <span className={`font-semibold ${selected.isgKatipStatus === "isveren_onayi_bekliyor" ? "text-emerald-700" : "text-amber-700"}`}>
                           {selected.isgKatipStatus === "isveren_onayi_bekliyor" ? "Onayladı" : "Onay Bekliyor"}
                         </span>
@@ -1044,7 +1069,7 @@ export default function IsgKatipEntegrasyon() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span>Uzman / Profesyonel Onayı</span>
+                        <span>{selectedGorevShort} Onayı</span>
                         <span className="font-semibold">Onayladı</span>
                       </div>
                       <div className="flex items-center justify-between">
