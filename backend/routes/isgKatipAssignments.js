@@ -65,6 +65,14 @@ function normalizeTc(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 11);
 }
 
+function normalizeTehlike(value) {
+  const text = String(value || "").toLocaleLowerCase("tr-TR");
+  if (text.includes("çok")) return "Çok Tehlikeli";
+  if (text.includes("az")) return "Az Tehlikeli";
+  if (text.includes("tehlikeli")) return "Tehlikeli";
+  return "";
+}
+
 function isAssignableUser(user) {
   return roleOf(user) === "ticari_user";
 }
@@ -458,6 +466,7 @@ router.post("/extension-sync", async (req, res) => {
 
     const now = new Date();
     const ops = [];
+    const firmUpdates = new Map();
     let matched = 0;
 
     rows.forEach((row) => {
@@ -469,19 +478,29 @@ router.post("/extension-sync", async (req, res) => {
       const status = STATUS_LABELS[row.isgKatipStatus]
         ? row.isgKatipStatus
         : "kontrol_edilmedi";
+      const gorevTuru = normalizeGorevTuru(row.gorevTuru);
+      const tehlike = normalizeTehlike(row.tehlike);
+      const calisanSayisi = Number.isFinite(Number(row.calisanSayisi))
+        ? Number(row.calisanSayisi)
+        : null;
+
+      const firmUpdate = firmUpdates.get(String(firm._id)) || {};
+      if (tehlike) firmUpdate.tehlike = tehlike;
+      if (calisanSayisi !== null) firmUpdate.calisanSayisi = calisanSayisi;
+      if (Object.keys(firmUpdate).length > 0) firmUpdates.set(String(firm._id), firmUpdate);
 
       ops.push({
         updateOne: {
           filter: {
             organization: orgId,
             firmaId: firm._id,
-            gorevTuru: normalizeGorevTuru(row.gorevTuru),
+            gorevTuru,
           },
           update: {
             $set: {
               organization: orgId,
               firmaId: firm._id,
-              gorevTuru: normalizeGorevTuru(row.gorevTuru),
+              gorevTuru,
               isgKatipStatus: status,
               sozlesmeId: row.sozlesmeId || "",
               calismaSuresi: row.calismaSuresi || "",
@@ -503,13 +522,24 @@ router.post("/extension-sync", async (req, res) => {
     });
 
     if (ops.length > 0) await IsgKatipAssignment.bulkWrite(ops);
+    if (firmUpdates.size > 0) {
+      await Firma.bulkWrite(
+        Array.from(firmUpdates.entries()).map(([firmaId, update]) => ({
+          updateOne: {
+            filter: { _id: firmaId, organization: orgId },
+            update: { $set: update },
+          },
+        }))
+      );
+    }
 
-    const overview = await buildOverview(orgId);
+    const overview = await buildOverview(orgId, normalizeGorevTuru(req.body?.source?.pageGorevTuru));
     return res.json({
       ok: true,
       received: rows.length,
       matched,
       unmatched: rows.length - matched,
+      updatedFirms: firmUpdates.size,
       ...overview,
     });
   } catch (err) {
