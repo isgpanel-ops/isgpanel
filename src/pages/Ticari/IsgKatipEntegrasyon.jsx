@@ -76,6 +76,18 @@ function fmtDateTime(value) {
   });
 }
 
+function hasValidTc(value) {
+  return String(value || "").replace(/\D/g, "").length === 11;
+}
+
+function approvalDaysLeft(item) {
+  const startValue = item?.lastSyncAt || item?.baslangicTarihi || item?.updatedAt;
+  const start = startValue ? new Date(startValue) : null;
+  if (!start || Number.isNaN(start.getTime())) return null;
+  const elapsed = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, 5 - elapsed);
+}
+
 function statusClass(status) {
   if (status === "atama_onaylandi") return "bg-emerald-50 text-emerald-700 border-emerald-200";
   if (status === "atama_dustu" || status === "yeniden_atama_gerekli") return "bg-rose-50 text-rose-700 border-rose-200";
@@ -156,10 +168,14 @@ export default function IsgKatipEntegrasyon() {
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || null);
       setSelected((prev) => {
-        if (prev && nextItems.some((item) => item.id === prev.id && item.category === activeTab)) {
+        const matchesTab = (item) =>
+          activeTab === "atanmamis"
+            ? item.category === "atanmamis" || item.category === "dusen"
+            : item.category === activeTab;
+        if (prev && nextItems.some((item) => item.id === prev.id && matchesTab(item))) {
           return nextItems.find((item) => item.id === prev.id) || null;
         }
-        return nextItems.find((item) => item.category === activeTab) || null;
+        return nextItems.find(matchesTab) || null;
       });
     } catch (err) {
       setError(err?.response?.data?.message || "İSG-KATİP verileri alınamadı.");
@@ -182,7 +198,11 @@ export default function IsgKatipEntegrasyon() {
   const visibleItems = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("tr-TR");
     return items
-      .filter((item) => item.category === activeTab)
+      .filter((item) =>
+        activeTab === "atanmamis"
+          ? item.category === "atanmamis" || item.category === "dusen"
+          : item.category === activeTab
+      )
       .filter((item) => {
         if (!q) return true;
         return [item.firmaAdi, item.sgkNo, item.assignedUserName, item.assignedDisplayName]
@@ -203,6 +223,23 @@ export default function IsgKatipEntegrasyon() {
     : selected?.firmaId
     ? [selected.firmaId]
     : [];
+  const isStartTab = activeTab === "atanmamis" || activeTab === "atama_yok";
+  const isApprovalTab = activeTab === "onay_bekleyen";
+  const isActiveTab = activeTab === "aktif";
+  const isFallenTab = activeTab === "dusen";
+  const manualFormValid =
+    manualAssigneeForm.adSoyad.trim() && hasValidTc(manualAssigneeForm.tcKimlik);
+  const selectedBulkUser = candidateUsers.find((user) => user.id === bulkUserId);
+  const bulkUzmanReady = bulkUserId
+    ? Boolean(selectedBulkUser?.tcKimlikVar)
+    : selectedItems.every((item) => item.assignedUserId && item.assignedUserTcKimlikVar !== false);
+  const bulkManualReady = selectedItems.every((item) => item.assignedUserTcKimlikVar) || manualFormValid;
+  const tabCount = (key) =>
+    key === "atanmamis" ? (counts.atanmamis || 0) + (counts.dusen || 0) : counts[key] || 0;
+  const isInActiveView = (item) =>
+    activeTab === "atanmamis"
+      ? item.category === "atanmamis" || item.category === "dusen"
+      : item.category === activeTab;
 
   useEffect(() => {
     if (!visibleItems.length) {
@@ -260,17 +297,72 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
-  const startAssignment = async (target = selected) => {
-    if (!target?.firmaId) return;
+  const updateBulkStatus = async (status) => {
+    if (selectedFirmaIds.length === 0) return;
     setSaving(true);
     setError("");
     try {
-      await axios.post(
-        `/api/isg-katip/${target.firmaId}/start`,
-        { gorevTuru },
+      const { data } = await axios.patch(
+        "/api/isg-katip/bulk/status",
+        { isgKatipStatus: status, gorevTuru, firmaIds: selectedFirmaIds },
         { headers: tokenHeader() }
       );
-      await loadOverview();
+      const nextItems = Array.isArray(data?.items) ? data.items : [];
+      setItems(nextItems);
+      setCounts(data?.counts || {});
+      setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+      setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
+      setLastSyncAt(data?.lastSyncAt || lastSyncAt);
+      setSelectedIds([]);
+      setSelected(nextItems.find(isInActiveView) || null);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Durum kaydedilemedi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startAssignment = async (target = selected) => {
+    if (!isBulkMode && !target?.firmaId) return;
+    if (isBulkMode && selectedFirmaIds.length === 0) return;
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        gorevTuru,
+        ...(isUzmanMode ? { userId: bulkUserId || undefined } : {}),
+        ...(!isUzmanMode && manualFormValid
+          ? {
+              adSoyad: manualAssigneeForm.adSoyad,
+              tcKimlik: manualAssigneeForm.tcKimlik,
+            }
+          : {}),
+      };
+      const { data } = isBulkMode
+        ? await axios.post(
+            "/api/isg-katip/bulk/start",
+            { ...payload, firmaIds: selectedFirmaIds },
+            { headers: tokenHeader() }
+          )
+        : await axios.post(
+            `/api/isg-katip/${target.firmaId}/start`,
+            payload,
+            { headers: tokenHeader() }
+          );
+
+      if (Array.isArray(data?.items)) {
+        const nextItems = data.items;
+        setItems(nextItems);
+        setCounts(data?.counts || {});
+        setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
+        setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
+        setLastSyncAt(data?.lastSyncAt || lastSyncAt);
+        setSelectedIds([]);
+        setBulkUserId("");
+        setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
+      } else {
+        await loadOverview();
+      }
     } catch (err) {
       setError(err?.response?.data?.message || "Atama süreci başlatılamadı.");
     } finally {
@@ -302,7 +394,7 @@ export default function IsgKatipEntegrasyon() {
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setBulkUserId("");
       setSelectedIds([]);
-      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find((item) => item.category === activeTab) || null);
+      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
     } catch (err) {
       setError(err?.response?.data?.message || "Kullanıcı ataması kaydedilemedi.");
     } finally {
@@ -338,7 +430,7 @@ export default function IsgKatipEntegrasyon() {
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setSelectedIds([]);
-      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find((item) => item.category === activeTab) || null);
+      setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
     } catch (err) {
       setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
     } finally {
@@ -373,11 +465,13 @@ export default function IsgKatipEntegrasyon() {
 
   const startDisabled =
     saving ||
-    !selected ||
-    isBulkMode ||
-    (isUzmanMode
-      ? !selected.assignedUserId || selected.assignedUserTcKimlikVar === false
-      : selected.assignedUserTcKimlikVar === false);
+    !isStartTab ||
+    (isBulkMode
+      ? selectedFirmaIds.length === 0 || (isUzmanMode ? !bulkUzmanReady : !bulkManualReady)
+      : !selected ||
+        (isUzmanMode
+          ? !selected.assignedUserId || selected.assignedUserTcKimlikVar === false
+          : !selected.assignedUserTcKimlikVar && !manualFormValid));
 
   return (
     <div className="p-6">
@@ -429,7 +523,7 @@ export default function IsgKatipEntegrasyon() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-5">
-          <StatCard title="Atanmamış Firmalar" value={counts.atanmamis || 0} sub="Kullanıcı atanmayı bekliyor" icon={ShieldAlert} tone="rose" active={activeTab === "atanmamis"} onClick={() => setActiveTab("atanmamis")} />
+          <StatCard title="Atanmamış Firmalar" value={tabCount("atanmamis")} sub="Kullanıcı atanmayı bekliyor" icon={ShieldAlert} tone="rose" active={activeTab === "atanmamis"} onClick={() => setActiveTab("atanmamis")} />
           <StatCard title="İSG-KATİP Ataması Yok" value={counts.atama_yok || 0} sub="Panelde atanmış, resmi atama yok" icon={FileCheck2} tone="amber" active={activeTab === "atama_yok"} onClick={() => setActiveTab("atama_yok")} />
           <StatCard title="Onay Bekleyenler" value={counts.onay_bekleyen || 0} sub="Profesyonel veya işveren onayı" icon={Hourglass} tone="blue" active={activeTab === "onay_bekleyen"} onClick={() => setActiveTab("onay_bekleyen")} />
           <StatCard title="Aktif Atamalar" value={counts.aktif || 0} sub="İSG-KATİP'te aktif sözleşme" icon={CheckCircle2} tone="emerald" active={activeTab === "aktif"} onClick={() => setActiveTab("aktif")} />
@@ -450,7 +544,7 @@ export default function IsgKatipEntegrasyon() {
                       : "text-slate-500 hover:bg-white"
                   }`}
                 >
-                  {tab.label} ({counts[tab.key] || 0})
+                  {tab.label} ({tabCount(tab.key)})
                 </button>
               ))}
             </div>
@@ -581,10 +675,10 @@ export default function IsgKatipEntegrasyon() {
                   </div>
                 </div>
 
-                {isUzmanMode ? (
+                {isStartTab && (isUzmanMode ? (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-2 text-xs font-semibold text-slate-700">
-                      Seçili Firmalara Uzman Ata
+                      Seçili Firmalar İçin Uzman
                     </div>
                     <select
                       value={bulkUserId}
@@ -601,19 +695,26 @@ export default function IsgKatipEntegrasyon() {
                         </option>
                       ))}
                     </select>
-                    <button
-                      type="button"
-                      onClick={() => assignUser(bulkUserId)}
-                      disabled={saving || !bulkUserId}
-                      className={`${btn.base} ${btn.primary} mt-2 w-full`}
-                    >
-                      Seçili Firmalara Ata
-                    </button>
+                    {isStartTab && (
+                      <button
+                        type="button"
+                        onClick={() => startAssignment()}
+                        disabled={startDisabled}
+                        className={`${btn.base} ${btn.primary} mt-2 w-full`}
+                      >
+                        Atama Sürecini Başlat
+                      </button>
+                    )}
+                    {bulkUserId && selectedBulkUser && !selectedBulkUser.tcKimlikVar && (
+                      <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">
+                        Seçilen uzmanın TC kimlik numarası kayıtlı olmalıdır.
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-2 text-xs font-semibold text-slate-700">
-                      Seçili Firmalara {selectedGorevLabel} Bilgisi Kaydet
+                      Seçili Firmalar İçin {selectedGorevLabel}
                     </div>
 
                     {savedPeople.length > 0 && (
@@ -683,16 +784,47 @@ export default function IsgKatipEntegrasyon() {
                         placeholder="TC KİMLİK NO"
                         className={inputClass}
                       />
-                      <button
-                        type="button"
-                        onClick={saveManualAssignee}
-                        disabled={saving || !manualAssigneeForm.adSoyad.trim() || manualAssigneeForm.tcKimlik.replace(/\D/g, "").length !== 11}
-                        className={`${btn.base} ${btn.primary} w-full`}
-                      >
-                        Seçili Firmalara Kaydet
-                      </button>
+                      {isStartTab && (
+                        <button
+                          type="button"
+                          onClick={() => startAssignment()}
+                          disabled={startDisabled}
+                          className={`${btn.base} ${btn.primary} w-full`}
+                        >
+                          Atama Sürecini Başlat
+                        </button>
+                      )}
+                      {isStartTab && !bulkManualReady && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-700">
+                          Seçili firmalar için kayıtlı kişi yoksa ad soyad ve 11 haneli TC kimlik girilmelidir.
+                        </div>
+                      )}
                     </div>
                   </div>
+                ))}
+
+                {isApprovalTab && (
+                  <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800">
+                    Seçili firmalar onay sürecinde. Uzman/profesyonel ve işveren onayları İSG-KATİP senkronizasyonu ile güncellenir.
+                  </div>
+                )}
+
+                {isActiveTab && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                    Seçili firmalarda profesyonel ve işveren onayı tamamlanmış görünüyor.
+                  </div>
+                )}
+
+                {isFallenTab && (
+                  <button
+                    type="button"
+                    onClick={() => updateBulkStatus("kontrol_edilmedi")}
+                    disabled={saving || selectedFirmaIds.length === 0}
+                    className={`${btn.base} ${btn.primary} w-full`}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Güncelle
+                  </button>
                 )}
 
                 <button
@@ -747,7 +879,7 @@ export default function IsgKatipEntegrasyon() {
                   </div>
                 </div>
 
-                {isUzmanMode ? (
+                {isStartTab && (isUzmanMode ? (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-2 text-xs font-semibold text-slate-700">
                       Bu Görev İçin Kullanıcı Ata
@@ -840,60 +972,103 @@ export default function IsgKatipEntegrasyon() {
                         placeholder="TC KİMLİK NO"
                         className={inputClass}
                       />
-                      <button
-                        type="button"
-                        onClick={saveManualAssignee}
-                        disabled={saving || !manualAssigneeForm.adSoyad.trim() || manualAssigneeForm.tcKimlik.replace(/\D/g, "").length !== 11}
-                        className={`${btn.base} ${btn.primary} w-full`}
-                      >
-                        Bilgileri Kaydet
-                      </button>
+                      {isStartTab && (
+                        <button
+                          type="button"
+                          onClick={() => startAssignment(selected)}
+                          disabled={startDisabled}
+                          className={`${btn.base} ${btn.primary} w-full`}
+                        >
+                          Atama Sürecini Başlat
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {isApprovalTab && (
+                  <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-slate-700">
+                    <div className="mb-2 flex items-center gap-2 font-semibold text-sky-800">
+                      <Clock3 className="h-4 w-4" />
+                      Onay Süreci
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span>Uzman / Profesyonel Onayı</span>
+                        <span className={`font-semibold ${selected.isgKatipStatus === "isveren_onayi_bekliyor" ? "text-emerald-700" : "text-amber-700"}`}>
+                          {selected.isgKatipStatus === "isveren_onayi_bekliyor" ? "Onayladı" : "Onay Bekliyor"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>İşveren Onayı</span>
+                        <span className="font-semibold text-amber-700">Onay Bekliyor</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-sky-100 pt-2">
+                        <span>Kalan Süre</span>
+                        <span className="font-semibold text-slate-900">
+                          {approvalDaysLeft(selected) === null ? "5 gün" : `${approvalDaysLeft(selected)} gün`}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Clock3 className="h-4 w-4" />
-                    İSG-KATİP Durumu
+                {isActiveTab && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                    <div className="mb-2 flex items-center gap-2 font-semibold">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Aktif Atama
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span>Uzman / Profesyonel Onayı</span>
+                        <span className="font-semibold">Onayladı</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>İşveren Onayı</span>
+                        <span className="font-semibold">Onayladı</span>
+                      </div>
+                    </div>
                   </div>
-                  <select
-                    value={selected.isgKatipStatus || "kontrol_edilmedi"}
-                    onChange={(event) => updateStatus(event.target.value)}
+                )}
+
+                {isFallenTab && (
+                  <button
+                    type="button"
+                    onClick={() => updateStatus("kontrol_edilmedi")}
                     disabled={saving}
-                    className={inputClass}
+                    className={`${btn.base} ${btn.primary} h-10 w-full`}
                   >
-                    {statusOptions.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <RefreshCw className="h-4 w-4" />
+                    Güncelle
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => startAssignment(selected)}
-                  disabled={startDisabled}
-                  className={`${btn.base} ${btn.dark} h-10 w-full`}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Atama Sürecini Başlat
-                </button>
+                {isStartTab && isUzmanMode && (
+                  <button
+                    type="button"
+                    onClick={() => startAssignment(selected)}
+                    disabled={startDisabled}
+                    className={`${btn.base} ${btn.dark} h-10 w-full`}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Atama Sürecini Başlat
+                  </button>
+                )}
 
-                {isUzmanMode && !selected.assignedUserId && (
+                {isStartTab && isUzmanMode && !selected.assignedUserId && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
                     Bu firma için önce iş güvenliği uzmanı seçilmelidir.
                   </div>
                 )}
 
-                {isUzmanMode && selected.assignedUserId && !selected.assignedUserTcKimlikVar && (
+                {isStartTab && isUzmanMode && selected.assignedUserId && !selected.assignedUserTcKimlikVar && (
                   <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                     Atama başlatmak için atanan kullanıcının kişisel bilgilerinde TC kimlik numarası kayıtlı olmalıdır.
                   </div>
                 )}
 
-                {!isUzmanMode && !selected.assignedUserTcKimlikVar && (
+                {isStartTab && !isUzmanMode && !selected.assignedUserTcKimlikVar && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
                     Bu görev için ad soyad ve 11 haneli TC kimlik kaydedilmelidir.
                   </div>
