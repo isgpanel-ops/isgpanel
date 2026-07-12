@@ -82,6 +82,18 @@ function roleSummary(rows) {
     .join(", ");
 }
 
+async function readApiJson(response) {
+  const text = await response.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch (_error) {
+    const preview = text.replace(/\s+/g, " ").slice(0, 120);
+    throw new Error(
+      `API JSON dönmedi. API adresini kontrol edin veya backend değişikliklerini canlıya alın. Gelen cevap: ${preview}`
+    );
+  }
+}
+
 chrome.storage.local.get(["apiBase", "token"], (stored) => {
   if (stored.apiBase) apiBaseInput.value = stored.apiBase;
   if (stored.token) tokenInput.value = stored.token;
@@ -159,7 +171,7 @@ syncBtn.addEventListener("click", async () => {
       }),
     });
 
-    const data = await syncResponse.json();
+    const data = await readApiJson(syncResponse);
     if (!syncResponse.ok) throw new Error(data?.message || "Panel kaydı başarısız");
 
     setStatus(
