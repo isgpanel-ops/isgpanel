@@ -1,4 +1,4 @@
-// AdminLayout.jsx  ✅ (mevcut yapıyı koruyarak) TAM KOD
+﻿// AdminLayout.jsx   (mevcut yapıyı koruyarak) TAM KOD
 import React, { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,7 +7,7 @@ import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
 import SubscriptionBanner from "../SubscriptionBanner";
 
-// ✅ EKLENDİ: Bildirim context'i Admin panelde çalışsın
+//  EKLENDİ: Bildirim context'i Admin panelde çalışsın
 import NotificationProvider from "../../context/NotificationContext";
 
 function readStatus() {
@@ -27,13 +27,13 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ MOBİL SIDEBAR STATE
+  //  MOBİL SIDEBAR STATE
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ✅ API’den abonelik expired state’i
+  //  API'den abonelik expired state'i
   const [expired, setExpired] = useState(false);
 
-  // ✅ 0) Açılışta /api/subscription/me ile expired çek
+  //  0) Açılışta /api/subscription/me ile expired çek
   useEffect(() => {
     let cancelled = false;
 
@@ -70,18 +70,18 @@ export default function AdminLayout() {
     };
   }, []);
 
-  // ✅ Sayfa değişince main'i en üste al
+  //  Sayfa değişince main'i en üste al
   useEffect(() => {
     const mainEl = document.querySelector("main");
     if (mainEl) mainEl.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
 
-  // ✅ Mobilde route değişince sidebar kapansın
+  //  Mobilde route değişince sidebar kapansın
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname, location.search]);
 
-  // 🔒 ADMIN KİLİT
+  // ğŸ”’ ADMIN KİLİT
   useEffect(() => {
     const status = readStatus();
     const isLimited = ["blokeli", "pasif", "askida"].includes(status);
@@ -103,7 +103,7 @@ export default function AdminLayout() {
     }
   }, [location.pathname, navigate, expired]);
 
-  // ✅ Son kalınan sayfayı hatırla
+  //  Son kalınan sayfayı hatırla
   useEffect(() => {
     try {
       const full = location.pathname + location.search;
@@ -111,7 +111,7 @@ export default function AdminLayout() {
     } catch (_) {}
   }, [location.pathname, location.search]);
 
-  // ✅ Kök sayfaya gelince son sekmeye yönlendir
+  //  Kök sayfaya gelince son sekmeye yönlendir
   useEffect(() => {
     const status = readStatus();
     const isLimited = ["blokeli", "pasif", "askida"].includes(status);
@@ -154,7 +154,7 @@ export default function AdminLayout() {
         />
 
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
-          {/* ✅ TEK TOPBAR */}
+          {/*  TEK TOPBAR */}
           <AdminTopbar setMobileOpen={setMobileOpen} />
 
           <main className="flex-1 overflow-y-auto min-h-0">
@@ -172,3 +172,4 @@ export default function AdminLayout() {
     </NotificationProvider>
   );
 }
+

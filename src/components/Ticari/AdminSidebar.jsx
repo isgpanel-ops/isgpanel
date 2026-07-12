@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Home,
   FolderOpen,
   Building2,
   ClipboardList,
+  FileCheck2,
   Users,
   CreditCard,
 } from "lucide-react";
@@ -112,6 +113,11 @@ export default function AdminSidebar({
       icon: ClipboardList,
     },
     {
+      name: "Atama Yönetimi",
+      path: "/ticari/admin/atama-yonetimi",
+      icon: FileCheck2,
+    },
+    {
       name: "Kullanıcı Listesi",
       path: "/ticari/admin/kullanicilar",
       icon: Users,
@@ -195,3 +201,5 @@ export default function AdminSidebar({
     </aside>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
 export default function UserFirmalarim() {
   const [firms, setFirms] = useState([]);
@@ -100,3 +100,4 @@ export default function UserFirmalarim() {
     </div>
   );
 }
+
