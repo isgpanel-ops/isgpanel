@@ -27,8 +27,9 @@ Bu klasör Chrome Manifest V3 tabanlı ilk İSG-KATİP senkronizasyon eklentisid
 2. Sağ üstten `Geliştirici modu`nu açın.
 3. `Paketlenmemiş öğe yükle` butonuna basın.
 4. Bu klasörü seçin: `extensions/isg-katip-sync`.
-5. İSG-KATİP sayfasında oturum açın.
-6. Eklenti ikonuna basıp `Açık Sayfayı Senkronize Et` butonunu kullanın.
+5. İSG-KATİP sayfasında oturum açın ve ilgili sözleşme listesini açık bırakın.
+6. İSG Panel'de `Atama Yönetimi > Senkronize Et` butonunu kullanın.
+7. Eklenti popup'ı yedek/manuel işlem ekranı olarak kullanılabilir.
 
 ## Not
 

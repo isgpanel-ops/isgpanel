@@ -240,6 +240,10 @@ function isUsableField(field) {
 function setFieldValue(field, value) {
   const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
   const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+  const wasDisabled = field.disabled;
+  const wasReadOnly = field.readOnly;
+  if (wasDisabled) field.disabled = false;
+  if (wasReadOnly) field.readOnly = false;
   field.focus();
   if (field instanceof HTMLInputElement && nativeSetter) {
     nativeSetter.call(field, value);
@@ -254,6 +258,8 @@ function setFieldValue(field, value) {
   field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: String(value).slice(-1) || "0" }));
   field.dispatchEvent(new Event("change", { bubbles: true }));
   field.blur();
+  if (wasReadOnly) field.readOnly = true;
+  if (wasDisabled) field.disabled = true;
 }
 
 function fillBestField(patterns, value) {
@@ -289,7 +295,6 @@ function visibleTextFields() {
     const tag = field.tagName.toLowerCase();
     const type = String(field.type || "").toLowerCase();
     return (
-      !field.disabled &&
       type !== "hidden" &&
       style.display !== "none" &&
       style.visibility !== "hidden" &&
@@ -763,6 +768,11 @@ async function fillCompanyStep(job, steps) {
   if (!sgkFilled.mainFilled && sgkFilled.segmentCount === 0) {
     return { ok: false, message: "SGK sicil no alanı doldurulamadı." };
   }
+  if (sgkFilled.segmentCount > 0 && sgkFilled.segmentCount < 9) {
+    await delay(300);
+    const retryFilled = fillSgkFields(sgkNo);
+    sgkFilled.segmentCount = Math.max(sgkFilled.segmentCount, retryFilled.segmentCount);
+  }
   steps.push(
     sgkFilled.segmentCount > 0
       ? `SGK sicil no yazıldı (${sgkFilled.segmentCount} parça)`
@@ -774,7 +784,12 @@ async function fillCompanyStep(job, steps) {
   }
   steps.push("Firma sorgulandı");
 
-  await delay(1600);
+  await delay(900);
+  const afterSearchFilled = fillSgkFields(sgkNo);
+  if (afterSearchFilled.segmentCount > 0) {
+    steps.push(`Firma sorgusu sonrası SGK parçaları doğrulandı (${afterSearchFilled.segmentCount} parça)`);
+  }
+  await delay(900);
   if (!clickButtonByText(["İleri", "Ileri"])) {
     return { ok: false, message: "Firma ekranında İleri butonu bulunamadı." };
   }

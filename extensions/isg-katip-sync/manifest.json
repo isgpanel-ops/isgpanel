@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "İSG Panel İSG-KATİP Senkronizasyonu",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Açık İSG-KATİP sayfasındaki firma ve atama bilgilerini İSG Panel'e güvenli şekilde aktarır.",
-  "permissions": ["activeTab", "storage", "scripting"],
+  "permissions": ["activeTab", "storage", "scripting", "tabs"],
   "host_permissions": [
     "https://*.isgkatip.csgb.gov.tr/*",
     "https://isgkatip.csgb.gov.tr/*",
@@ -14,7 +14,17 @@
     "default_popup": "popup.html",
     "default_title": "İSG-KATİP Senkronize Et"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
+    {
+      "matches": [
+        "https://app.isgpanel.tr/*"
+      ],
+      "js": ["panel-bridge.js"],
+      "run_at": "document_idle"
+    },
     {
       "matches": [
         "https://*.isgkatip.csgb.gov.tr/*",

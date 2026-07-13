@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   UserPlus,
 } from "lucide-react";
+import { API_BASE } from "../../config/api";
 
 const brand = {
   primary: "#0a2b45",
@@ -78,6 +79,54 @@ function fmtDateTime(value) {
 
 function hasValidTc(value) {
   return String(value || "").replace(/\D/g, "").length === 11;
+}
+
+function requestIsgKatipExtensionSync({ apiBase, token }) {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Tarayıcı ortamı bulunamadı."));
+      return;
+    }
+
+    const requestId = `isg-katip-sync-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const timer = window.setTimeout(() => {
+      window.removeEventListener("message", handleMessage);
+      reject(new Error("İSG-KATİP eklentisi cevap vermedi. Eklentiyi yenileyip tekrar deneyin."));
+    }, 12000);
+
+    function handleMessage(event) {
+      if (event.source !== window) return;
+      const message = event.data;
+      if (
+        !message ||
+        message.source !== "ISG_PANEL_ISG_KATIP_EXTENSION" ||
+        message.type !== "ISG_KATIP_SYNC_RESPONSE" ||
+        message.requestId !== requestId
+      ) {
+        return;
+      }
+
+      window.clearTimeout(timer);
+      window.removeEventListener("message", handleMessage);
+      if (!message.response?.ok) {
+        reject(new Error(message.response?.message || "İSG-KATİP senkronizasyonu başarısız."));
+        return;
+      }
+      resolve(message.response.data || {});
+    }
+
+    window.addEventListener("message", handleMessage);
+    window.postMessage(
+      {
+        source: "ISG_PANEL_PAGE",
+        type: "ISG_KATIP_SYNC_REQUEST",
+        requestId,
+        apiBase: String(apiBase || "").replace(/\/$/, ""),
+        token,
+      },
+      window.location.origin
+    );
+  });
 }
 
 function approvalDaysLeft(item) {
@@ -273,18 +322,19 @@ export default function IsgKatipEntegrasyon() {
     setSaving(true);
     setError("");
     try {
-      const { data } = await axios.post(
-        "/api/isg-katip/sync",
-        { gorevTuru, allRoles: true },
-        { headers: tokenHeader() }
-      );
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+      if (!token) throw new Error("Panel oturumu bulunamadı. Tekrar giriş yapın.");
+      const data = await requestIsgKatipExtensionSync({
+        apiBase: API_BASE,
+        token,
+      });
       setItems(Array.isArray(data?.items) ? data.items : []);
       setCounts(data?.counts || {});
       setCandidateUsers(Array.isArray(data?.candidateUsers) ? data.candidateUsers : []);
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || new Date().toISOString());
     } catch (err) {
-      setError(err?.response?.data?.message || "Senkronizasyon çalıştırılamadı.");
+      setError(err?.message || err?.response?.data?.message || "Senkronizasyon çalıştırılamadı.");
     } finally {
       setSaving(false);
     }
