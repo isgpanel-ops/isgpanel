@@ -65,6 +65,10 @@ function normalizeTc(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 11);
 }
 
+function isUnknownSyncStatus(status) {
+  return !status || status === "kontrol_edilmedi";
+}
+
 function normalizeTehlike(value) {
   const text = String(value || "").toLocaleLowerCase("tr-TR");
   if (text.includes("çok")) return "Çok Tehlikeli";
@@ -464,8 +468,57 @@ router.post("/extension-sync", async (req, res) => {
       if (firm.sgkSicilNo) firmBySgk.set(String(firm.sgkSicilNo).replace(/\D/g, ""), firm);
     });
 
+    const firmIds = firms.map((firm) => firm._id);
+    const [links, users, assignments, savedAssignees] = await Promise.all([
+      FirmUser.find(
+        uzmanLinkFilter({
+          organization: orgId,
+          firmId: { $in: firmIds },
+          isActive: true,
+        })
+      ).lean(),
+      User.find({ organization: orgId, role: "ticari_user" })
+        .select("_id name email personal.tcKimlik")
+        .lean(),
+      IsgKatipAssignment.find({
+        organization: orgId,
+        firmaId: { $in: firmIds },
+      }).lean(),
+      IsgKatipPerson.find({
+        organization: orgId,
+        isActive: true,
+      }).lean(),
+    ]);
+
+    const usersById = new Map(users.map((user) => [String(user._id), user]));
+    const usersByTc = new Map(
+      users
+        .map((user) => [normalizeTc(user.personal?.tcKimlik), user])
+        .filter(([tc]) => hasValidTcValue(tc))
+    );
+    const activeUzmanLinksByFirm = new Map();
+    links.forEach((link) => {
+      const key = String(link.firmId);
+      const arr = activeUzmanLinksByFirm.get(key) || [];
+      arr.push(link);
+      activeUzmanLinksByFirm.set(key, arr);
+    });
+
+    const assignmentsByFirmRole = new Map();
+    assignments.forEach((assignment) => {
+      assignmentsByFirmRole.set(`${String(assignment.firmaId)}:${assignment.gorevTuru}`, assignment);
+    });
+
+    const savedPeopleByRoleTc = new Map();
+    savedAssignees.forEach((person) => {
+      const tc = normalizeTc(person.tcKimlik);
+      if (hasValidTcValue(tc)) savedPeopleByRoleTc.set(`${person.gorevTuru}:${tc}`, person);
+    });
+
     const now = new Date();
     const ops = [];
+    const linkOps = [];
+    const deactivateLinkFilters = [];
     const firmUpdates = new Map();
     let matched = 0;
 
@@ -475,14 +528,77 @@ router.post("/extension-sync", async (req, res) => {
       if (!firm) return;
       matched += 1;
 
-      const status = STATUS_LABELS[row.isgKatipStatus]
+      const rawStatus = STATUS_LABELS[row.isgKatipStatus]
         ? row.isgKatipStatus
         : "kontrol_edilmedi";
       const gorevTuru = normalizeGorevTuru(row.gorevTuru);
+      const personelTc = normalizeTc(row.personelTcKimlik);
       const tehlike = normalizeTehlike(row.tehlike);
       const calisanSayisi = Number.isFinite(Number(row.calisanSayisi))
         ? Number(row.calisanSayisi)
         : null;
+      const existingAssignment = assignmentsByFirmRole.get(`${String(firm._id)}:${gorevTuru}`) || null;
+      const updateSet = {};
+      let hasKnownAssignee = false;
+
+      if (isUzmanGorevi(gorevTuru)) {
+        const activeLinks = activeUzmanLinksByFirm.get(String(firm._id)) || [];
+        const matchedExistingLink = activeLinks.find((link) => {
+          const user = usersById.get(String(link.userId));
+          return hasValidTcValue(personelTc) && normalizeTc(user?.personal?.tcKimlik) === personelTc;
+        });
+        const matchedUser = hasValidTcValue(personelTc) ? usersByTc.get(personelTc) : null;
+
+        if (matchedExistingLink || matchedUser) {
+          const assignedUserId = matchedExistingLink?.userId || matchedUser?._id;
+          updateSet.assignedUserId = assignedUserId;
+          hasKnownAssignee = true;
+
+          if (!matchedExistingLink && matchedUser) {
+            deactivateLinkFilters.push({
+              organization: orgId,
+              firmId: firm._id,
+            });
+            linkOps.push({
+              updateOne: {
+                filter: { organization: orgId, firmId: firm._id, userId: matchedUser._id },
+                update: {
+                  $set: {
+                    organization: orgId,
+                    firmId: firm._id,
+                    userId: matchedUser._id,
+                    gorevTuru,
+                    isActive: true,
+                    assignedBy: req.user._id || req.user.id || null,
+                  },
+                },
+                upsert: true,
+              },
+            });
+          }
+        }
+      } else {
+        const existingManualTc = normalizeTc(existingAssignment?.manualAssignee?.tcKimlik);
+        const savedPerson = hasValidTcValue(personelTc)
+          ? savedPeopleByRoleTc.get(`${gorevTuru}:${personelTc}`)
+          : null;
+
+        if (hasValidTcValue(personelTc) && (existingManualTc === personelTc || savedPerson)) {
+          updateSet.manualAssignee = {
+            adSoyad:
+              existingAssignment?.manualAssignee?.adSoyad ||
+              savedPerson?.adSoyad ||
+              String(row.personelAdSoyad || "").trim().toLocaleUpperCase("tr-TR"),
+            tcKimlik: personelTc,
+          };
+          hasKnownAssignee = true;
+        }
+      }
+
+      const status =
+        isUnknownSyncStatus(rawStatus) && hasKnownAssignee && hasValidTcValue(personelTc)
+          ? "atama_onaylandi"
+          : rawStatus;
 
       const firmUpdate = firmUpdates.get(String(firm._id)) || {};
       if (tehlike) firmUpdate.tehlike = tehlike;
@@ -501,6 +617,7 @@ router.post("/extension-sync", async (req, res) => {
               organization: orgId,
               firmaId: firm._id,
               gorevTuru,
+              ...updateSet,
               isgKatipStatus: status,
               sozlesmeId: row.sozlesmeId || "",
               calismaSuresi: row.calismaSuresi || "",
@@ -521,6 +638,16 @@ router.post("/extension-sync", async (req, res) => {
       });
     });
 
+    if (deactivateLinkFilters.length > 0) {
+      await Promise.all(
+        deactivateLinkFilters.map((filter) =>
+          FirmUser.updateMany(uzmanLinkFilter({ ...filter, isActive: true }), {
+            $set: { isActive: false },
+          })
+        )
+      );
+    }
+    if (linkOps.length > 0) await FirmUser.bulkWrite(linkOps);
     if (ops.length > 0) await IsgKatipAssignment.bulkWrite(ops);
     if (firmUpdates.size > 0) {
       await Firma.bulkWrite(
