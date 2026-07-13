@@ -12,6 +12,17 @@ function lowerTR(value) {
   return cleanText(value).toLocaleLowerCase("tr-TR");
 }
 
+function normalizeSearchText(value) {
+  return lowerTR(value)
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/i̇/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+}
+
 function normalizeStatus(text) {
   const value = lowerTR(text);
   if (
@@ -192,7 +203,7 @@ function readIsgKatipSnapshot() {
 }
 
 function normalizeFieldHint(value) {
-  return lowerTR(value).replace(/ı/g, "i");
+  return normalizeSearchText(value);
 }
 
 function fieldContext(field) {
@@ -260,6 +271,277 @@ function fillAssignmentJob(job) {
   return { ok: true, filled };
 }
 
+const PROCESS_TEXT_BY_ROLE = {
+  is_guvenligi_uzmani: "OSGB İLE ÖZEL İŞYERİ ARASINDA İŞ GÜVENLİĞİ UZMANI HİZMET ALIMI SÖZLEŞMESİ",
+  isyeri_hekimi: "OSGB İLE ÖZEL İŞYERİ ARASINDA İŞYERİ HEKİMLİĞİ HİZMET ALIMI SÖZLEŞMESİ",
+  diger_saglik_personeli: "OSGB İLE ÖZEL İŞYERİ ARASINDA DİĞER SAĞLIK PERSONELİ HİZMETİ ALIMI SÖZLEŞMESİ",
+};
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(check, timeoutMs = 8000, intervalMs = 250) {
+  const startedAt = Date.now();
+  let lastValue = null;
+  while (Date.now() - startedAt < timeoutMs) {
+    lastValue = check();
+    if (lastValue) return lastValue;
+    await delay(intervalMs);
+  }
+  return lastValue;
+}
+
+function isVisibleElement(element) {
+  if (!element) return false;
+  const style = window.getComputedStyle(element);
+  const rect = element.getBoundingClientRect();
+  return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+}
+
+function visibleElements(selector) {
+  return Array.from(document.querySelectorAll(selector)).filter(isVisibleElement);
+}
+
+function clickElement(element) {
+  element.scrollIntoView({ block: "center", inline: "center" });
+  element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  element.click();
+}
+
+function clickButtonByText(texts) {
+  const wanted = texts.map(normalizeSearchText);
+  const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']");
+  const button = candidates.find((element) => {
+    const text = normalizeSearchText(element.innerText || element.value || element.getAttribute("aria-label") || "");
+    return wanted.some((item) => text === item || text.includes(item));
+  });
+  if (!button) return false;
+  clickElement(button);
+  return true;
+}
+
+function clickFirstVisibleByText(text) {
+  const wanted = normalizeSearchText(text);
+  const candidates = visibleElements("li, div, span, a, button, [role='option'], [role='menuitem']");
+  const option = candidates.find((element) => {
+    const value = normalizeSearchText(element.innerText || element.textContent || "");
+    return value === wanted || value.includes(wanted);
+  });
+  if (!option) return false;
+  clickElement(option);
+  return true;
+}
+
+function getAllFields() {
+  return Array.from(document.querySelectorAll("input, textarea, select")).filter(isUsableField);
+}
+
+function findField(patterns) {
+  const normalizedPatterns = patterns.map(normalizeSearchText);
+  return getAllFields().find((candidate) => {
+    const context = fieldContext(candidate);
+    return normalizedPatterns.some((pattern) => context.includes(pattern));
+  });
+}
+
+function findFirstEmptyTextField() {
+  return getAllFields().find((field) => {
+    const type = String(field.type || "").toLowerCase();
+    return (type === "text" || type === "search" || !type) && !field.value;
+  });
+}
+
+function fillFieldByPatterns(patterns, value, options = {}) {
+  const field = findField(patterns) || (options.allowFallback === false ? null : findFirstEmptyTextField());
+  if (!field) return false;
+  setFieldValue(field, value);
+  return true;
+}
+
+function parseNumberFromText(value) {
+  const match = cleanText(value).match(/\d+(?:[.,]\d+)?/);
+  return match ? match[0].replace(",", ".") : "";
+}
+
+function findValueNearLabel(patterns) {
+  const normalizedPatterns = patterns.map(normalizeSearchText);
+  const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, div"));
+  for (const row of rows) {
+    const cells = Array.from(row.querySelectorAll("td, th, label, span, div")).filter(isVisibleElement);
+    if (cells.length >= 2) {
+      const firstText = normalizeSearchText(cells[0].innerText || cells[0].textContent || "");
+      if (normalizedPatterns.some((pattern) => firstText.includes(pattern))) {
+        const value = cleanText(cells[cells.length - 1].innerText || cells[cells.length - 1].textContent || "");
+        if (parseNumberFromText(value)) return value;
+      }
+    }
+
+    const rowText = normalizeSearchText(row.innerText || row.textContent || "");
+    if (normalizedPatterns.some((pattern) => rowText.includes(pattern))) {
+      const rawText = cleanText(row.innerText || row.textContent || "");
+      const afterLabel = rawText.split(/GEREKLİ TOPLAM İSG SÜRESİ|GEREKLI TOPLAM ISG SURESI/i).pop();
+      const number = parseNumberFromText(afterLabel || rawText);
+      if (number) return number;
+    }
+  }
+  return "";
+}
+
+function fillDurationField(duration) {
+  const cleanDuration = parseNumberFromText(duration);
+  if (!cleanDuration) return false;
+  return fillFieldByPatterns(["calisma suresi", "çalışma süresi"], cleanDuration, { allowFallback: false });
+}
+
+async function chooseProcessForRole(gorevTuru, steps) {
+  const processText = PROCESS_TEXT_BY_ROLE[gorevTuru] || PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani;
+
+  if (!clickButtonByText(["Yeni", "+ Yeni"])) {
+    return { ok: false, message: "Yeni butonu bulunamadı." };
+  }
+  steps.push("Yeni butonu açıldı");
+
+  await waitFor(() => normalizeSearchText(document.body.innerText).includes("surec secimi"), 8000);
+  const searchField =
+    findField(["lutfen surec seciniz", "süreç seçiniz", "surec seciniz"]) || findFirstEmptyTextField();
+  if (searchField) {
+    setFieldValue(searchField, processText);
+    clickElement(searchField);
+  } else {
+    clickFirstVisibleByText("Lütfen Süreç Seçiniz");
+  }
+  await delay(500);
+
+  if (!clickFirstVisibleByText(processText)) {
+    return { ok: false, message: "Görev türüne uygun süreç seçeneği bulunamadı." };
+  }
+  steps.push(`${GOREV_TURLERI[gorevTuru] || "Görev"} süreci seçildi`);
+
+  await delay(500);
+  if (!clickButtonByText(["Başlat", "Baslat"])) {
+    return { ok: false, message: "Başlat butonu bulunamadı." };
+  }
+  steps.push("Süreç başlatıldı");
+  return { ok: true };
+}
+
+async function approveInfoScreen(steps) {
+  const hasInfoScreen = await waitFor(
+    () => normalizeSearchText(document.body.innerText).includes("okudum") || normalizeSearchText(document.body.innerText).includes("bilgilendirme"),
+    10000
+  );
+  if (!hasInfoScreen) return { ok: true };
+
+  const checkbox = visibleElements("input[type='checkbox']").find((input) => !input.checked);
+  if (checkbox) {
+    clickElement(checkbox);
+    steps.push("Bilgilendirme metni işaretlendi");
+  }
+
+  if (clickButtonByText(["Başlat", "Baslat", "İleri", "Ileri"])) {
+    steps.push("Bilgilendirme ekranı geçildi");
+    return { ok: true };
+  }
+
+  return { ok: false, message: "Bilgilendirme ekranında ilerleme butonu bulunamadı." };
+}
+
+async function fillCompanyStep(job, steps) {
+  const sgkNo = String(job?.sgkNo || "").replace(/\D/g, "");
+  if (!sgkNo) return { ok: false, message: "Görevde SGK sicil no yok." };
+
+  const ready = await waitFor(() => findField(["sgk", "sicil", "detsis", "26 hane"]), 10000);
+  if (!ready) return { ok: false, message: "SGK sicil no alanı bulunamadı." };
+
+  fillFieldByPatterns(["sgk", "sicil", "detsis", "26 hane"], sgkNo);
+  steps.push("SGK sicil no yazıldı");
+
+  if (!clickButtonByText(["Bul"])) {
+    return { ok: false, message: "SGK Bul butonu bulunamadı." };
+  }
+  steps.push("Firma sorgulandı");
+
+  await delay(1600);
+  if (!clickButtonByText(["İleri", "Ileri"])) {
+    return { ok: false, message: "Firma ekranında İleri butonu bulunamadı." };
+  }
+  steps.push("Firma ekranı geçildi");
+  return { ok: true };
+}
+
+async function fillPersonStep(job, steps) {
+  const tcKimlik = String(job?.assigneeTcKimlik || "").replace(/\D/g, "");
+  if (!tcKimlik) return { ok: false, message: "Görevde atanacak kişinin TC kimlik no bilgisi yok." };
+
+  const ready = await waitFor(() => findField(["tc", "tckn", "kimlik", "kisi tckn", "kişi tckn"]), 10000);
+  if (!ready) return { ok: false, message: "TC kimlik no alanı bulunamadı." };
+
+  fillFieldByPatterns(["tc", "tckn", "kimlik", "kisi tckn", "kişi tckn"], tcKimlik);
+  steps.push("TC kimlik no yazıldı");
+
+  if (!clickButtonByText(["Bul"])) {
+    return { ok: false, message: "TC Bul butonu bulunamadı." };
+  }
+  steps.push("Personel sorgulandı");
+
+  await delay(1600);
+  if (!clickButtonByText(["İleri", "Ileri"])) {
+    return { ok: false, message: "Personel ekranında İleri butonu bulunamadı." };
+  }
+  steps.push("Personel ekranı geçildi");
+  return { ok: true };
+}
+
+async function fillDurationStep(steps) {
+  const duration = await waitFor(
+    () =>
+      findValueNearLabel([
+        "gerekli toplam isg suresi",
+        "gerekli toplam i̇sg süresi",
+        "gerekli toplam iş güvenliği süresi",
+      ]),
+    10000
+  );
+  if (!duration) return { ok: false, message: "Gerekli toplam İSG süresi okunamadı." };
+
+  if (!fillDurationField(duration)) {
+    return { ok: false, message: "Çalışma süresi alanı bulunamadı." };
+  }
+
+  steps.push("Gerekli toplam süre çalışma süresine yazıldı");
+  return { ok: true, duration: parseNumberFromText(duration) };
+}
+
+async function autoPrepareAssignmentJob(job) {
+  const steps = [];
+  const gorevTuru = job?.gorevTuru || "is_guvenligi_uzmani";
+
+  const processResult = await chooseProcessForRole(gorevTuru, steps);
+  if (!processResult.ok) return { ok: false, steps, message: processResult.message };
+
+  const infoResult = await approveInfoScreen(steps);
+  if (!infoResult.ok) return { ok: false, steps, message: infoResult.message };
+
+  const companyResult = await fillCompanyStep(job, steps);
+  if (!companyResult.ok) return { ok: false, steps, message: companyResult.message };
+
+  const personResult = await fillPersonStep(job, steps);
+  if (!personResult.ok) return { ok: false, steps, message: personResult.message };
+
+  const durationResult = await fillDurationStep(steps);
+  if (!durationResult.ok) return { ok: false, steps, message: durationResult.message };
+
+  return {
+    ok: true,
+    steps,
+    duration: durationResult.duration,
+    message: "Atama son kontrol ekranına kadar hazırlandı.",
+  };
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "READ_ISG_KATIP_ROWS") return false;
 
@@ -280,6 +562,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } catch (error) {
     sendResponse({ ok: false, message: error?.message || "Sayfaya bilgi doldurulamadı" });
   }
+
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "AUTO_PREPARE_ISG_KATIP_JOB") return false;
+
+  autoPrepareAssignmentJob(message.job)
+    .then(sendResponse)
+    .catch((error) => {
+      sendResponse({ ok: false, message: error?.message || "Atama otomasyonu çalıştırılamadı." });
+    });
 
   return true;
 });

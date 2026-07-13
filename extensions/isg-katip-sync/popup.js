@@ -3,6 +3,7 @@ const tokenInput = document.getElementById("token");
 const detectPanelBtn = document.getElementById("detectPanelBtn");
 const syncBtn = document.getElementById("syncBtn");
 const nextJobBtn = document.getElementById("nextJobBtn");
+const autoPrepareJobBtn = document.getElementById("autoPrepareJobBtn");
 const fillJobBtn = document.getElementById("fillJobBtn");
 const doneJobBtn = document.getElementById("doneJobBtn");
 const failJobBtn = document.getElementById("failJobBtn");
@@ -48,6 +49,7 @@ function renderJob(job) {
   if (!currentJob) {
     jobBox.style.display = "none";
     jobBox.innerHTML = "";
+    autoPrepareJobBtn.style.display = "none";
     fillJobBtn.style.display = "none";
     doneJobBtn.style.display = "none";
     failJobBtn.style.display = "none";
@@ -63,6 +65,7 @@ function renderJob(job) {
     <div><strong>TC:</strong> ${escapeHtml(currentJob.assigneeTcKimlik || "-")}</div>
     <div><strong>Durum:</strong> ${escapeHtml(currentJob.status || "-")}</div>
   `;
+  autoPrepareJobBtn.style.display = "block";
   fillJobBtn.style.display = "block";
   doneJobBtn.style.display = "block";
   failJobBtn.style.display = "block";
@@ -321,6 +324,52 @@ fillJobBtn.addEventListener("click", async () => {
     setStatus(error?.message || "Sayfaya bilgi doldurulamadı.", true);
   } finally {
     fillJobBtn.disabled = false;
+  }
+});
+
+autoPrepareJobBtn.addEventListener("click", async () => {
+  if (!currentJob) {
+    setStatus("Önce bekleyen atama görevini alın.", true);
+    return;
+  }
+
+  autoPrepareJobBtn.disabled = true;
+  setStatus("İSG-KATİP atama ekranı otomatik hazırlanıyor...");
+
+  try {
+    const tab = await getActiveTab();
+    if (!tab?.url || !tab.url.includes("isgkatip")) {
+      throw new Error("Önce açık İSG-KATİP sekmesine geçin.");
+    }
+
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(tab.id, {
+        type: "AUTO_PREPARE_ISG_KATIP_JOB",
+        job: currentJob,
+      });
+    } catch (_error) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"],
+      });
+      response = await chrome.tabs.sendMessage(tab.id, {
+        type: "AUTO_PREPARE_ISG_KATIP_JOB",
+        job: currentJob,
+      });
+    }
+
+    if (!response?.ok) throw new Error(response?.message || "Atama ekranı otomatik hazırlanamadı.");
+    const steps = (response.steps || []).map((step) => `- ${step}`).join("\n");
+    setStatus(
+      `Atama hazırlandı.\n${steps}\nToplam süre: ${
+        response.duration || "-"
+      }\nSon resmi gönderimden önce ekrandaki bilgileri kontrol edin.`
+    );
+  } catch (error) {
+    setStatus(error?.message || "Atama ekranı otomatik hazırlanamadı.", true);
+  } finally {
+    autoPrepareJobBtn.disabled = false;
   }
 });
 
