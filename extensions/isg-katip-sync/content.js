@@ -238,9 +238,20 @@ function isUsableField(field) {
 }
 
 function setFieldValue(field, value) {
+  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
   field.focus();
-  field.value = value;
+  if (field instanceof HTMLInputElement && nativeSetter) {
+    nativeSetter.call(field, value);
+  } else if (field instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
+    nativeTextAreaSetter.call(field, value);
+  } else {
+    field.value = value;
+  }
+  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: String(value).slice(-1) || "0" }));
+  field.dispatchEvent(new KeyboardEvent("keypress", { bubbles: true, key: String(value).slice(-1) || "0" }));
   field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: String(value).slice(-1) || "0" }));
   field.dispatchEvent(new Event("change", { bubbles: true }));
   field.blur();
 }
@@ -256,19 +267,112 @@ function fillBestField(patterns, value) {
   return true;
 }
 
-function fillAssignmentJob(job) {
+function sgkSegments(sgkNo) {
+  const value = String(sgkNo || "").replace(/\D/g, "");
+  const lengths = [1, 4, 2, 2, 7, 3, 2, 2, 3];
+  const segments = [];
+  let index = 0;
+  lengths.forEach((length) => {
+    segments.push(value.slice(index, index + length));
+    index += length;
+  });
+  return segments;
+}
+
+function findFieldByAny(patternGroups) {
+  return patternGroups.map((patterns) => findField(patterns)).find(Boolean) || null;
+}
+
+function fillSgkSegmentFields(sgkNo) {
+  const segments = sgkSegments(sgkNo);
+  if (segments.some((part) => !part)) return 0;
+
+  const groups = [
+    ["mahiyet"],
+    ["is kolu", "iş kolu"],
+    ["yeni su", "yeni şube", "yeni sub"],
+    ["eski sub", "eski şube"],
+    ["sira no", "sıra no"],
+    ["il kodu"],
+    ["ilce kodu", "ilçe kodu"],
+    ["kontrol"],
+    ["araci", "aracı"],
+  ];
+
+  let filled = 0;
+  const used = new Set();
+  groups.forEach((patterns, index) => {
+    const field = findField(patterns);
+    if (field && !used.has(field)) {
+      setFieldValue(field, segments[index]);
+      used.add(field);
+      filled += 1;
+    }
+  });
+
+  if (filled >= 7) return filled;
+
+  const lengthHints = ["1 hane", "4 hane", "2 hane", "2 hane", "7 hane", "3 hane", "2 hane", "2 hane", "3 hane"];
+  const candidates = getAllFields().filter((field) => {
+    if (used.has(field)) return false;
+    const context = fieldContext(field);
+    return lengthHints.some((hint) => context.includes(hint)) || /^\d+\s*hane$/i.test(cleanText(field.placeholder || ""));
+  });
+
+  candidates.slice(0, segments.length).forEach((field, index) => {
+    setFieldValue(field, segments[index]);
+    used.add(field);
+    filled += 1;
+  });
+
+  return filled;
+}
+
+function fillSgkFields(sgkNo) {
+  const mainField =
+    findFieldByAny([
+      ["sgk", "sicil", "detsis", "26 hane"],
+      ["sgk sicil no"],
+      ["26 hane"],
+    ]) || findFirstEmptyTextField();
+  let mainFilled = false;
+  if (mainField) {
+    setFieldValue(mainField, sgkNo);
+    mainFilled = true;
+  }
+
+  const segmentCount = fillSgkSegmentFields(sgkNo);
+  return { mainFilled, segmentCount };
+}
+
+async function fillAssignmentJob(job) {
   const sgkNo = String(job?.sgkNo || "").replace(/\D/g, "");
   const tcKimlik = String(job?.assigneeTcKimlik || "").replace(/\D/g, "");
   if (!sgkNo || !tcKimlik) {
     return { ok: false, message: "Görevde SGK veya TC bilgisi eksik." };
   }
 
-  const filled = {
-    sgk: fillBestField(["sgk", "sicil", "detsis"], sgkNo),
-    tc: fillBestField(["tc", "kimlik", "gorevlendirilen"], tcKimlik),
-  };
+  const steps = [];
+  const filled = { sgk: false, tc: false };
 
-  return { ok: true, filled };
+  if (isCompanySelectionPage()) {
+    const companyResult = await fillCompanyStep(job, steps);
+    if (!companyResult.ok) return { ok: false, steps, message: companyResult.message };
+    filled.sgk = true;
+  }
+
+  if (isPersonSelectionPage()) {
+    const personResult = await fillPersonStep(job, steps);
+    if (!personResult.ok) return { ok: false, steps, message: personResult.message };
+    filled.tc = true;
+  }
+
+  if (!filled.sgk && !filled.tc) {
+    filled.sgk = fillSgkFields(sgkNo).mainFilled;
+    filled.tc = fillBestField(["tc", "kimlik", "gorevlendirilen"], tcKimlik);
+  }
+
+  return { ok: true, filled, steps };
 }
 
 const PROCESS_TEXT_BY_ROLE = {
@@ -631,8 +735,15 @@ async function fillCompanyStep(job, steps) {
   );
   if (!ready) return { ok: false, message: `SGK sicil no alanı bulunamadı. Ekran özeti: ${currentPagePreview()}` };
 
-  fillFieldByPatterns(["sgk", "sicil", "detsis", "26 hane"], sgkNo);
-  steps.push("SGK sicil no yazıldı");
+  const sgkFilled = fillSgkFields(sgkNo);
+  if (!sgkFilled.mainFilled && sgkFilled.segmentCount === 0) {
+    return { ok: false, message: "SGK sicil no alanı doldurulamadı." };
+  }
+  steps.push(
+    sgkFilled.segmentCount > 0
+      ? `SGK sicil no yazıldı (${sgkFilled.segmentCount} parça)`
+      : "SGK sicil no yazıldı"
+  );
 
   if (!clickButtonByText(["Bul"])) {
     return { ok: false, message: "SGK Bul butonu bulunamadı." };
@@ -644,7 +755,13 @@ async function fillCompanyStep(job, steps) {
     return { ok: false, message: "Firma ekranında İleri butonu bulunamadı." };
   }
   steps.push("Firma ekranı geçildi");
-  await delay(1200);
+  const moved = await waitFor(() => isPersonSelectionPage() || isSuccessfulTerminalPage(), 10000);
+  if (!moved) {
+    return {
+      ok: false,
+      message: `Firma ekranı geçilemedi. SGK parçalı alanları ve İSG-KATİP uyarılarını kontrol edin. Ekran özeti: ${currentPagePreview()}`,
+    };
+  }
   return { ok: true };
 }
 
@@ -755,11 +872,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "FILL_ISG_KATIP_JOB") return false;
 
-  try {
-    sendResponse(fillAssignmentJob(message.job));
-  } catch (error) {
-    sendResponse({ ok: false, message: error?.message || "Sayfaya bilgi doldurulamadı" });
-  }
+  fillAssignmentJob(message.job)
+    .then(sendResponse)
+    .catch((error) => {
+      sendResponse({ ok: false, message: error?.message || "Sayfaya bilgi doldurulamadı" });
+    });
 
   return true;
 });

@@ -231,6 +231,7 @@ export default function IsgKatipEntegrasyon() {
   const isApprovalTab = activeTab === "onay_bekleyen";
   const isActiveTab = activeTab === "aktif";
   const isFallenTab = activeTab === "dusen";
+  const canEditAssignee = isStartTab || isApprovalTab || isActiveTab || isFallenTab;
   const manualFormValid =
     manualAssigneeForm.adSoyad.trim() && hasValidTc(manualAssigneeForm.tcKimlik);
   const selectedBulkUser = candidateUsers.find((user) => user.id === bulkUserId);
@@ -245,6 +246,7 @@ export default function IsgKatipEntegrasyon() {
       ? item.category === "atanmamis" || item.category === "dusen"
       : item.category === activeTab;
   const actionLabel = isPanelAssignmentTab ? "Panel Atamasını Kaydet" : "Atama Sürecini Başlat";
+  const changeAssigneeLabel = isStartTab ? actionLabel : "Personeli Değiştir";
 
   useEffect(() => {
     if (!visibleItems.length) {
@@ -448,6 +450,14 @@ export default function IsgKatipEntegrasyon() {
   };
 
   const handleBulkPrimaryAction = () => {
+    if (!isStartTab) {
+      if (isUzmanMode) {
+        assignUser(bulkUserId);
+        return;
+      }
+      saveManualAssignee();
+      return;
+    }
     if (isPanelAssignmentTab) {
       if (isUzmanMode) {
         assignUser(bulkUserId);
@@ -460,6 +470,10 @@ export default function IsgKatipEntegrasyon() {
   };
 
   const handleSingleManualPrimaryAction = () => {
+    if (!isStartTab) {
+      saveManualAssignee();
+      return;
+    }
     if (isPanelAssignmentTab) {
       saveManualAssignee();
       return;
@@ -729,14 +743,20 @@ export default function IsgKatipEntegrasyon() {
                         </option>
                       ))}
                     </select>
-                    {isStartTab && (
+                    {canEditAssignee && (
                       <button
                         type="button"
                         onClick={handleBulkPrimaryAction}
-                        disabled={isPanelAssignmentTab ? saving || !bulkUserId : startDisabled}
+                        disabled={
+                          isStartTab
+                            ? isPanelAssignmentTab
+                              ? saving || !bulkUserId
+                              : startDisabled
+                            : saving || !bulkUserId
+                        }
                         className={`${btn.base} ${btn.primary} mt-2 w-full`}
                       >
-                        {actionLabel}
+                        {changeAssigneeLabel}
                       </button>
                     )}
                     {bulkUserId && selectedBulkUser && !selectedBulkUser.tcKimlikVar && (
@@ -818,14 +838,20 @@ export default function IsgKatipEntegrasyon() {
                         placeholder="TC KİMLİK NO"
                         className={inputClass}
                       />
-                      {isStartTab && (
+                      {canEditAssignee && (
                         <button
                           type="button"
                           onClick={handleBulkPrimaryAction}
-                          disabled={isPanelAssignmentTab ? saving || !manualFormValid : startDisabled}
+                          disabled={
+                            isStartTab
+                              ? isPanelAssignmentTab
+                                ? saving || !manualFormValid
+                                : startDisabled
+                              : saving || !manualFormValid
+                          }
                           className={`${btn.base} ${btn.primary} w-full`}
                         >
-                          {actionLabel}
+                          {changeAssigneeLabel}
                         </button>
                       )}
                       {isStartTab && !bulkManualReady && (
@@ -913,15 +939,15 @@ export default function IsgKatipEntegrasyon() {
                   </div>
                 </div>
 
-                {isStartTab && (isUzmanMode ? (
+                {canEditAssignee && (isUzmanMode ? (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="mb-2 text-xs font-semibold text-slate-700">
                       Bu Görev İçin Kullanıcı Ata
                     </div>
                     <select
-                      value={isPanelAssignmentTab ? pendingUserId : selected.assignedUserId || ""}
+                      value={isPanelAssignmentTab || !isStartTab ? pendingUserId : selected.assignedUserId || ""}
                       onChange={(event) =>
-                        isPanelAssignmentTab
+                        isPanelAssignmentTab || !isStartTab
                           ? setPendingUserId(event.target.value)
                           : assignUser(event.target.value)
                       }
@@ -937,14 +963,14 @@ export default function IsgKatipEntegrasyon() {
                         </option>
                       ))}
                     </select>
-                    {isPanelAssignmentTab && (
+                    {(isPanelAssignmentTab || !isStartTab) && (
                       <button
                         type="button"
                         onClick={handleSingleExpertPanelSave}
                         disabled={saving || !pendingUserId}
                         className={`${btn.base} ${btn.primary} mt-2 w-full`}
                       >
-                        Panel Atamasını Kaydet
+                        {isStartTab ? "Panel Atamasını Kaydet" : "Personeli Değiştir"}
                       </button>
                     )}
                   </div>
@@ -1020,14 +1046,20 @@ export default function IsgKatipEntegrasyon() {
                         placeholder="TC KİMLİK NO"
                         className={inputClass}
                       />
-                      {isStartTab && (
+                      {canEditAssignee && (
                         <button
                           type="button"
                           onClick={handleSingleManualPrimaryAction}
-                          disabled={isPanelAssignmentTab ? saving || !manualFormValid : startDisabled}
+                          disabled={
+                            isStartTab
+                              ? isPanelAssignmentTab
+                                ? saving || !manualFormValid
+                                : startDisabled
+                              : saving || !manualFormValid
+                          }
                           className={`${btn.base} ${btn.primary} w-full`}
                         >
-                          {actionLabel}
+                          {changeAssigneeLabel}
                         </button>
                       )}
                     </div>

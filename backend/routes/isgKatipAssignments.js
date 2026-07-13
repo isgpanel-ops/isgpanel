@@ -142,6 +142,37 @@ function jobKeyFor(orgId, firmaId, gorevTuru) {
   return `${String(orgId)}:${String(firmaId)}:${normalizeGorevTuru(gorevTuru)}`;
 }
 
+async function cancelOpenJobsForAssignments(orgId, gorevTuru, firmaIds, actorId, reason = "Atama bilgisi guncellendi") {
+  const validFirmaIds = (Array.isArray(firmaIds) ? firmaIds : [firmaIds]).filter((id) =>
+    mongoose.Types.ObjectId.isValid(String(id))
+  );
+  if (validFirmaIds.length === 0) return;
+
+  await IsgKatipJob.updateMany(
+    {
+      organization: orgId,
+      firmaId: { $in: validFirmaIds },
+      gorevTuru: normalizeGorevTuru(gorevTuru),
+      status: { $in: ["pending", "failed", "in_progress"] },
+    },
+    {
+      $set: {
+        status: "cancelled",
+        lastClientNote: reason,
+        updatedBy: actorId || null,
+      },
+      $push: {
+        logs: {
+          action: "cancelled_by_assignment_change",
+          message: reason,
+          by: actorId || null,
+          at: new Date(),
+        },
+      },
+    }
+  );
+}
+
 function gorevTuruLabel(gorevTuru) {
   const labels = {
     is_guvenligi_uzmani: "Is Guvenligi Uzmani",
@@ -698,6 +729,35 @@ router.patch("/jobs/:jobId", async (req, res) => {
     ).lean();
 
     if (!job) return res.status(404).json({ message: "Gorev bulunamadi" });
+
+    if (job.assignmentId) {
+      const nextAssignmentStatus =
+        status === "done" ? "profesyonel_onayi_bekliyor" : status === "failed" ? "atama_yok" : null;
+      if (nextAssignmentStatus) {
+        await IsgKatipAssignment.updateOne(
+          { _id: job.assignmentId, organization: orgId },
+          {
+            $set: {
+              isgKatipStatus: nextAssignmentStatus,
+              lastSyncAt: now,
+              lastError: status === "failed" ? error : "",
+            },
+            $push: {
+              logs: {
+                action: `extension_job_${status}`,
+                message:
+                  status === "done"
+                    ? "Eklenti gorevi tamamlandi; atama onay surecine alindi"
+                    : "Eklenti gorevi hatali isaretlendi; atama yeniden baslatilabilir duruma alindi",
+                by: req.user._id || req.user.id || null,
+                at: now,
+              },
+            },
+          }
+        );
+      }
+    }
+
     return res.json({ ok: true, job: normalizeJob(job) });
   } catch (err) {
     console.error("ISG-KATIP update job hata:", err);
@@ -1038,6 +1098,14 @@ router.post("/bulk/assign-user", async (req, res) => {
       }))
     );
 
+    await cancelOpenJobsForAssignments(
+      orgId,
+      gorevTuru,
+      scopedFirmaIds,
+      req.user._id || req.user.id || null,
+      "Toplu kullanici atamasi degisti"
+    );
+
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1121,6 +1189,14 @@ router.post("/bulk/manual-assignee", async (req, res) => {
           upsert: true,
         },
       }))
+    );
+
+    await cancelOpenJobsForAssignments(
+      orgId,
+      gorevTuru,
+      scopedFirmaIds,
+      req.user._id || req.user.id || null,
+      "Toplu kisi bilgisi degisti"
     );
 
     const overview = await buildOverview(orgId, gorevTuru);
@@ -1242,7 +1318,7 @@ router.post("/bulk/start", async (req, res) => {
                   firmaId,
                   gorevTuru,
                   assignedUserId: link.userId,
-                  isgKatipStatus: "profesyonel_onayi_bekliyor",
+                  isgKatipStatus: "atama_yok",
                   lastSyncAt: now,
                   lastError: "",
                 },
@@ -1320,7 +1396,7 @@ router.post("/bulk/start", async (req, res) => {
                 gorevTuru,
                 assignedUserId: null,
                 manualAssignee: assignee,
-                isgKatipStatus: "profesyonel_onayi_bekliyor",
+                isgKatipStatus: "atama_yok",
                 lastSyncAt: now,
                 lastError: "",
               },
@@ -1483,6 +1559,14 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       { upsert: true }
     );
 
+    await cancelOpenJobsForAssignments(
+      orgId,
+      gorevTuru,
+      [firmaId],
+      req.user._id || req.user.id || null,
+      "Kullanici atamasi degisti"
+    );
+
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1555,6 +1639,14 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
         },
       },
       { upsert: true }
+    );
+
+    await cancelOpenJobsForAssignments(
+      orgId,
+      gorevTuru,
+      [firmaId],
+      req.user._id || req.user.id || null,
+      "Kisi bilgisi degisti"
     );
 
     const overview = await buildOverview(orgId, gorevTuru);
@@ -1686,7 +1778,7 @@ router.post("/:firmaId/start", async (req, res) => {
             firmaId,
             assignedUserId: activeLink.userId,
             gorevTuru,
-            isgKatipStatus: "profesyonel_onayi_bekliyor",
+            isgKatipStatus: "atama_yok",
             lastSyncAt: now,
             lastError: "",
           },
@@ -1749,7 +1841,7 @@ router.post("/:firmaId/start", async (req, res) => {
           assignedUserId: null,
           manualAssignee: { adSoyad: manualName, tcKimlik: manualTc },
           gorevTuru,
-          isgKatipStatus: "profesyonel_onayi_bekliyor",
+          isgKatipStatus: "atama_yok",
           lastSyncAt: now,
           lastError: "",
         },
