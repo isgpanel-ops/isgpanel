@@ -135,16 +135,17 @@ function findCompanyName(cells, rowText) {
   return cleanText(beforeSgk).slice(0, 180);
 }
 
-function rowToRecord(cells) {
+function rowToRecord(cells, statusHint = "") {
   const rawText = cleanText(cells.join(" "));
   const sgkNo = findSgkNo(rawText);
   if (!sgkNo) return null;
+  const detectedStatus = normalizeStatus(rawText);
 
   return {
     sgkNo,
     firmaAdi: findCompanyName(cells, rawText),
     gorevTuru: detectGorevTuru(rawText),
-    isgKatipStatus: normalizeStatus(rawText),
+    isgKatipStatus: detectedStatus === "kontrol_edilmedi" && statusHint ? statusHint : detectedStatus,
     personelTcKimlik: findTcKimlik(rawText),
     calisanSayisi: findEmployeeCount(rawText),
     tehlike: findHazardClass(rawText),
@@ -154,18 +155,34 @@ function rowToRecord(cells) {
   };
 }
 
-function readRowsFromTables() {
+function inferStatusFromActiveTab() {
+  const activeCandidates = visibleElements(
+    ".active, [aria-selected='true'], [class*='active'], [class*='selected'], a, button, li"
+  );
+  const activeText = normalizeSearchText(
+    activeCandidates
+      .map((node) => cleanText(node.innerText || node.textContent || ""))
+      .filter(Boolean)
+      .join(" ")
+  );
+  if (activeText.includes("devam eden")) return "atama_onaylandi";
+  if (activeText.includes("onay bekleyen")) return "profesyonel_onayi_bekliyor";
+  if (activeText.includes("guncellenmesi gereken") || activeText.includes("sure guncellemesi")) return "atama_dustu";
+  return "";
+}
+
+function readRowsFromTables(statusHint = "") {
   const rows = Array.from(document.querySelectorAll("table tbody tr, table tr"));
   return rows
     .map((row) => {
       const cells = Array.from(row.querySelectorAll("td, th")).map((cell) => cellTextForSync(cell));
       if (cells.length < 2) return null;
-      return rowToRecord(cells);
+      return rowToRecord(cells, statusHint);
     })
     .filter(Boolean);
 }
 
-function readCardsFromPage() {
+function readCardsFromPage(statusHint = "") {
   const candidates = Array.from(
     document.querySelectorAll("[class*='card'], [class*='panel'], [class*='result'], [class*='sonuc'], section, form")
   );
@@ -173,7 +190,7 @@ function readCardsFromPage() {
     .map((node) => {
       const text = cleanText(node.innerText);
       if (!findSgkNo(text)) return null;
-      return rowToRecord([text]);
+      return rowToRecord([text], statusHint);
     })
     .filter(Boolean);
 }
@@ -189,8 +206,9 @@ function dedupeRows(rows) {
 }
 
 function readIsgKatipSnapshot() {
-  const tableRows = readRowsFromTables();
-  const cardRows = tableRows.length > 0 ? [] : readCardsFromPage();
+  const statusHint = inferStatusFromActiveTab();
+  const tableRows = readRowsFromTables(statusHint);
+  const cardRows = tableRows.length > 0 ? [] : readCardsFromPage(statusHint);
   const pageText = cleanText(document.body?.innerText || "");
 
   return {
@@ -198,6 +216,116 @@ function readIsgKatipSnapshot() {
     title: document.title || "",
     pageGorevTuru: detectGorevTuru(pageText),
     rows: dedupeRows([...tableRows, ...cardRows]),
+    capturedAt: new Date().toISOString(),
+  };
+}
+
+function activePageNumber() {
+  const candidates = visibleElements(
+    ".active, [aria-current='page'], [aria-selected='true'], [class*='active'], [class*='current']"
+  );
+  const page = candidates
+    .map((node) => cleanText(node.innerText || node.textContent || ""))
+    .find((text) => /^\d+$/.test(text));
+  return page || "";
+}
+
+function pageSignature() {
+  const snapshot = readIsgKatipSnapshot();
+  const rowKey = snapshot.rows.map((row) => `${row.sgkNo}:${row.personelTcKimlik}:${row.rawText}`).join("|");
+  return `${activePageNumber()}::${rowKey}`;
+}
+
+function pageControlText(element) {
+  return cleanText(
+    [
+      element.innerText,
+      element.textContent,
+      element.value,
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.className,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function paginationControls() {
+  return visibleElements("button, a, li, [role='button']")
+    .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const text = pageControlText(element);
+      return /(^|\s)(pagination|pager|page|next|prev|sonraki|önceki|onceki)(\s|$)/i.test(text) || /^[0-9<>»›‹«]+$/.test(cleanText(element.innerText || element.textContent || ""));
+    })
+    .sort((a, b) => {
+      const aText = pageControlText(a);
+      const bText = pageControlText(b);
+      const aScore = /pagination|pager|next/i.test(aText) ? 0 : 1;
+      const bScore = /pagination|pager|next/i.test(bText) ? 0 : 1;
+      return aScore - bScore || b.getBoundingClientRect().top - a.getBoundingClientRect().top;
+    });
+}
+
+function clickPageControl(element) {
+  const target = element.querySelector?.("button, a") || element;
+  clickElement(target);
+}
+
+function clickPageNumber(pageNumber) {
+  const target = paginationControls().find((element) => cleanText(element.innerText || element.textContent || "") === String(pageNumber));
+  if (!target) return false;
+  clickPageControl(target);
+  return true;
+}
+
+function isNextPageControl(element) {
+  const raw = cleanText(element.innerText || element.textContent || "");
+  const meta = normalizeSearchText(pageControlText(element));
+  return raw === ">" || raw === "›" || meta.includes("pagination-next") || meta.includes("pager-next") || meta.includes("sonraki");
+}
+
+function clickNextPage() {
+  const target = paginationControls().find(isNextPageControl);
+  if (!target) return false;
+  clickPageControl(target);
+  return true;
+}
+
+async function goFirstPageIfPossible() {
+  if (activePageNumber() === "1") return;
+  const before = pageSignature();
+  if (!clickPageNumber(1)) return;
+  await waitFor(() => pageSignature() !== before, 8000, 250);
+  await delay(300);
+}
+
+async function readIsgKatipSnapshotAllPages() {
+  await goFirstPageIfPossible();
+  const rows = [];
+  const pageSignatures = new Set();
+  let pageCount = 0;
+
+  for (let i = 0; i < 80; i += 1) {
+    const before = pageSignature();
+    if (pageSignatures.has(before)) break;
+    pageSignatures.add(before);
+
+    const snapshot = readIsgKatipSnapshot();
+    rows.push(...snapshot.rows);
+    pageCount += 1;
+
+    if (!clickNextPage()) break;
+    const changed = await waitFor(() => pageSignature() !== before, 10000, 300);
+    if (!changed) break;
+    await delay(500);
+  }
+
+  const base = readIsgKatipSnapshot();
+  return {
+    ...base,
+    rows: dedupeRows(rows),
+    pageCount,
     capturedAt: new Date().toISOString(),
   };
 }
@@ -1145,6 +1273,18 @@ async function runAssignmentJob(job) {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "READ_ISG_KATIP_ROWS") return false;
+
+  readIsgKatipSnapshotAllPages()
+    .then((snapshot) => sendResponse({ ok: true, ...snapshot }))
+    .catch((error) => {
+      sendResponse({ ok: false, message: error?.message || "Sayfa okunamadÄ±" });
+    });
+
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "READ_ISG_KATIP_ROWS_LEGACY") return false;
 
   try {
     sendResponse({ ok: true, ...readIsgKatipSnapshot() });
