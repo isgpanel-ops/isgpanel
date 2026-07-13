@@ -352,6 +352,20 @@ function clickFirstVisibleByText(text) {
   return true;
 }
 
+function clickTextContainer(text) {
+  const wanted = normalizeSearchText(text);
+  const candidates = visibleElements("label, span, div, p, input, .ant-checkbox-wrapper, .checkbox, [class*='checkbox']")
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => a.children.length - b.children.length);
+  const element = candidates.find((candidate) => {
+    const value = normalizeSearchText(candidate.innerText || candidate.textContent || candidate.value || "");
+    return value.includes(wanted);
+  });
+  if (!element) return false;
+  clickElement(element);
+  return true;
+}
+
 function getAllFields() {
   return Array.from(document.querySelectorAll("input, textarea, select")).filter(isUsableField);
 }
@@ -435,6 +449,36 @@ function isPersonSelectionPage() {
 function isInfoApprovalPage() {
   const pageText = normalizeSearchText(document.body?.innerText || "");
   return pageText.includes("okudum") || pageText.includes("bilgilendirme metni") || pageText.includes("yonetmelik kapsaminda");
+}
+
+function isCheckedElement(element) {
+  return (
+    element.checked ||
+    element.getAttribute("aria-checked") === "true" ||
+    element.classList.contains("checked") ||
+    element.classList.contains("ant-checkbox-checked")
+  );
+}
+
+function checkInfoApprovalBox() {
+  const nativeCheckbox = visibleElements("input[type='checkbox']").find((input) => !input.checked);
+  if (nativeCheckbox) {
+    clickElement(nativeCheckbox);
+    nativeCheckbox.checked = true;
+    nativeCheckbox.dispatchEvent(new Event("input", { bubbles: true }));
+    nativeCheckbox.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  const customCheckbox = visibleElements(
+    "[role='checkbox'], .ant-checkbox, .ant-checkbox-wrapper, .checkbox, [class*='checkbox']"
+  ).find((element) => !isCheckedElement(element));
+  if (customCheckbox) {
+    clickElement(customCheckbox);
+    return true;
+  }
+
+  return clickTextContainer("okudum ve onaylıyorum") || clickTextContainer("okudum");
 }
 
 function currentPagePreview() {
@@ -554,19 +598,24 @@ async function approveInfoScreen(steps) {
   if (hasInfoScreen && isCompanySelectionPage()) return { ok: true };
   if (!hasInfoScreen) return { ok: true };
 
-  const checkbox = visibleElements("input[type='checkbox']").find((input) => !input.checked);
-  if (checkbox) {
-    clickElement(checkbox);
+  if (checkInfoApprovalBox()) {
     steps.push("Bilgilendirme metni işaretlendi");
   }
 
-  if (clickButtonByText(["Başlat", "Baslat", "İleri", "Ileri"])) {
+  const continued = await waitFor(() => clickButtonByText(["Başlat", "Baslat", "İleri", "Ileri"]), 6000);
+  if (continued) {
     steps.push("Bilgilendirme ekranı geçildi");
-    await delay(1200);
+    const moved = await waitFor(() => isCompanySelectionPage() || isSuccessfulTerminalPage(), 12000);
+    if (!moved) {
+      return {
+        ok: false,
+        message: `Bilgilendirme ekranı geçildi ama SGK ekranı açılmadı. Ekran özeti: ${currentPagePreview()}`,
+      };
+    }
     return { ok: true };
   }
 
-  return { ok: false, message: "Bilgilendirme ekranında ilerleme butonu bulunamadı." };
+  return { ok: false, message: `Bilgilendirme ekranında aktif ilerleme butonu bulunamadı. Ekran özeti: ${currentPagePreview()}` };
 }
 
 async function fillCompanyStep(job, steps) {
