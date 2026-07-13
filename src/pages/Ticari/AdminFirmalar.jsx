@@ -1025,8 +1025,8 @@ export default function AdminFirmalar() {
   const downloadBulkTemplate = async () => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Firmalar");
-    ws.addRow(["Firma Adı", "SGK Sicil No", "Adres", "Tehlike Sınıfı", "Sözleşme Onay Tarihi"]);
-    ws.addRow(["ÖRNEK FİRMA LTD. ŞTİ.", "12345678901234567890123456", "Örnek adres", "Tehlikeli", "01.06.2026"]);
+    ws.addRow(["Firma Adı", "SGK Sicil No", "Tehlike Sınıfı", "Sözleşme Onay Tarihi"]);
+    ws.addRow(["ÖRNEK FİRMA LTD. ŞTİ.", "12345678901234567890123456", "Tehlikeli", "01.06.2026"]);
     ws.columns.forEach((col) => {
       col.width = 24;
     });
@@ -1054,10 +1054,10 @@ export default function AdminFirmalar() {
         if (rowNumber === 1) return;
         const firmaAdi = getCellByHeader(row, headerMap, ["Firma Adı", "Hizmet Alan İşyeri Unvanı", "Unvan"], 1);
         const sgkSicilNo = digitsOnly(getCellByHeader(row, headerMap, ["SGK Sicil No", "Hizmet Alan İşyeri SGK/DETSİS No", "SGK DETSİS No"], 2));
-        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], 3);
-        const tehlike = getCellByHeader(row, headerMap, ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"], 4);
-        const hazirlama = getCellByHeader(row, headerMap, ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"], 5);
-        if (![firmaAdi, sgkSicilNo, adres, tehlike, hazirlama].some(Boolean)) return;
+        const adres = getCellByHeader(row, headerMap, ["Adres", "Hizmet Alan İşyeri Adresi"], null);
+        const tehlike = getCellByHeader(row, headerMap, ["Tehlike Sınıfı", "Güncel Tehlike Sınıfı", "Hizmet Alan İşyeri Tehlike Sınıfı"], 3);
+        const hazirlama = getCellByHeader(row, headerMap, ["Sözleşme Onay Tarihi", "Sözleşme Başlangıç Tarihi", "Hazırlama Tarihi"], 4);
+        if (![firmaAdi, sgkSicilNo, tehlike, hazirlama].some(Boolean)) return;
         const nace = inferNaceFromSgk(sgkSicilNo);
         rows.push({ rowNumber, firmaAdi, sgkSicilNo, sgkNo: sgkSicilNo, adres, tehlike, hazirlama, nace });
       });
