@@ -299,6 +299,15 @@ function isVisibleElement(element) {
   return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
 }
 
+function isDisabledElement(element) {
+  return (
+    element.disabled ||
+    element.getAttribute("aria-disabled") === "true" ||
+    element.classList.contains("disabled") ||
+    element.classList.contains("ant-btn-disabled")
+  );
+}
+
 function visibleElements(selector) {
   return Array.from(document.querySelectorAll(selector)).filter(isVisibleElement);
 }
@@ -313,7 +322,9 @@ function clickElement(element) {
 
 function clickButtonByText(texts) {
   const wanted = texts.map(normalizeSearchText);
-  const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']");
+  const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']").filter(
+    (element) => !isDisabledElement(element)
+  );
   const button = candidates.find((element) => {
     const text = normalizeSearchText(element.innerText || element.value || element.getAttribute("aria-label") || "");
     return wanted.some((item) => text === item || text.includes(item));
@@ -325,7 +336,13 @@ function clickButtonByText(texts) {
 
 function clickFirstVisibleByText(text) {
   const wanted = normalizeSearchText(text);
-  const candidates = visibleElements("li, div, span, a, button, [role='option'], [role='menuitem']");
+  const candidates = visibleElements("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, div, span")
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => {
+      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option") ? 0 : 1;
+      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option") ? 0 : 1;
+      return aRoleScore - bRoleScore || a.children.length - b.children.length;
+    });
   const option = candidates.find((element) => {
     const value = normalizeSearchText(element.innerText || element.textContent || "");
     return value === wanted || value.includes(wanted);
@@ -415,6 +432,11 @@ function isPersonSelectionPage() {
   );
 }
 
+function isInfoApprovalPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return pageText.includes("okudum") || pageText.includes("bilgilendirme metni") || pageText.includes("yonetmelik kapsaminda");
+}
+
 function currentPagePreview() {
   return cleanText(document.body?.innerText || "")
     .replace(/\s+/g, " ")
@@ -499,30 +521,37 @@ async function chooseProcessForRole(gorevTuru, steps) {
   if (searchField) {
     setFieldValue(searchField, processText);
     clickElement(searchField);
+    searchField.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Enter" }));
   } else {
     clickFirstVisibleByText("Lütfen Süreç Seçiniz");
   }
-  await delay(500);
+  await delay(900);
 
   if (!clickFirstVisibleByText(processText)) {
     return { ok: false, message: "Görev türüne uygun süreç seçeneği bulunamadı." };
   }
   steps.push(`${GOREV_TURLERI[gorevTuru] || "Görev"} süreci seçildi`);
 
-  await delay(500);
-  if (!clickButtonByText(["Başlat", "Baslat"])) {
-    return { ok: false, message: "Başlat butonu bulunamadı." };
+  const startReady = await waitFor(() => clickButtonByText(["Başlat", "Baslat"]), 5000);
+  if (!startReady) {
+    return { ok: false, message: `Başlat butonu aktif bulunamadı. Ekran özeti: ${currentPagePreview()}` };
   }
   steps.push("Süreç başlatıldı");
-  await delay(1200);
+  const moved = await waitFor(() => isCompanySelectionPage() || isInfoApprovalPage() || isSuccessfulTerminalPage(), 12000);
+  if (!moved) {
+    return { ok: false, message: `Süreç başlatıldı ama SGK ekranı açılmadı. Ekran özeti: ${currentPagePreview()}` };
+  }
   return { ok: true };
 }
 
 async function approveInfoScreen(steps) {
   const hasInfoScreen = await waitFor(
-    () => normalizeSearchText(document.body.innerText).includes("okudum") || normalizeSearchText(document.body.innerText).includes("bilgilendirme"),
+    () =>
+      isCompanySelectionPage() ||
+      isInfoApprovalPage(),
     10000
   );
+  if (hasInfoScreen && isCompanySelectionPage()) return { ok: true };
   if (!hasInfoScreen) return { ok: true };
 
   const checkbox = visibleElements("input[type='checkbox']").find((input) => !input.checked);
@@ -548,7 +577,7 @@ async function fillCompanyStep(job, steps) {
     () => isCompanySelectionPage() && findField(["sgk", "sicil", "detsis", "26 hane"]),
     10000
   );
-  if (!ready) return { ok: false, message: "SGK sicil no alanı bulunamadı." };
+  if (!ready) return { ok: false, message: `SGK sicil no alanı bulunamadı. Ekran özeti: ${currentPagePreview()}` };
 
   fillFieldByPatterns(["sgk", "sicil", "detsis", "26 hane"], sgkNo);
   steps.push("SGK sicil no yazıldı");
