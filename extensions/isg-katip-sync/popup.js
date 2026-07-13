@@ -373,10 +373,18 @@ autoPrepareJobBtn.addEventListener("click", async () => {
 
     if (!response?.ok) throw new Error(response?.message || "Atama ekranı otomatik hazırlanamadı.");
     const steps = (response.steps || []).map((step) => `- ${step}`).join("\n");
+    const data = await panelFetch(`/api/isg-katip/jobs/${currentJob.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "done",
+        note: "Eklenti İSG-KATİP atama işlemini otomatik tamamladı",
+      }),
+    });
+    renderJob(data.job);
     setStatus(
-      `Atama hazırlandı.\n${steps}\nToplam süre: ${
+      `Atama otomatik tamamlandı.\n${steps}\nToplam süre: ${
         response.duration || "-"
-      }\n${response.message || ""}\nSon resmi gönderimden önce ekrandaki bilgileri kontrol edin.`
+      }\n${response.message || ""}\nPanel onay sürecine alındı.`
     );
   } catch (error) {
     setStatus(error?.message || "Atama ekranı otomatik hazırlanamadı.", true);

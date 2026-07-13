@@ -410,6 +410,35 @@ const PROCESS_TEXT_BY_ROLE = {
   diger_saglik_personeli: "OSGB İLE ÖZEL İŞYERİ ARASINDA DİĞER SAĞLIK PERSONELİ HİZMETİ ALIMI SÖZLEŞMESİ",
 };
 
+const PROCESS_KEYWORDS_BY_ROLE = {
+  is_guvenligi_uzmani: ["osgb", "ozel isyeri", "is guvenligi uzmani", "hizmet alimi sozlesmesi"],
+  isyeri_hekimi: ["osgb", "ozel isyeri", "isyeri hekimligi", "hizmet alimi sozlesmesi"],
+  diger_saglik_personeli: ["osgb", "ozel isyeri", "diger saglik personeli", "hizmeti alimi sozlesmesi"],
+};
+
+const DURATION_LABELS_BY_ROLE = {
+  is_guvenligi_uzmani: [
+    "gerekli toplam igu suresi",
+    "gerekli toplam isg suresi",
+    "devam eden toplam igu suresi",
+    "devam eden toplam isg suresi",
+  ],
+  isyeri_hekimi: [
+    "gerekli toplam ih suresi",
+    "gerekli toplam isyeri hekimi suresi",
+    "devam eden toplam ih suresi",
+  ],
+  diger_saglik_personeli: [
+    "gerekli toplam dsp suresi",
+    "gerekli toplam diger saglik personeli suresi",
+    "devam eden toplam dsp suresi",
+  ],
+};
+
+function roleLabel(gorevTuru) {
+  return GOREV_TURLERI[gorevTuru] || GOREV_TURLERI.is_guvenligi_uzmani || "Görev";
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -479,6 +508,34 @@ function clickFirstVisibleByText(text) {
   const option = candidates.find((element) => {
     const value = normalizeSearchText(element.innerText || element.textContent || "");
     return value === wanted || value.includes(wanted);
+  });
+  if (!option) return false;
+  clickElement(option);
+  return true;
+}
+
+function clickProcessOption(gorevTuru) {
+  const processText = PROCESS_TEXT_BY_ROLE[gorevTuru] || PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani;
+  if (clickFirstVisibleByText(processText)) return true;
+
+  const keywords = PROCESS_KEYWORDS_BY_ROLE[gorevTuru] || PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani;
+  const candidates = visibleElements(
+    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, div"
+  )
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => {
+      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option")
+        ? 0
+        : 1;
+      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option")
+        ? 0
+        : 1;
+      return aRoleScore - bRoleScore || a.children.length - b.children.length;
+    });
+
+  const option = candidates.find((element) => {
+    const text = normalizeSearchText(element.innerText || element.textContent || "");
+    return keywords.every((keyword) => text.includes(keyword));
   });
   if (!option) return false;
   clickElement(option);
@@ -623,12 +680,30 @@ function currentPagePreview() {
     .slice(0, 220);
 }
 
-function durationFromRawText(rawText) {
+function durationLabelsForRole(gorevTuru) {
+  return [
+    ...(DURATION_LABELS_BY_ROLE[gorevTuru] || DURATION_LABELS_BY_ROLE.is_guvenligi_uzmani),
+    "gerekli toplam sure",
+    "devam eden toplam sure",
+  ];
+}
+
+function durationFromRawText(rawText, gorevTuru = "is_guvenligi_uzmani") {
   const text = cleanText(rawText);
+  const normalizedText = normalizeSearchText(text);
+  for (const label of durationLabelsForRole(gorevTuru)) {
+    const index = normalizedText.indexOf(label);
+    if (index >= 0) {
+      const nearby = text.slice(Math.max(0, index), index + 180);
+      const value = parseNumberFromText(nearby);
+      if (value) return value;
+    }
+  }
+
   const patterns = [
-    /GEREKL[İI]\s+TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
-    /TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
-    /DEVAM\s+EDEN\s+TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /GEREKL[İI]\s+TOPLAM\s+(?:İGU|IGU|İSG|ISG|İH|IH|DSP)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /TOPLAM\s+(?:İGU|IGU|İSG|ISG|İH|IH|DSP)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /DEVAM\s+EDEN\s+TOPLAM\s+(?:İGU|IGU|İSG|ISG|İH|IH|DSP)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -637,12 +712,12 @@ function durationFromRawText(rawText) {
   return "";
 }
 
-function findValueNearLabel(patterns) {
+function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
   const normalizedPatterns = patterns.map(normalizeSearchText);
   const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, .form-line, .ant-row, div"));
   for (const row of rows) {
     const rowRawText = elementTextWithValues(row);
-    const directDuration = durationFromRawText(rowRawText);
+    const directDuration = durationFromRawText(rowRawText, gorevTuru);
     if (directDuration) return directDuration;
 
     const directCells = Array.from(row.children).filter(isVisibleElement);
@@ -707,10 +782,10 @@ async function chooseProcessForRole(gorevTuru, steps) {
   }
   await delay(900);
 
-  if (!clickFirstVisibleByText(processText)) {
+  if (!clickProcessOption(gorevTuru)) {
     return { ok: false, message: "Görev türüne uygun süreç seçeneği bulunamadı." };
   }
-  steps.push(`${GOREV_TURLERI[gorevTuru] || "Görev"} süreci seçildi`);
+  steps.push(`${roleLabel(gorevTuru)} süreci seçildi`);
 
   const startReady = await waitFor(() => clickButtonByText(["Başlat", "Baslat"]), 5000);
   if (!startReady) {
@@ -830,16 +905,12 @@ async function fillPersonStep(job, steps) {
   return { ok: true };
 }
 
-async function fillDurationStep(steps) {
+async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
+  const durationLabels = durationLabelsForRole(gorevTuru);
   const duration = await waitFor(
     () =>
       isSuccessfulTerminalPage() ||
-      findValueNearLabel([
-        "gerekli toplam isg suresi",
-        "gerekli toplam i̇sg süresi",
-        "gerekli toplam iş güvenliği süresi",
-        "devam eden toplam isg suresi",
-      ]),
+      findValueNearLabel(durationLabels, gorevTuru),
     10000
   );
   if (duration === true) {
@@ -866,7 +937,158 @@ async function fillDurationStep(steps) {
   }
 
   steps.push("Gerekli toplam süre çalışma süresine yazıldı");
-  return { ok: true, duration: parseNumberFromText(duration) };
+  const continued = await waitFor(() => clickButtonByText(["İleri", "Ileri"]), 6000);
+  if (!continued) {
+    return { ok: false, message: "Süre ekranında son İleri butonu bulunamadı." };
+  }
+  steps.push("Süre ekranı geçildi");
+
+  const succeeded = await waitFor(() => isSuccessfulTerminalPage() || isContractListPage(), 15000, 300);
+  if (isSuccessfulTerminalPage()) {
+    steps.push("İSG-KATİP başarı mesajı görüldü");
+    return { ok: true, duration: parseNumberFromText(duration) };
+  }
+  if (succeeded && isContractListPage()) {
+    return {
+      ok: false,
+      message: `İSG-KATİP liste ekranına döndü; başarı mesajı görülemedi. Ekran özeti: ${currentPagePreview()}`,
+    };
+  }
+  return {
+    ok: false,
+    message: `Süre gönderildi ama başarı mesajı görülemedi. Ekran özeti: ${currentPagePreview()}`,
+  };
+}
+
+function jobOperation(job) {
+  return String(job?.operation || "create_assignment");
+}
+
+function clickTabByText(texts) {
+  const wanted = texts.map(normalizeSearchText);
+  const candidates = visibleElements("a, button, li, [role='tab'], .nav-link, .ant-tabs-tab, span, div")
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => {
+      const aScore = a.matches("a, button, li, [role='tab'], .nav-link, .ant-tabs-tab") ? 0 : 1;
+      const bScore = b.matches("a, button, li, [role='tab'], .nav-link, .ant-tabs-tab") ? 0 : 1;
+      return aScore - bScore || a.children.length - b.children.length;
+    });
+  const tab = candidates.find((element) => {
+    const text = normalizeSearchText(element.innerText || element.textContent || "");
+    return wanted.some((item) => text.includes(item));
+  });
+  if (!tab) return false;
+  clickElement(tab);
+  return true;
+}
+
+function rowMatchesJob(row, job, usePrevious = false) {
+  const text = normalizeSearchText(elementTextWithValues(row));
+  const digits = elementTextWithValues(row).replace(/\D/g, "");
+  const sgkNo = String(job?.sgkNo || "").replace(/\D/g, "");
+  const firmaAdi = normalizeSearchText(job?.firmaAdi || "");
+  const tcKimlik = String(
+    usePrevious ? job?.previousAssigneeTcKimlik || job?.assigneeTcKimlik || "" : job?.assigneeTcKimlik || ""
+  ).replace(/\D/g, "");
+  const name = normalizeSearchText(usePrevious ? job?.previousAssigneeName || job?.assigneeName || "" : job?.assigneeName || "");
+  const roleKeywords = PROCESS_KEYWORDS_BY_ROLE[job?.gorevTuru] || [];
+
+  const firmMatched = (sgkNo && digits.includes(sgkNo)) || (firmaAdi && text.includes(firmaAdi.slice(0, 24)));
+  const personMatched = !tcKimlik || digits.includes(tcKimlik) || (name && text.includes(name));
+  const roleMatched =
+    !roleKeywords.length ||
+    roleKeywords.some((keyword) => text.includes(keyword)) ||
+    text.includes("is guvenligi") ||
+    text.includes("isyeri hekim") ||
+    text.includes("diger saglik");
+
+  return firmMatched && personMatched && roleMatched;
+}
+
+function findMatchingContractRow(job, usePrevious = false) {
+  const rows = visibleElements("table tbody tr, table tr").filter((row) => row.querySelector("td"));
+  return rows.find((row) => rowMatchesJob(row, job, usePrevious)) || null;
+}
+
+function checkContractRow(row) {
+  const checkbox =
+    row.querySelector("input[type='checkbox']") ||
+    row.querySelector("[role='checkbox'], .ant-checkbox, .checkbox, [class*='checkbox']");
+  if (!checkbox) return false;
+  if (!isCheckedElement(checkbox)) {
+    clickElement(checkbox);
+    if ("checked" in checkbox) {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event("input", { bubbles: true }));
+      checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+  return true;
+}
+
+async function confirmOpenDialog(steps) {
+  const confirmed = await waitFor(
+    () => clickButtonByText(["Evet", "Tamam", "Onayla"]),
+    7000,
+    250
+  );
+  if (confirmed) {
+    steps.push("Onay penceresi onaylandı");
+    return true;
+  }
+  return false;
+}
+
+async function waitForSuccessToastOrList(steps, actionName) {
+  const result = await waitFor(
+    () => isSuccessfulTerminalPage() || isContractListPage() || normalizeSearchText(document.body?.innerText || "").includes("basari"),
+    15000,
+    300
+  );
+  if (result) {
+    steps.push(`${actionName} sonucu alındı`);
+    return true;
+  }
+  return false;
+}
+
+async function cancelPendingAssignment(job, steps) {
+  clickTabByText(["Onay Bekleyen Sözleşmeler", "Onay Bekleyen"]);
+  await waitFor(() => isContractListPage(), 10000);
+  const row = await waitFor(() => findMatchingContractRow(job, true), 10000);
+  if (!row) {
+    return { ok: false, message: `Onay bekleyen sözleşme satırı bulunamadı. Ekran özeti: ${currentPagePreview()}` };
+  }
+  if (!checkContractRow(row)) return { ok: false, message: "Onay bekleyen satır seçilemedi." };
+  steps.push("Onay bekleyen eski atama seçildi");
+
+  if (!clickButtonByText(["İptal Et", "Iptal Et", "İptal", "Iptal"])) {
+    return { ok: false, message: "İptal Et butonu bulunamadı." };
+  }
+  await confirmOpenDialog(steps);
+  const ok = await waitForSuccessToastOrList(steps, "İptal işlemi");
+  if (!ok) return { ok: false, message: `İptal sonucu görülemedi. Ekran özeti: ${currentPagePreview()}` };
+  return { ok: true };
+}
+
+async function terminateActiveAssignment(job, steps) {
+  clickTabByText(["Devam Eden Sözleşmeler", "Tüm Sözleşmeler"]);
+  await waitFor(() => isContractListPage(), 10000);
+  const row = await waitFor(() => findMatchingContractRow(job, true), 10000);
+  if (!row) {
+    return { ok: false, message: `Aktif sözleşme satırı bulunamadı. Ekran özeti: ${currentPagePreview()}` };
+  }
+  if (!checkContractRow(row)) return { ok: false, message: "Aktif sözleşme satırı seçilemedi." };
+  steps.push("Aktif eski atama seçildi");
+
+  if (!clickButtonByText(["Sözleşmeyi Sonlandır", "Sozlesmeyi Sonlandir", "Sonlandır", "Sonlandir"])) {
+    return { ok: false, message: "Sözleşmeyi Sonlandır butonu bulunamadı." };
+  }
+  const confirmed = await confirmOpenDialog(steps);
+  if (!confirmed) return { ok: false, message: "Sonlandırma onay penceresi onaylanamadı." };
+  const ok = await waitForSuccessToastOrList(steps, "Sonlandırma işlemi");
+  if (!ok) return { ok: false, message: `Sonlandırma sonucu görülemedi. Ekran özeti: ${currentPagePreview()}` };
+  return { ok: true };
 }
 
 async function autoPrepareAssignmentJob(job) {
@@ -885,14 +1107,39 @@ async function autoPrepareAssignmentJob(job) {
   const personResult = await fillPersonStep(job, steps);
   if (!personResult.ok) return { ok: false, steps, message: personResult.message };
 
-  const durationResult = await fillDurationStep(steps);
+  const durationResult = await fillDurationStep(steps, gorevTuru);
   if (!durationResult.ok) return { ok: false, steps, message: durationResult.message };
 
   return {
     ok: true,
     steps,
     duration: durationResult.duration,
-    message: "Atama son kontrol ekranına kadar hazırlandı.",
+    message: "Atama İSG-KATİP tarafında oluşturuldu ve onay sürecine alındı.",
+  };
+}
+
+async function runAssignmentJob(job) {
+  const operation = jobOperation(job);
+  const steps = [];
+
+  if (operation === "cancel_pending" || operation === "cancel_pending_then_create") {
+    const cancelResult = await cancelPendingAssignment(job, steps);
+    if (!cancelResult.ok) return { ok: false, steps, message: cancelResult.message };
+  }
+
+  if (operation === "terminate_active" || operation === "terminate_active_then_create") {
+    const terminateResult = await terminateActiveAssignment(job, steps);
+    if (!terminateResult.ok) return { ok: false, steps, message: terminateResult.message };
+  }
+
+  if (operation === "cancel_pending" || operation === "terminate_active") {
+    return { ok: true, steps, message: "Eski İSG-KATİP ataması kapatıldı." };
+  }
+
+  const createResult = await autoPrepareAssignmentJob(job);
+  return {
+    ...createResult,
+    steps: [...steps, ...(createResult.steps || [])],
   };
 }
 
@@ -941,7 +1188,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "AUTO_PREPARE_ISG_KATIP_JOB") return false;
 
-  autoPrepareAssignmentJob(message.job)
+  runAssignmentJob(message.job)
     .then(sendResponse)
     .catch((error) => {
       sendResponse({ ok: false, message: error?.message || "Atama otomasyonu çalıştırılamadı." });

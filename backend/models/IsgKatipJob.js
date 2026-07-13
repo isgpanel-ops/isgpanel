@@ -27,6 +27,18 @@ const IsgKatipJobSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    operation: {
+      type: String,
+      enum: [
+        "create_assignment",
+        "cancel_pending",
+        "terminate_active",
+        "cancel_pending_then_create",
+        "terminate_active_then_create",
+      ],
+      default: "create_assignment",
+      index: true,
+    },
     status: {
       type: String,
       enum: ["pending", "in_progress", "done", "failed", "cancelled"],
@@ -39,6 +51,9 @@ const IsgKatipJobSchema = new mongoose.Schema(
     calisanSayisi: { type: Number, default: null },
     assigneeName: { type: String, default: "" },
     assigneeTcKimlik: { type: String, default: "" },
+    previousAssigneeName: { type: String, default: "" },
+    previousAssigneeTcKimlik: { type: String, default: "" },
+    previousSozlesmeId: { type: String, default: "" },
     assignedUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     claimedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },

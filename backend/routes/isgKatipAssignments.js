@@ -144,6 +144,26 @@ function jobKeyFor(orgId, firmaId, gorevTuru) {
   return `${String(orgId)}:${String(firmaId)}:${normalizeGorevTuru(gorevTuru)}`;
 }
 
+function normalizeJobOperation(value) {
+  const allowed = new Set([
+    "create_assignment",
+    "cancel_pending",
+    "terminate_active",
+    "cancel_pending_then_create",
+    "terminate_active_then_create",
+  ]);
+  return allowed.has(value) ? value : "create_assignment";
+}
+
+function operationForExistingStatus(status) {
+  const normalized = normalizeWorkflowStatus(status);
+  if (normalized === "profesyonel_onayi_bekliyor" || normalized === "isveren_onayi_bekliyor") {
+    return "cancel_pending_then_create";
+  }
+  if (normalized === "atama_onaylandi") return "terminate_active_then_create";
+  return "create_assignment";
+}
+
 async function cancelOpenJobsForAssignments(orgId, gorevTuru, firmaIds, actorId, reason = "Atama bilgisi guncellendi") {
   const validFirmaIds = (Array.isArray(firmaIds) ? firmaIds : [firmaIds]).filter((id) =>
     mongoose.Types.ObjectId.isValid(String(id))
@@ -184,8 +204,9 @@ function gorevTuruLabel(gorevTuru) {
   return labels[normalizeGorevTuru(gorevTuru)] || labels.is_guvenligi_uzmani;
 }
 
-async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
+async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId, options = {}) {
   const normalizedGorevTuru = normalizeGorevTuru(gorevTuru);
+  const operation = normalizeJobOperation(options.operation);
   const validFirmaIds = (Array.isArray(firmaIds) ? firmaIds : []).filter((id) =>
     mongoose.Types.ObjectId.isValid(String(id))
   );
@@ -204,7 +225,9 @@ async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
 
   const firmMap = new Map(firms.map((firm) => [String(firm._id), firm]));
   const assignmentMap = new Map(assignments.map((item) => [String(item.firmaId), item]));
-  const userIds = assignments.map((item) => item.assignedUserId).filter(Boolean);
+  const userIds = assignments
+    .flatMap((item) => [item.assignedUserId, options.previousByFirmaId?.[String(item.firmaId)]?.assignedUserId])
+    .filter(Boolean);
   const users = userIds.length
     ? await User.find({ _id: { $in: userIds }, organization: orgId })
         .select("_id name email personal.tcKimlik")
@@ -238,12 +261,26 @@ async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
 
     if (!sgkNo || !hasValidTcValue(assigneeTcKimlik)) continue;
 
+    const previous = options.previousByFirmaId?.[String(firmaId)] || {};
+    let previousAssigneeName = String(previous.assigneeName || "").trim();
+    let previousAssigneeTcKimlik = normalizeTc(previous.assigneeTcKimlik);
+    if (!previousAssigneeName && previous.assignedUserId) {
+      const previousUser = userMap.get(String(previous.assignedUserId));
+      previousAssigneeName = previousUser?.name || previousUser?.email || "";
+      previousAssigneeTcKimlik = normalizeTc(previousUser?.personal?.tcKimlik);
+    }
+    if (!previousAssigneeName && previous.manualAssignee?.adSoyad) {
+      previousAssigneeName = String(previous.manualAssignee.adSoyad || "").trim();
+      previousAssigneeTcKimlik = normalizeTc(previous.manualAssignee.tcKimlik);
+    }
+
     const payload = {
       organization: orgId,
       firmaId: firm._id,
       assignmentId: assignment._id,
       jobKey: jobKeyFor(orgId, firm._id, normalizedGorevTuru),
       gorevTuru: normalizedGorevTuru,
+      operation,
       status: "pending",
       firmaAdi: firm.firmaAdi || "",
       sgkNo,
@@ -251,6 +288,9 @@ async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
       calisanSayisi: Number.isFinite(Number(firm.calisanSayisi)) ? Number(firm.calisanSayisi) : null,
       assigneeName,
       assigneeTcKimlik,
+      previousAssigneeName,
+      previousAssigneeTcKimlik,
+      previousSozlesmeId: String(previous.sozlesmeId || ""),
       assignedUserId,
       claimedAt: null,
       completedAt: null,
@@ -271,7 +311,7 @@ async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
           $push: {
             logs: {
               action: "queued",
-              message: `${gorevTuruLabel(normalizedGorevTuru)} atama gorevi eklenti kuyruguna alindi`,
+              message: `${gorevTuruLabel(normalizedGorevTuru)} atama gorevi eklenti kuyruguna alindi (${operation})`,
               by: actorId || null,
               at: now,
             },
@@ -295,6 +335,7 @@ function normalizeJob(job) {
     assignmentId: job.assignmentId ? String(job.assignmentId) : "",
     gorevTuru: job.gorevTuru,
     gorevTuruLabel: gorevTuruLabel(job.gorevTuru),
+    operation: job.operation || "create_assignment",
     status: job.status,
     firmaAdi: job.firmaAdi || "",
     sgkNo: job.sgkNo || "",
@@ -302,6 +343,9 @@ function normalizeJob(job) {
     calisanSayisi: job.calisanSayisi ?? null,
     assigneeName: job.assigneeName || "",
     assigneeTcKimlik: job.assigneeTcKimlik || "",
+    previousAssigneeName: job.previousAssigneeName || "",
+    previousAssigneeTcKimlik: job.previousAssigneeTcKimlik || "",
+    previousSozlesmeId: job.previousSozlesmeId || "",
     attempts: job.attempts || 0,
     lastError: job.lastError || "",
     lastClientNote: job.lastClientNote || "",
@@ -733,8 +777,15 @@ router.patch("/jobs/:jobId", async (req, res) => {
     if (!job) return res.status(404).json({ message: "Gorev bulunamadi" });
 
     if (job.assignmentId) {
+      const closeOnlyOperations = new Set(["cancel_pending", "terminate_active"]);
       const nextAssignmentStatus =
-        status === "done" ? "profesyonel_onayi_bekliyor" : status === "failed" ? "atama_yok" : null;
+        status === "done"
+          ? closeOnlyOperations.has(job.operation)
+            ? "atama_yok"
+            : "profesyonel_onayi_bekliyor"
+          : status === "failed"
+            ? "atama_yok"
+            : null;
       if (nextAssignmentStatus) {
         await IsgKatipAssignment.updateOne(
           { _id: job.assignmentId, organization: orgId },
@@ -1048,6 +1099,23 @@ router.post("/bulk/assign-user", async (req, res) => {
       return res.status(400).json({ message: "Organizasyona ait seçili firma bulunamadı" });
     }
 
+    const previousAssignments = await IsgKatipAssignment.find({
+      organization: orgId,
+      firmaId: { $in: scopedFirmaIds },
+      gorevTuru,
+    }).lean();
+    const previousByFirmaId = Object.fromEntries(
+      previousAssignments.map((item) => [
+        String(item.firmaId),
+        {
+          assignedUserId: item.assignedUserId,
+          manualAssignee: item.manualAssignee,
+          sozlesmeId: item.sozlesmeId,
+          isgKatipStatus: item.isgKatipStatus,
+        },
+      ])
+    );
+
     await FirmUser.updateMany(
       uzmanLinkFilter({ organization: orgId, firmId: { $in: scopedFirmaIds }, isActive: true }),
       { $set: { isActive: false } }
@@ -1109,6 +1177,24 @@ router.post("/bulk/assign-user", async (req, res) => {
       "Toplu kullanici atamasi degisti"
     );
 
+    const operationGroups = new Map();
+    scopedFirmaIds.forEach((firmaId) => {
+      const previous = previousByFirmaId[String(firmaId)];
+      const operation = operationForExistingStatus(previous?.isgKatipStatus);
+      if (operation === "create_assignment") return;
+      if (!operationGroups.has(operation)) operationGroups.set(operation, []);
+      operationGroups.get(operation).push(firmaId);
+    });
+    for (const [operation, operationFirmaIds] of operationGroups.entries()) {
+      await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        operationFirmaIds,
+        req.user._id || req.user.id || null,
+        { operation, previousByFirmaId }
+      );
+    }
+
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1149,6 +1235,23 @@ router.post("/bulk/manual-assignee", async (req, res) => {
     if (scopedFirmaIds.length === 0) {
       return res.status(400).json({ message: "Organizasyona ait seçili firma bulunamadı" });
     }
+
+    const previousAssignments = await IsgKatipAssignment.find({
+      organization: orgId,
+      firmaId: { $in: scopedFirmaIds },
+      gorevTuru,
+    }).lean();
+    const previousByFirmaId = Object.fromEntries(
+      previousAssignments.map((item) => [
+        String(item.firmaId),
+        {
+          assignedUserId: item.assignedUserId,
+          manualAssignee: item.manualAssignee,
+          sozlesmeId: item.sozlesmeId,
+          isgKatipStatus: item.isgKatipStatus,
+        },
+      ])
+    );
 
     await IsgKatipPerson.findOneAndUpdate(
       { organization: orgId, gorevTuru, tcKimlik },
@@ -1201,6 +1304,24 @@ router.post("/bulk/manual-assignee", async (req, res) => {
       req.user._id || req.user.id || null,
       "Toplu kisi bilgisi degisti"
     );
+
+    const operationGroups = new Map();
+    scopedFirmaIds.forEach((firmaId) => {
+      const previous = previousByFirmaId[String(firmaId)];
+      const operation = operationForExistingStatus(previous?.isgKatipStatus);
+      if (operation === "create_assignment") return;
+      if (!operationGroups.has(operation)) operationGroups.set(operation, []);
+      operationGroups.get(operation).push(firmaId);
+    });
+    for (const [operation, operationFirmaIds] of operationGroups.entries()) {
+      await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        operationFirmaIds,
+        req.user._id || req.user.id || null,
+        { operation, previousByFirmaId }
+      );
+    }
 
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
@@ -1511,12 +1632,28 @@ router.post("/:firmaId/assign-user", async (req, res) => {
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
 
     const user = await User.findOne({ _id: userId, organization: orgId })
-      .select("role personal.tcKimlik personal.sertifikaNo")
+      .select("name email role personal.tcKimlik personal.sertifikaNo")
       .lean();
     if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı" });
     if (!isAssignableUser(user)) {
       return res.status(400).json({ message: "Seçilen kullanıcı iş güvenliği uzmanı değil" });
     }
+
+    const previousAssignment = await IsgKatipAssignment.findOne({
+      organization: orgId,
+      firmaId,
+      gorevTuru,
+    }).lean();
+    const operation = operationForExistingStatus(previousAssignment?.isgKatipStatus);
+    const previousByFirmaId = previousAssignment
+      ? {
+          [String(firmaId)]: {
+            assignedUserId: previousAssignment.assignedUserId,
+            manualAssignee: previousAssignment.manualAssignee,
+            sozlesmeId: previousAssignment.sozlesmeId,
+          },
+        }
+      : {};
 
     await FirmUser.updateMany(
       uzmanLinkFilter({ organization: orgId, firmId: firmaId, isActive: true }),
@@ -1571,6 +1708,16 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       "Kullanici atamasi degisti"
     );
 
+    if (operation !== "create_assignment") {
+      await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        [firmaId],
+        req.user._id || req.user.id || null,
+        { operation, previousByFirmaId }
+      );
+    }
+
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1604,6 +1751,22 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
 
     const firm = await Firma.findOne({ _id: firmaId, organization: orgId }).select("_id").lean();
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
+
+    const previousAssignment = await IsgKatipAssignment.findOne({
+      organization: orgId,
+      firmaId,
+      gorevTuru,
+    }).lean();
+    const operation = operationForExistingStatus(previousAssignment?.isgKatipStatus);
+    const previousByFirmaId = previousAssignment
+      ? {
+          [String(firmaId)]: {
+            assignedUserId: previousAssignment.assignedUserId,
+            manualAssignee: previousAssignment.manualAssignee,
+            sozlesmeId: previousAssignment.sozlesmeId,
+          },
+        }
+      : {};
 
     await IsgKatipPerson.findOneAndUpdate(
       { organization: orgId, gorevTuru, tcKimlik },
@@ -1652,6 +1815,16 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
       req.user._id || req.user.id || null,
       "Kisi bilgisi degisti"
     );
+
+    if (operation !== "create_assignment") {
+      await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        [firmaId],
+        req.user._id || req.user.id || null,
+        { operation, previousByFirmaId }
+      );
+    }
 
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });

@@ -125,6 +125,55 @@ function requestIsgKatipExtensionSync({ apiBase, token }) {
   });
 }
 
+function requestIsgKatipExtensionJobRun({ apiBase, token, gorevTuru }) {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Tarayıcı ortamı bulunamadı."));
+      return;
+    }
+
+    const requestId = `isg-katip-job-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const timer = window.setTimeout(() => {
+      window.removeEventListener("message", handleMessage);
+      reject(new Error("İSG-KATİP eklentisi atama görevine cevap vermedi."));
+    }, 90000);
+
+    function handleMessage(event) {
+      if (event.source !== window) return;
+      const message = event.data;
+      if (
+        !message ||
+        message.source !== "ISG_PANEL_ISG_KATIP_EXTENSION" ||
+        message.type !== "ISG_KATIP_RUN_JOB_RESPONSE" ||
+        message.requestId !== requestId
+      ) {
+        return;
+      }
+
+      window.clearTimeout(timer);
+      window.removeEventListener("message", handleMessage);
+      if (!message.response?.ok) {
+        reject(new Error(message.response?.message || "İSG-KATİP atama otomasyonu başarısız."));
+        return;
+      }
+      resolve(message.response.data || {});
+    }
+
+    window.addEventListener("message", handleMessage);
+    window.postMessage(
+      {
+        source: "ISG_PANEL_PAGE",
+        type: "ISG_KATIP_RUN_JOB_REQUEST",
+        requestId,
+        apiBase: String(apiBase || "").replace(/\/$/, ""),
+        token,
+        gorevTuru,
+      },
+      window.location.origin
+    );
+  });
+}
+
 function approvalDaysLeft(item) {
   const startValue = item?.lastSyncAt || item?.baslangicTarihi || item?.updatedAt;
   const start = startValue ? new Date(startValue) : null;
@@ -324,6 +373,23 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
+  const runQueuedExtensionJob = async () => {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+    if (!token) return;
+    try {
+      const result = await requestIsgKatipExtensionJobRun({
+        apiBase: API_BASE,
+        token,
+        gorevTuru,
+      });
+      if (result?.job) await loadOverview();
+    } catch (err) {
+      setError(
+        `${err?.message || "İSG-KATİP eklentisi otomatik atamayı tamamlayamadı."} Görev kuyrukta kaldı; İSG-KATİP oturumu açıkken tekrar deneyebilirsiniz.`
+      );
+    }
+  };
+
   const updateStatus = async (status) => {
     if (!selected?.firmaId) return;
     setSaving(true);
@@ -408,6 +474,7 @@ export default function IsgKatipEntegrasyon() {
       } else {
         await loadOverview();
       }
+      await runQueuedExtensionJob();
     } catch (err) {
       setError(err?.response?.data?.message || "Atama süreci başlatılamadı.");
     } finally {
@@ -440,6 +507,7 @@ export default function IsgKatipEntegrasyon() {
       setBulkUserId("");
       setSelectedIds([]);
       setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
+      await runQueuedExtensionJob();
     } catch (err) {
       setError(err?.response?.data?.message || "Kullanıcı ataması kaydedilemedi.");
     } finally {
@@ -476,6 +544,7 @@ export default function IsgKatipEntegrasyon() {
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setSelectedIds([]);
       setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
+      await runQueuedExtensionJob();
     } catch (err) {
       setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
     } finally {
