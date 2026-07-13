@@ -283,65 +283,89 @@ function findFieldByAny(patternGroups) {
   return patternGroups.map((patterns) => findField(patterns)).find(Boolean) || null;
 }
 
-function fillSgkSegmentFields(sgkNo) {
-  const segments = sgkSegments(sgkNo);
-  if (segments.some((part) => !part)) return 0;
-
-  const groups = [
-    ["mahiyet"],
-    ["is kolu", "iş kolu"],
-    ["yeni su", "yeni şube", "yeni sub"],
-    ["eski sub", "eski şube"],
-    ["sira no", "sıra no"],
-    ["il kodu"],
-    ["ilce kodu", "ilçe kodu"],
-    ["kontrol"],
-    ["araci", "aracı"],
-  ];
-
-  let filled = 0;
-  const used = new Set();
-  groups.forEach((patterns, index) => {
-    const field = findField(patterns);
-    if (field && !used.has(field)) {
-      setFieldValue(field, segments[index]);
-      used.add(field);
-      filled += 1;
-    }
+function visibleTextFields() {
+  return Array.from(document.querySelectorAll("input, textarea")).filter((field) => {
+    const style = window.getComputedStyle(field);
+    const tag = field.tagName.toLowerCase();
+    const type = String(field.type || "").toLowerCase();
+    return (
+      !field.disabled &&
+      type !== "hidden" &&
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      field.offsetParent !== null &&
+      (tag === "textarea" || ["", "text", "search", "number", "tel"].includes(type))
+    );
   });
-
-  if (filled >= 7) return filled;
-
-  const lengthHints = ["1 hane", "4 hane", "2 hane", "2 hane", "7 hane", "3 hane", "2 hane", "2 hane", "3 hane"];
-  const candidates = getAllFields().filter((field) => {
-    if (used.has(field)) return false;
-    const context = fieldContext(field);
-    return lengthHints.some((hint) => context.includes(hint)) || /^\d+\s*hane$/i.test(cleanText(field.placeholder || ""));
-  });
-
-  candidates.slice(0, segments.length).forEach((field, index) => {
-    setFieldValue(field, segments[index]);
-    used.add(field);
-    filled += 1;
-  });
-
-  return filled;
 }
 
-function fillSgkFields(sgkNo) {
-  const mainField =
+function findSgkMainField() {
+  return (
     findFieldByAny([
       ["sgk", "sicil", "detsis", "26 hane"],
       ["sgk sicil no"],
       ["26 hane"],
-    ]) || findFirstEmptyTextField();
+    ]) || null
+  );
+}
+
+function isSgkSegmentCandidate(field, mainField) {
+  if (!field || field === mainField) return false;
+  const context = fieldContext(field);
+  const placeholder = normalizeFieldHint(field.placeholder || "");
+  const maxLength = Number(field.getAttribute("maxlength") || field.maxLength || 0);
+  const labels = [
+    "mahiyet",
+    "is kolu",
+    "iş kolu",
+    "yeni su",
+    "yeni şube",
+    "yeni sub",
+    "eski sub",
+    "eski şube",
+    "sira no",
+    "sıra no",
+    "il kodu",
+    "ilce kodu",
+    "ilçe kodu",
+    "kontrol",
+    "araci",
+    "aracı",
+  ];
+  return (
+    labels.some((label) => context.includes(label)) ||
+    /\d+\s*hane/i.test(context) ||
+    /\d+\s*hane/i.test(placeholder) ||
+    [1, 2, 3, 4, 7].includes(maxLength)
+  );
+}
+
+function fillSgkSegmentFields(sgkNo, mainField) {
+  const segments = sgkSegments(sgkNo);
+  if (segments.some((part) => !part)) return 0;
+
+  const fields = visibleTextFields();
+  const mainIndex = mainField ? fields.indexOf(mainField) : -1;
+  const orderedFields = mainIndex >= 0 ? fields.slice(mainIndex + 1) : fields;
+  const candidates = orderedFields.filter((field) => isSgkSegmentCandidate(field, mainField));
+  const selected = candidates.slice(0, segments.length);
+
+  selected.forEach((field, index) => {
+    setFieldValue(field, segments[index]);
+  });
+
+  return selected.length;
+}
+
+function fillSgkFields(sgkNo) {
+  const mainField = findSgkMainField() || findFirstEmptyTextField();
   let mainFilled = false;
   if (mainField) {
     setFieldValue(mainField, sgkNo);
     mainFilled = true;
   }
 
-  const segmentCount = fillSgkSegmentFields(sgkNo);
+  const segmentCount = fillSgkSegmentFields(sgkNo, mainField);
   return { mainFilled, segmentCount };
 }
 
@@ -877,6 +901,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     .catch((error) => {
       sendResponse({ ok: false, message: error?.message || "Sayfaya bilgi doldurulamadı" });
     });
+
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "VERIFY_ISG_KATIP_ASSIGNMENT_DONE") return false;
+
+  try {
+    const ok = isSuccessfulTerminalPage();
+    sendResponse({
+      ok,
+      message: ok
+        ? "ISG-KATIP basari ekrani goruldu."
+        : `ISG-KATIP basari ekrani gorulmedi. Ekran ozeti: ${currentPagePreview()}`,
+    });
+  } catch (error) {
+    sendResponse({ ok: false, message: error?.message || "ISG-KATIP ekran durumu okunamadi." });
+  }
 
   return true;
 });

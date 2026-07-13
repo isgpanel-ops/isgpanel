@@ -88,6 +88,18 @@ async function readActiveIsgKatipPage(tab) {
   }
 }
 
+async function verifyActiveIsgKatipDone(tab) {
+  try {
+    return await chrome.tabs.sendMessage(tab.id, { type: "VERIFY_ISG_KATIP_ASSIGNMENT_DONE" });
+  } catch (_error) {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    });
+    return chrome.tabs.sendMessage(tab.id, { type: "VERIFY_ISG_KATIP_ASSIGNMENT_DONE" });
+  }
+}
+
 async function readPanelToken(tab) {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
@@ -377,6 +389,16 @@ doneJobBtn.addEventListener("click", async () => {
   if (!currentJob) return;
   doneJobBtn.disabled = true;
   try {
+    const tab = await getActiveTab();
+    if (!tab?.url || !tab.url.includes("isgkatip")) {
+      throw new Error("Once ISG-KATIP basari ekraninin acik oldugu sekmeye gecin.");
+    }
+
+    const verification = await verifyActiveIsgKatipDone(tab);
+    if (!verification?.ok) {
+      throw new Error(verification?.message || "ISG-KATIP basari ekrani gorulmeden gorev tamamlanamaz.");
+    }
+
     const data = await panelFetch(`/api/isg-katip/jobs/${currentJob.id}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -385,9 +407,9 @@ doneJobBtn.addEventListener("click", async () => {
       }),
     });
     renderJob(data.job);
-    setStatus("Görev tamamlandı işaretlendi. Sonrasında açık sayfayı senkronize edin.");
+    setStatus("Gorev tamamlandi. Panel onay surecine alindi; sonraki senkron aktif/onay durumunu gunceller.");
   } catch (error) {
-    setStatus(error?.message || "Görev tamamlandı işaretlenemedi.", true);
+    setStatus(error?.message || "Gorev tamamlandi isaretlenemedi.", true);
   } finally {
     doneJobBtn.disabled = false;
   }
