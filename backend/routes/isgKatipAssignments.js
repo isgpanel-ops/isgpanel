@@ -69,6 +69,19 @@ function isUnknownSyncStatus(status) {
   return !status || status === "kontrol_edilmedi";
 }
 
+function statusPriority(status) {
+  const priorities = {
+    kontrol_edilmedi: 0,
+    atama_yok: 1,
+    profesyonel_onayi_bekliyor: 2,
+    isveren_onayi_bekliyor: 3,
+    atama_dustu: 4,
+    yeniden_atama_gerekli: 4,
+    atama_onaylandi: 5,
+  };
+  return priorities[status] ?? 0;
+}
+
 function normalizeTehlike(value) {
   const text = String(value || "").toLocaleLowerCase("tr-TR");
   if (text.includes("çok")) return "Çok Tehlikeli";
@@ -516,7 +529,7 @@ router.post("/extension-sync", async (req, res) => {
     });
 
     const now = new Date();
-    const ops = [];
+    const assignmentOpsByKey = new Map();
     const linkOps = [];
     const deactivateLinkFilters = [];
     const firmUpdates = new Map();
@@ -605,7 +618,9 @@ router.post("/extension-sync", async (req, res) => {
       if (calisanSayisi !== null) firmUpdate.calisanSayisi = calisanSayisi;
       if (Object.keys(firmUpdate).length > 0) firmUpdates.set(String(firm._id), firmUpdate);
 
-      ops.push({
+      const assignmentKey = `${String(firm._id)}:${gorevTuru}`;
+      const priority = statusPriority(status);
+      const assignmentOp = {
         updateOne: {
           filter: {
             organization: orgId,
@@ -635,7 +650,11 @@ router.post("/extension-sync", async (req, res) => {
           },
           upsert: true,
         },
-      });
+      };
+      const current = assignmentOpsByKey.get(assignmentKey);
+      if (!current || priority >= current.priority) {
+        assignmentOpsByKey.set(assignmentKey, { priority, op: assignmentOp });
+      }
     });
 
     if (deactivateLinkFilters.length > 0) {
@@ -648,6 +667,7 @@ router.post("/extension-sync", async (req, res) => {
       );
     }
     if (linkOps.length > 0) await FirmUser.bulkWrite(linkOps);
+    const ops = Array.from(assignmentOpsByKey.values()).map((entry) => entry.op);
     if (ops.length > 0) await IsgKatipAssignment.bulkWrite(ops);
     if (firmUpdates.size > 0) {
       await Firma.bulkWrite(

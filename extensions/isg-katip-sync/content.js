@@ -14,6 +14,15 @@ function lowerTR(value) {
 
 function normalizeStatus(text) {
   const value = lowerTR(text);
+  if (
+    value.includes("fa-check") ||
+    value.includes("glyphicon-ok") ||
+    value.includes("check_circle") ||
+    value.includes("text-success") ||
+    value.includes("success")
+  ) {
+    return "atama_onaylandi";
+  }
   if (value.includes("onaylandı") || value.includes("aktif sözleşme") || value.includes("aktif atama")) {
     return "atama_onaylandi";
   }
@@ -33,6 +42,21 @@ function normalizeStatus(text) {
     return "atama_yok";
   }
   return "kontrol_edilmedi";
+}
+
+function cellTextForSync(cell) {
+  const parts = [
+    cell.innerText,
+    cell.getAttribute("title"),
+    cell.getAttribute("aria-label"),
+    cell.className,
+  ];
+  cell.querySelectorAll("[title], [aria-label], [class]").forEach((node) => {
+    parts.push(node.getAttribute("title"));
+    parts.push(node.getAttribute("aria-label"));
+    parts.push(node.className);
+  });
+  return cleanText(parts.filter(Boolean).join(" "));
 }
 
 function detectGorevTuru(text) {
@@ -123,7 +147,7 @@ function readRowsFromTables() {
   const rows = Array.from(document.querySelectorAll("table tbody tr, table tr"));
   return rows
     .map((row) => {
-      const cells = Array.from(row.querySelectorAll("td, th")).map((cell) => cleanText(cell.innerText));
+      const cells = Array.from(row.querySelectorAll("td, th")).map((cell) => cellTextForSync(cell));
       if (cells.length < 2) return null;
       return rowToRecord(cells);
     })
