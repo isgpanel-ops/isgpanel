@@ -6,6 +6,7 @@ const FirmUser = require("../models/FirmUser");
 const User = require("../models/User");
 const IsgKatipAssignment = require("../models/IsgKatipAssignment");
 const IsgKatipPerson = require("../models/IsgKatipPerson");
+const IsgKatipJob = require("../models/IsgKatipJob");
 
 const router = express.Router();
 
@@ -135,6 +136,146 @@ async function savedPeople(orgId, gorevTuru) {
     tcKimlik: person.tcKimlik || "",
     gorevTuru: person.gorevTuru,
   }));
+}
+
+function jobKeyFor(orgId, firmaId, gorevTuru) {
+  return `${String(orgId)}:${String(firmaId)}:${normalizeGorevTuru(gorevTuru)}`;
+}
+
+function gorevTuruLabel(gorevTuru) {
+  const labels = {
+    is_guvenligi_uzmani: "Is Guvenligi Uzmani",
+    isyeri_hekimi: "Isyeri Hekimi",
+    diger_saglik_personeli: "Diger Saglik Personeli",
+  };
+  return labels[normalizeGorevTuru(gorevTuru)] || labels.is_guvenligi_uzmani;
+}
+
+async function queueJobsForAssignments(orgId, gorevTuru, firmaIds, actorId) {
+  const normalizedGorevTuru = normalizeGorevTuru(gorevTuru);
+  const validFirmaIds = (Array.isArray(firmaIds) ? firmaIds : []).filter((id) =>
+    mongoose.Types.ObjectId.isValid(String(id))
+  );
+  if (validFirmaIds.length === 0) return [];
+
+  const [firms, assignments] = await Promise.all([
+    Firma.find({ _id: { $in: validFirmaIds }, organization: orgId })
+      .select("_id firmaAdi sgkNo sgkSicilNo tehlike calisanSayisi")
+      .lean(),
+    IsgKatipAssignment.find({
+      organization: orgId,
+      firmaId: { $in: validFirmaIds },
+      gorevTuru: normalizedGorevTuru,
+    }).lean(),
+  ]);
+
+  const firmMap = new Map(firms.map((firm) => [String(firm._id), firm]));
+  const assignmentMap = new Map(assignments.map((item) => [String(item.firmaId), item]));
+  const userIds = assignments.map((item) => item.assignedUserId).filter(Boolean);
+  const users = userIds.length
+    ? await User.find({ _id: { $in: userIds }, organization: orgId })
+        .select("_id name email personal.tcKimlik")
+        .lean()
+    : [];
+  const userMap = new Map(users.map((user) => [String(user._id), user]));
+
+  const now = new Date();
+  const ops = [];
+  const queued = [];
+
+  for (const firmaId of validFirmaIds) {
+    const firm = firmMap.get(String(firmaId));
+    const assignment = assignmentMap.get(String(firmaId));
+    if (!firm || !assignment) continue;
+
+    const sgkNo = String(firm.sgkNo || firm.sgkSicilNo || "").replace(/\D/g, "");
+    let assigneeName = "";
+    let assigneeTcKimlik = "";
+    let assignedUserId = null;
+
+    if (isUzmanGorevi(normalizedGorevTuru)) {
+      const user = assignment.assignedUserId ? userMap.get(String(assignment.assignedUserId)) : null;
+      assignedUserId = user?._id || null;
+      assigneeName = user?.name || user?.email || "";
+      assigneeTcKimlik = normalizeTc(user?.personal?.tcKimlik);
+    } else {
+      assigneeName = String(assignment.manualAssignee?.adSoyad || "").trim();
+      assigneeTcKimlik = normalizeTc(assignment.manualAssignee?.tcKimlik);
+    }
+
+    if (!sgkNo || !hasValidTcValue(assigneeTcKimlik)) continue;
+
+    const payload = {
+      organization: orgId,
+      firmaId: firm._id,
+      assignmentId: assignment._id,
+      jobKey: jobKeyFor(orgId, firm._id, normalizedGorevTuru),
+      gorevTuru: normalizedGorevTuru,
+      status: "pending",
+      firmaAdi: firm.firmaAdi || "",
+      sgkNo,
+      tehlike: firm.tehlike || "",
+      calisanSayisi: Number.isFinite(Number(firm.calisanSayisi)) ? Number(firm.calisanSayisi) : null,
+      assigneeName,
+      assigneeTcKimlik,
+      assignedUserId,
+      claimedAt: null,
+      completedAt: null,
+      lastError: "",
+      lastClientNote: "",
+      updatedBy: actorId || null,
+    };
+
+    ops.push({
+      updateOne: {
+        filter: { jobKey: payload.jobKey },
+        update: {
+          $set: payload,
+          $setOnInsert: {
+            createdBy: actorId || null,
+            attempts: 0,
+          },
+          $push: {
+            logs: {
+              action: "queued",
+              message: `${gorevTuruLabel(normalizedGorevTuru)} atama gorevi eklenti kuyruguna alindi`,
+              by: actorId || null,
+              at: now,
+            },
+          },
+        },
+        upsert: true,
+      },
+    });
+    queued.push(payload);
+  }
+
+  if (ops.length > 0) await IsgKatipJob.bulkWrite(ops);
+  return queued;
+}
+
+function normalizeJob(job) {
+  if (!job) return null;
+  return {
+    id: String(job._id),
+    firmaId: String(job.firmaId || ""),
+    assignmentId: job.assignmentId ? String(job.assignmentId) : "",
+    gorevTuru: job.gorevTuru,
+    gorevTuruLabel: gorevTuruLabel(job.gorevTuru),
+    status: job.status,
+    firmaAdi: job.firmaAdi || "",
+    sgkNo: job.sgkNo || "",
+    tehlike: job.tehlike || "",
+    calisanSayisi: job.calisanSayisi ?? null,
+    assigneeName: job.assigneeName || "",
+    assigneeTcKimlik: job.assigneeTcKimlik || "",
+    attempts: job.attempts || 0,
+    lastError: job.lastError || "",
+    lastClientNote: job.lastClientNote || "",
+    createdAt: job.createdAt || null,
+    updatedAt: job.updatedAt || null,
+    claimedAt: job.claimedAt || null,
+  };
 }
 
 async function scopedFirmIds(orgId, firmaIds) {
@@ -451,6 +592,116 @@ router.delete("/people/:personId", async (req, res) => {
   } catch (err) {
     console.error("ISG-KATIP person delete hata:", err);
     return res.status(500).json({ message: "Kayıtlı kişi silinemedi" });
+  }
+});
+
+router.get("/jobs/next", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const gorevTuru = req.query?.gorevTuru ? normalizeGorevTuru(req.query.gorevTuru) : null;
+    const filter = {
+      organization: orgId,
+      status: { $in: ["pending", "failed"] },
+      ...(gorevTuru ? { gorevTuru } : {}),
+    };
+
+    const job = await IsgKatipJob.findOne(filter).sort({ updatedAt: 1 }).lean();
+    return res.json({ ok: true, job: normalizeJob(job) });
+  } catch (err) {
+    console.error("ISG-KATIP next job hata:", err);
+    return res.status(500).json({ message: "Bekleyen atama gorevi alinamadi" });
+  }
+});
+
+router.post("/jobs/:jobId/claim", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const { jobId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(String(jobId))) {
+      return res.status(400).json({ message: "Gorev bilgisi gecersiz" });
+    }
+
+    const now = new Date();
+    const job = await IsgKatipJob.findOneAndUpdate(
+      { _id: jobId, organization: orgId, status: { $in: ["pending", "failed", "in_progress"] } },
+      {
+        $set: {
+          status: "in_progress",
+          claimedAt: now,
+          lastError: "",
+          lastClientNote: String(req.body?.note || "").slice(0, 500),
+          updatedBy: req.user._id || req.user.id || null,
+        },
+        $inc: { attempts: 1 },
+        $push: {
+          logs: {
+            action: "claimed",
+            message: "Eklenti atama gorevini isleme aldi",
+            by: req.user._id || req.user.id || null,
+            at: now,
+          },
+        },
+      },
+      { new: true }
+    ).lean();
+
+    if (!job) return res.status(404).json({ message: "Bekleyen gorev bulunamadi" });
+    return res.json({ ok: true, job: normalizeJob(job) });
+  } catch (err) {
+    console.error("ISG-KATIP claim job hata:", err);
+    return res.status(500).json({ message: "Atama gorevi baslatilamadi" });
+  }
+});
+
+router.patch("/jobs/:jobId", async (req, res) => {
+  try {
+    const orgId = ensureAdmin(req, res);
+    if (!orgId) return;
+
+    const { jobId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(String(jobId))) {
+      return res.status(400).json({ message: "Gorev bilgisi gecersiz" });
+    }
+
+    const status = String(req.body?.status || "").trim();
+    if (!["pending", "in_progress", "done", "failed", "cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Gorev durumu gecersiz" });
+    }
+
+    const now = new Date();
+    const error = String(req.body?.error || "").slice(0, 1000);
+    const note = String(req.body?.note || "").slice(0, 1000);
+    const job = await IsgKatipJob.findOneAndUpdate(
+      { _id: jobId, organization: orgId },
+      {
+        $set: {
+          status,
+          ...(status === "done" ? { completedAt: now } : {}),
+          lastError: status === "failed" ? error : "",
+          lastClientNote: note,
+          updatedBy: req.user._id || req.user.id || null,
+        },
+        $push: {
+          logs: {
+            action: `job_${status}`,
+            message: note || error || `Gorev durumu ${status} olarak guncellendi`,
+            by: req.user._id || req.user.id || null,
+            at: now,
+          },
+        },
+      },
+      { new: true }
+    ).lean();
+
+    if (!job) return res.status(404).json({ message: "Gorev bulunamadi" });
+    return res.json({ ok: true, job: normalizeJob(job) });
+  } catch (err) {
+    console.error("ISG-KATIP update job hata:", err);
+    return res.status(500).json({ message: "Atama gorevi guncellenemedi" });
   }
 });
 
@@ -1010,8 +1261,14 @@ router.post("/bulk/start", async (req, res) => {
         })
       );
 
+      const queuedJobs = await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        firmaIds,
+        req.user._id || req.user.id || null
+      );
       const overview = await buildOverview(orgId, gorevTuru);
-      return res.json({ ok: true, ...overview });
+      return res.json({ ok: true, queuedJobs: queuedJobs.length, ...overview });
     }
 
     let manualPerson = null;
@@ -1082,8 +1339,14 @@ router.post("/bulk/start", async (req, res) => {
       })
     );
 
+    const queuedJobs = await queueJobsForAssignments(
+      orgId,
+      gorevTuru,
+      firmaIds,
+      req.user._id || req.user.id || null
+    );
     const overview = await buildOverview(orgId, gorevTuru);
-    return res.json({ ok: true, ...overview });
+    return res.json({ ok: true, queuedJobs: queuedJobs.length, ...overview });
   } catch (err) {
     console.error("ISG-KATIP bulk start hata:", err);
     return res.status(500).json({ message: err?.message || "Toplu atama süreci başlatılamadı" });
@@ -1439,7 +1702,14 @@ router.post("/:firmaId/start", async (req, res) => {
         { upsert: true, new: true }
       ).lean();
 
-      return res.json({ ok: true, assignment });
+      const queuedJobs = await queueJobsForAssignments(
+        orgId,
+        gorevTuru,
+        [firmaId],
+        req.user._id || req.user.id || null
+      );
+
+      return res.json({ ok: true, assignment, queuedJobs: queuedJobs.length });
     }
 
     const requestName = String(req.body?.adSoyad || "").trim();
@@ -1495,7 +1765,14 @@ router.post("/:firmaId/start", async (req, res) => {
       { upsert: true, new: true }
     ).lean();
 
-    return res.json({ ok: true, assignment });
+    const queuedJobs = await queueJobsForAssignments(
+      orgId,
+      gorevTuru,
+      [firmaId],
+      req.user._id || req.user.id || null
+    );
+
+    return res.json({ ok: true, assignment, queuedJobs: queuedJobs.length });
   } catch (err) {
     console.error("ISG-KATIP start hata:", err);
     return res.status(500).json({ message: "Atama süreci başlatılamadı" });

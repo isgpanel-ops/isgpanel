@@ -191,6 +191,75 @@ function readIsgKatipSnapshot() {
   };
 }
 
+function normalizeFieldHint(value) {
+  return lowerTR(value).replace(/ı/g, "i");
+}
+
+function fieldContext(field) {
+  const id = field.id || "";
+  const label = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+  const wrapper = field.closest("label, .form-group, .form-row, .row, div");
+  return normalizeFieldHint(
+    [
+      field.name,
+      field.id,
+      field.placeholder,
+      field.getAttribute("aria-label"),
+      field.getAttribute("title"),
+      label?.innerText,
+      wrapper?.innerText,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function isUsableField(field) {
+  const style = window.getComputedStyle(field);
+  return (
+    !field.disabled &&
+    !field.readOnly &&
+    field.type !== "hidden" &&
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    field.offsetParent !== null
+  );
+}
+
+function setFieldValue(field, value) {
+  field.focus();
+  field.value = value;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new Event("change", { bubbles: true }));
+  field.blur();
+}
+
+function fillBestField(patterns, value) {
+  const fields = Array.from(document.querySelectorAll("input, textarea")).filter(isUsableField);
+  const field = fields.find((candidate) => {
+    const context = fieldContext(candidate);
+    return patterns.some((pattern) => context.includes(pattern));
+  });
+  if (!field) return false;
+  setFieldValue(field, value);
+  return true;
+}
+
+function fillAssignmentJob(job) {
+  const sgkNo = String(job?.sgkNo || "").replace(/\D/g, "");
+  const tcKimlik = String(job?.assigneeTcKimlik || "").replace(/\D/g, "");
+  if (!sgkNo || !tcKimlik) {
+    return { ok: false, message: "Görevde SGK veya TC bilgisi eksik." };
+  }
+
+  const filled = {
+    sgk: fillBestField(["sgk", "sicil", "detsis"], sgkNo),
+    tc: fillBestField(["tc", "kimlik", "gorevlendirilen"], tcKimlik),
+  };
+
+  return { ok: true, filled };
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "READ_ISG_KATIP_ROWS") return false;
 
@@ -198,6 +267,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: true, ...readIsgKatipSnapshot() });
   } catch (error) {
     sendResponse({ ok: false, message: error?.message || "Sayfa okunamadı" });
+  }
+
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "FILL_ISG_KATIP_JOB") return false;
+
+  try {
+    sendResponse(fillAssignmentJob(message.job));
+  } catch (error) {
+    sendResponse({ ok: false, message: error?.message || "Sayfaya bilgi doldurulamadı" });
   }
 
   return true;

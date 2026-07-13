@@ -2,7 +2,13 @@ const apiBaseInput = document.getElementById("apiBase");
 const tokenInput = document.getElementById("token");
 const detectPanelBtn = document.getElementById("detectPanelBtn");
 const syncBtn = document.getElementById("syncBtn");
+const nextJobBtn = document.getElementById("nextJobBtn");
+const fillJobBtn = document.getElementById("fillJobBtn");
+const doneJobBtn = document.getElementById("doneJobBtn");
+const failJobBtn = document.getElementById("failJobBtn");
+const jobBox = document.getElementById("jobBox");
 const statusEl = document.getElementById("status");
+let currentJob = null;
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -11,6 +17,55 @@ function setStatus(message, isError = false) {
 
 function normalizeApiBase(value) {
   return String(value || "").trim().replace(/\/$/, "");
+}
+
+function getConfig() {
+  return {
+    apiBase: normalizeApiBase(apiBaseInput.value),
+    token: tokenInput.value.trim(),
+  };
+}
+
+function requireConfig() {
+  const config = getConfig();
+  if (!config.apiBase || !config.token) {
+    throw new Error("API adresi ve panel tokenı zorunlu.");
+  }
+  return config;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderJob(job) {
+  currentJob = job || null;
+  if (!currentJob) {
+    jobBox.style.display = "none";
+    jobBox.innerHTML = "";
+    fillJobBtn.style.display = "none";
+    doneJobBtn.style.display = "none";
+    failJobBtn.style.display = "none";
+    return;
+  }
+
+  jobBox.style.display = "block";
+  jobBox.innerHTML = `
+    <b>${escapeHtml(currentJob.gorevTuruLabel || currentJob.gorevTuru || "Atama Görevi")}</b>
+    <div><strong>Firma:</strong> ${escapeHtml(currentJob.firmaAdi || "-")}</div>
+    <div><strong>SGK:</strong> ${escapeHtml(currentJob.sgkNo || "-")}</div>
+    <div><strong>Kişi:</strong> ${escapeHtml(currentJob.assigneeName || "-")}</div>
+    <div><strong>TC:</strong> ${escapeHtml(currentJob.assigneeTcKimlik || "-")}</div>
+    <div><strong>Durum:</strong> ${escapeHtml(currentJob.status || "-")}</div>
+  `;
+  fillJobBtn.style.display = "block";
+  doneJobBtn.style.display = "block";
+  failJobBtn.style.display = "block";
 }
 
 async function getActiveTab() {
@@ -92,6 +147,21 @@ async function readApiJson(response) {
       `API JSON dönmedi. API adresini kontrol edin veya backend değişikliklerini canlıya alın. Gelen cevap: ${preview}`
     );
   }
+}
+
+async function panelFetch(path, options = {}) {
+  const { apiBase, token } = requireConfig();
+  const response = await fetch(`${apiBase}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+  });
+  const data = await readApiJson(response);
+  if (!response.ok) throw new Error(data?.message || "Panel isteği başarısız.");
+  return data;
 }
 
 chrome.storage.local.get(["apiBase", "token"], (stored) => {
@@ -181,5 +251,115 @@ syncBtn.addEventListener("click", async () => {
     setStatus(error?.message || "Senkronizasyon başarısız.", true);
   } finally {
     syncBtn.disabled = false;
+  }
+});
+
+nextJobBtn.addEventListener("click", async () => {
+  nextJobBtn.disabled = true;
+  setStatus("Bekleyen atama görevi alınıyor...");
+
+  try {
+    const data = await panelFetch("/api/isg-katip/jobs/next");
+    if (!data.job) {
+      renderJob(null);
+      setStatus("Bekleyen atama görevi yok.");
+      return;
+    }
+
+    const claimed = await panelFetch(`/api/isg-katip/jobs/${data.job.id}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ note: "Eklenti görevi aldı" }),
+    });
+    renderJob(claimed.job);
+    setStatus("Atama görevi alındı. İSG-KATİP sayfasında Sayfaya SGK/TC Doldur butonunu kullanın.");
+  } catch (error) {
+    setStatus(error?.message || "Bekleyen atama görevi alınamadı.", true);
+  } finally {
+    nextJobBtn.disabled = false;
+  }
+});
+
+fillJobBtn.addEventListener("click", async () => {
+  if (!currentJob) {
+    setStatus("Önce bekleyen atama görevini alın.", true);
+    return;
+  }
+
+  fillJobBtn.disabled = true;
+  setStatus("Açık İSG-KATİP sayfasına bilgiler hazırlanıyor...");
+
+  try {
+    const tab = await getActiveTab();
+    if (!tab?.url || !tab.url.includes("isgkatip")) {
+      throw new Error("Önce açık İSG-KATİP sekmesine geçin.");
+    }
+
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(tab.id, {
+        type: "FILL_ISG_KATIP_JOB",
+        job: currentJob,
+      });
+    } catch (_error) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["content.js"],
+      });
+      response = await chrome.tabs.sendMessage(tab.id, {
+        type: "FILL_ISG_KATIP_JOB",
+        job: currentJob,
+      });
+    }
+
+    if (!response?.ok) throw new Error(response?.message || "Sayfaya bilgi doldurulamadı.");
+    setStatus(
+      `Hazırlandı.\nSGK alanı: ${response.filled?.sgk ? "dolduruldu" : "bulunamadı"}\nTC alanı: ${
+        response.filled?.tc ? "dolduruldu" : "bulunamadı"
+      }\nSon resmi kontrol ve onay kullanıcıda.`
+    );
+  } catch (error) {
+    setStatus(error?.message || "Sayfaya bilgi doldurulamadı.", true);
+  } finally {
+    fillJobBtn.disabled = false;
+  }
+});
+
+doneJobBtn.addEventListener("click", async () => {
+  if (!currentJob) return;
+  doneJobBtn.disabled = true;
+  try {
+    const data = await panelFetch(`/api/isg-katip/jobs/${currentJob.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "done",
+        note: "Kullanıcı İSG-KATİP işlem adımını tamamlandı işaretledi",
+      }),
+    });
+    renderJob(data.job);
+    setStatus("Görev tamamlandı işaretlendi. Sonrasında açık sayfayı senkronize edin.");
+  } catch (error) {
+    setStatus(error?.message || "Görev tamamlandı işaretlenemedi.", true);
+  } finally {
+    doneJobBtn.disabled = false;
+  }
+});
+
+failJobBtn.addEventListener("click", async () => {
+  if (!currentJob) return;
+  failJobBtn.disabled = true;
+  try {
+    const data = await panelFetch(`/api/isg-katip/jobs/${currentJob.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "failed",
+        error: "Kullanıcı eklenti üzerinden hatalı işaretledi",
+      }),
+    });
+    renderJob(data.job);
+    setStatus("Görev hatalı işaretlendi. Tekrar denemek için Bekleyen Atamayı Al diyebilirsiniz.", true);
+  } catch (error) {
+    setStatus(error?.message || "Görev hatalı işaretlenemedi.", true);
+  } finally {
+    failJobBtn.disabled = false;
   }
 });

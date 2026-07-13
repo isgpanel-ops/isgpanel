@@ -50,6 +50,30 @@
         opacity: 0.6;
         cursor: not-allowed;
       }
+      .secondary {
+        background: #0f766e;
+      }
+      .muted {
+        background: #475569;
+      }
+      .danger {
+        background: #be123c;
+      }
+      #jobBox {
+        display: none;
+        margin-top: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #fff;
+        padding: 10px;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      #jobBox b {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
       .note {
         margin-top: 10px;
         color: #64748b;
@@ -75,6 +99,11 @@
 
       <button id="detectPanelBtn" type="button">Panel Oturumunu Tanı</button>
       <button id="syncBtn">Açık Sayfayı Senkronize Et</button>
+      <button id="nextJobBtn" type="button" class="secondary">Bekleyen Atamayı Al</button>
+      <div id="jobBox"></div>
+      <button id="fillJobBtn" type="button" class="muted" style="display: none">Sayfaya SGK/TC Doldur</button>
+      <button id="doneJobBtn" type="button" class="secondary" style="display: none">Görevi Tamamlandı İşaretle</button>
+      <button id="failJobBtn" type="button" class="danger" style="display: none">Görevi Hatalı İşaretle</button>
 
       <div class="note">
         Bu eklenti şifre, e-Devlet bilgisi veya çerez kaydetmez. Sadece açık
