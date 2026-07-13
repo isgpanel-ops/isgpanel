@@ -364,7 +364,7 @@ autoPrepareJobBtn.addEventListener("click", async () => {
     setStatus(
       `Atama hazırlandı.\n${steps}\nToplam süre: ${
         response.duration || "-"
-      }\nSon resmi gönderimden önce ekrandaki bilgileri kontrol edin.`
+      }\n${response.message || ""}\nSon resmi gönderimden önce ekrandaki bilgileri kontrol edin.`
     );
   } catch (error) {
     setStatus(error?.message || "Atama ekranı otomatik hazırlanamadı.", true);

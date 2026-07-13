@@ -387,6 +387,21 @@ function isSuccessfulTerminalPage() {
   );
 }
 
+function isContractListPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return (
+    (pageText.includes("bu sayfayi disa aktar") || pageText.includes("tumunu disa aktar")) &&
+    (pageText.includes("hizmet sozlesmeleri") || pageText.includes("toplam")) &&
+    pageText.includes("gorevlendirilen kisi")
+  );
+}
+
+function currentPagePreview() {
+  return cleanText(document.body?.innerText || "")
+    .replace(/\s+/g, " ")
+    .slice(0, 220);
+}
+
 function durationFromRawText(rawText) {
   const text = cleanText(rawText);
   const patterns = [
@@ -551,6 +566,7 @@ async function fillDurationStep(steps) {
   const duration = await waitFor(
     () =>
       isSuccessfulTerminalPage() ||
+      isContractListPage() ||
       findValueNearLabel([
         "gerekli toplam isg suresi",
         "gerekli toplam i̇sg süresi",
@@ -560,10 +576,19 @@ async function fillDurationStep(steps) {
     10000
   );
   if (duration === true) {
-    steps.push("İSG-KATİP işlemi başarılı mesajı verdi");
+    if (isSuccessfulTerminalPage()) {
+      steps.push("İSG-KATİP işlemi başarılı mesajı verdi");
+      return { ok: true, duration: "", skipped: true };
+    }
+    steps.push("İSG-KATİP liste ekranına döndü");
     return { ok: true, duration: "" };
   }
-  if (!duration) return { ok: false, message: "Gerekli toplam İSG süresi okunamadı." };
+  if (!duration) {
+    return {
+      ok: false,
+      message: `Gerekli toplam İSG süresi okunamadı. Ekran özeti: ${currentPagePreview()}`,
+    };
+  }
 
   if (!fillDurationField(duration)) {
     return { ok: false, message: "Çalışma süresi alanı bulunamadı." };
