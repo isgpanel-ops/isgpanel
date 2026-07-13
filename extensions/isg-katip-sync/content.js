@@ -366,24 +366,76 @@ function parseNumberFromText(value) {
   return match ? match[0].replace(",", ".") : "";
 }
 
+function elementTextWithValues(element) {
+  const values = [element.innerText, element.textContent];
+  if (element.matches?.("input, textarea, select")) {
+    values.push(element.value);
+    if (element.selectedOptions?.[0]) values.push(element.selectedOptions[0].textContent);
+  }
+  element.querySelectorAll("input, textarea, select").forEach((field) => {
+    values.push(field.value);
+    if (field.selectedOptions?.[0]) values.push(field.selectedOptions[0].textContent);
+  });
+  return cleanText(values.filter(Boolean).join(" "));
+}
+
+function isSuccessfulTerminalPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return (
+    pageText.includes("isleminiz basariyla gerceklestirilmistir") ||
+    pageText.includes("basvuruya ait bir sonraki ekranda islem yapma yetkiniz olmadigindan")
+  );
+}
+
+function durationFromRawText(rawText) {
+  const text = cleanText(rawText);
+  const patterns = [
+    /GEREKL[İI]\s+TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+    /DEVAM\s+EDEN\s+TOPLAM\s+(?:İSG|ISG)\s+S[ÜU]RES[İI]\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].replace(",", ".");
+  }
+  return "";
+}
+
 function findValueNearLabel(patterns) {
   const normalizedPatterns = patterns.map(normalizeSearchText);
-  const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, div"));
+  const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, .form-line, .ant-row, div"));
   for (const row of rows) {
-    const cells = Array.from(row.querySelectorAll("td, th, label, span, div")).filter(isVisibleElement);
-    if (cells.length >= 2) {
-      const firstText = normalizeSearchText(cells[0].innerText || cells[0].textContent || "");
-      if (normalizedPatterns.some((pattern) => firstText.includes(pattern))) {
-        const value = cleanText(cells[cells.length - 1].innerText || cells[cells.length - 1].textContent || "");
-        if (parseNumberFromText(value)) return value;
+    const rowRawText = elementTextWithValues(row);
+    const directDuration = durationFromRawText(rowRawText);
+    if (directDuration) return directDuration;
+
+    const directCells = Array.from(row.children).filter(isVisibleElement);
+    if (directCells.length >= 2) {
+      const labelText = normalizeSearchText(elementTextWithValues(directCells[0]));
+      if (normalizedPatterns.some((pattern) => labelText.includes(pattern))) {
+        for (let i = 1; i < directCells.length; i += 1) {
+          const value = parseNumberFromText(elementTextWithValues(directCells[i]));
+          if (value) return value;
+        }
       }
     }
 
-    const rowText = normalizeSearchText(row.innerText || row.textContent || "");
+    const cells = Array.from(row.querySelectorAll("td, th, label, span, div, input, textarea, select")).filter(
+      isVisibleElement
+    );
+    if (cells.length >= 2) {
+      const firstText = normalizeSearchText(elementTextWithValues(cells[0]));
+      if (normalizedPatterns.some((pattern) => firstText.includes(pattern))) {
+        for (let i = 1; i < cells.length; i += 1) {
+          const value = parseNumberFromText(elementTextWithValues(cells[i]));
+          if (value) return value;
+        }
+      }
+    }
+
+    const rowText = normalizeSearchText(rowRawText);
     if (normalizedPatterns.some((pattern) => rowText.includes(pattern))) {
-      const rawText = cleanText(row.innerText || row.textContent || "");
-      const afterLabel = rawText.split(/GEREKLİ TOPLAM İSG SÜRESİ|GEREKLI TOPLAM ISG SURESI/i).pop();
-      const number = parseNumberFromText(afterLabel || rawText);
+      const number = parseNumberFromText(rowRawText);
       if (number) return number;
     }
   }
@@ -498,13 +550,19 @@ async function fillPersonStep(job, steps) {
 async function fillDurationStep(steps) {
   const duration = await waitFor(
     () =>
+      isSuccessfulTerminalPage() ||
       findValueNearLabel([
         "gerekli toplam isg suresi",
         "gerekli toplam i̇sg süresi",
         "gerekli toplam iş güvenliği süresi",
+        "devam eden toplam isg suresi",
       ]),
     10000
   );
+  if (duration === true) {
+    steps.push("İSG-KATİP işlemi başarılı mesajı verdi");
+    return { ok: true, duration: "" };
+  }
   if (!duration) return { ok: false, message: "Gerekli toplam İSG süresi okunamadı." };
 
   if (!fillDurationField(duration)) {
