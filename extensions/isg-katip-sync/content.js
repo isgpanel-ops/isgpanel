@@ -433,7 +433,10 @@ function isProcessSelectionPage() {
 
 function isCompanySelectionPage() {
   const pageText = normalizeSearchText(document.body?.innerText || "");
-  return pageText.includes("sozlesme yapilacak isyeri") || pageText.includes("sgk sicil no");
+  return (
+    (pageText.includes("sgk sicil no") || pageText.includes("26 hane")) &&
+    (pageText.includes("taraf tipi") || Boolean(findField(["sgk", "sicil", "detsis", "26 hane"])))
+  );
 }
 
 function isPersonSelectionPage() {
