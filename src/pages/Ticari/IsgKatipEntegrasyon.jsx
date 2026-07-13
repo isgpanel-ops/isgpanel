@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
-  AlertTriangle,
   CheckCircle2,
   Clock3,
   FileCheck2,
@@ -33,7 +32,6 @@ const tabs = [
   { key: "atama_yok", label: "İSG-KATİP Ataması Olmayanlar" },
   { key: "onay_bekleyen", label: "Onay Bekleyenler" },
   { key: "aktif", label: "Aktif Atamalar" },
-  { key: "dusen", label: "Düşen Atamalar" },
 ];
 
 const statusOptions = [
@@ -42,8 +40,6 @@ const statusOptions = [
   ["profesyonel_onayi_bekliyor", "Profesyonel Onayı Bekliyor"],
   ["isveren_onayi_bekliyor", "İşveren Onayı Bekliyor"],
   ["atama_onaylandi", "Atama Onaylandı"],
-  ["atama_dustu", "Atama Düştü"],
-  ["yeniden_atama_gerekli", "Yeniden Atama Gerekli"],
 ];
 
 const gorevTurleri = [
@@ -219,10 +215,7 @@ export default function IsgKatipEntegrasyon() {
       setSavedPeople(Array.isArray(data?.savedPeople) ? data.savedPeople : []);
       setLastSyncAt(data?.lastSyncAt || null);
       setSelected((prev) => {
-        const matchesTab = (item) =>
-          activeTab === "atanmamis"
-            ? item.category === "atanmamis" || item.category === "dusen"
-            : item.category === activeTab;
+        const matchesTab = (item) => item.category === activeTab;
         if (prev && nextItems.some((item) => item.id === prev.id && matchesTab(item))) {
           return nextItems.find((item) => item.id === prev.id) || null;
         }
@@ -249,11 +242,7 @@ export default function IsgKatipEntegrasyon() {
   const visibleItems = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("tr-TR");
     return items
-      .filter((item) =>
-        activeTab === "atanmamis"
-          ? item.category === "atanmamis" || item.category === "dusen"
-          : item.category === activeTab
-      )
+      .filter((item) => item.category === activeTab)
       .filter((item) => {
         if (!q) return true;
         return [item.firmaAdi, item.sgkNo, item.assignedUserName, item.assignedDisplayName]
@@ -279,8 +268,7 @@ export default function IsgKatipEntegrasyon() {
   const isStartTab = isPanelAssignmentTab || isKatipStartTab;
   const isApprovalTab = activeTab === "onay_bekleyen";
   const isActiveTab = activeTab === "aktif";
-  const isFallenTab = activeTab === "dusen";
-  const canEditAssignee = isStartTab || isApprovalTab || isActiveTab || isFallenTab;
+  const canEditAssignee = isStartTab || isApprovalTab || isActiveTab;
   const manualFormValid =
     manualAssigneeForm.adSoyad.trim() && hasValidTc(manualAssigneeForm.tcKimlik);
   const selectedBulkUser = candidateUsers.find((user) => user.id === bulkUserId);
@@ -288,12 +276,8 @@ export default function IsgKatipEntegrasyon() {
     ? Boolean(selectedBulkUser?.tcKimlikVar)
     : selectedItems.every((item) => item.assignedUserId && item.assignedUserTcKimlikVar !== false);
   const bulkManualReady = selectedItems.every((item) => item.assignedUserTcKimlikVar) || manualFormValid;
-  const tabCount = (key) =>
-    key === "atanmamis" ? (counts.atanmamis || 0) + (counts.dusen || 0) : counts[key] || 0;
-  const isInActiveView = (item) =>
-    activeTab === "atanmamis"
-      ? item.category === "atanmamis" || item.category === "dusen"
-      : item.category === activeTab;
+  const tabCount = (key) => counts[key] || 0;
+  const isInActiveView = (item) => item.category === activeTab;
   const actionLabel = isPanelAssignmentTab ? "Panel Atamasını Kaydet" : "Atama Sürecini Başlat";
   const changeAssigneeLabel = isStartTab ? actionLabel : "Personeli Değiştir";
 
@@ -620,12 +604,11 @@ export default function IsgKatipEntegrasyon() {
           ))}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-4">
           <StatCard title="Atanmamış Firmalar" value={tabCount("atanmamis")} sub="Kullanıcı atanmayı bekliyor" icon={ShieldAlert} tone="rose" active={activeTab === "atanmamis"} onClick={() => setActiveTab("atanmamis")} />
           <StatCard title="İSG-KATİP Ataması Yok" value={counts.atama_yok || 0} sub="Panelde atanmış, resmi atama yok" icon={FileCheck2} tone="amber" active={activeTab === "atama_yok"} onClick={() => setActiveTab("atama_yok")} />
           <StatCard title="Onay Bekleyenler" value={counts.onay_bekleyen || 0} sub="Profesyonel veya işveren onayı" icon={Hourglass} tone="blue" active={activeTab === "onay_bekleyen"} onClick={() => setActiveTab("onay_bekleyen")} />
           <StatCard title="Aktif Atamalar" value={counts.aktif || 0} sub="İSG-KATİP'te aktif sözleşme" icon={CheckCircle2} tone="emerald" active={activeTab === "aktif"} onClick={() => setActiveTab("aktif")} />
-          <StatCard title="Düşen Atamalar" value={counts.dusen || 0} sub="Yeniden işlem gerekli" icon={AlertTriangle} tone="rose" active={activeTab === "dusen"} onClick={() => setActiveTab("dusen")} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
@@ -925,18 +908,6 @@ export default function IsgKatipEntegrasyon() {
                   </div>
                 )}
 
-                {isFallenTab && (
-                  <button
-                    type="button"
-                    onClick={() => updateBulkStatus("kontrol_edilmedi")}
-                    disabled={saving || selectedFirmaIds.length === 0}
-                    className={`${btn.base} ${btn.primary} w-full`}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Güncelle
-                  </button>
-                )}
-
                 <button
                   type="button"
                   onClick={() => setSelectedIds([])}
@@ -1160,18 +1131,6 @@ export default function IsgKatipEntegrasyon() {
                       </div>
                     </div>
                   </div>
-                )}
-
-                {isFallenTab && (
-                  <button
-                    type="button"
-                    onClick={() => updateStatus("kontrol_edilmedi")}
-                    disabled={saving}
-                    className={`${btn.base} ${btn.primary} h-10 w-full`}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Güncelle
-                  </button>
                 )}
 
                 {isKatipStartTab && isUzmanMode && (

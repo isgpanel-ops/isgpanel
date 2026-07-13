@@ -76,11 +76,18 @@ function statusPriority(status) {
     atama_yok: 1,
     profesyonel_onayi_bekliyor: 2,
     isveren_onayi_bekliyor: 3,
-    atama_dustu: 4,
-    yeniden_atama_gerekli: 4,
+    atama_dustu: 1,
+    yeniden_atama_gerekli: 1,
     atama_onaylandi: 5,
   };
   return priorities[status] ?? 0;
+}
+
+function normalizeWorkflowStatus(status) {
+  if (status === "atama_dustu" || status === "yeniden_atama_gerekli") {
+    return "atama_yok";
+  }
+  return STATUS_LABELS[status] ? status : "kontrol_edilmedi";
 }
 
 function normalizeTehlike(value) {
@@ -97,16 +104,11 @@ function isAssignableUser(user) {
 
 function categoryFor(item) {
   if (!item.hasAssignee) return "atanmamis";
-  if (item.isgKatipStatus === "atama_onaylandi") return "aktif";
+  const status = normalizeWorkflowStatus(item.isgKatipStatus);
+  if (status === "atama_onaylandi") return "aktif";
   if (
-    item.isgKatipStatus === "atama_dustu" ||
-    item.isgKatipStatus === "yeniden_atama_gerekli"
-  ) {
-    return "dusen";
-  }
-  if (
-    item.isgKatipStatus === "profesyonel_onayi_bekliyor" ||
-    item.isgKatipStatus === "isveren_onayi_bekliyor"
+    status === "profesyonel_onayi_bekliyor" ||
+    status === "isveren_onayi_bekliyor"
   ) {
     return "onay_bekleyen";
   }
@@ -426,7 +428,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     const assignedName = uzmanMode ? assignedUser?.name || assignedUser?.email || "" : manualName;
     const assignedTc = uzmanMode ? assignedUser?.personal?.tcKimlik || "" : manualTc;
     const hasAssignee = uzmanMode ? Boolean(assignedUserId) : hasManualAssignee;
-    const status = assignment?.isgKatipStatus || "kontrol_edilmedi";
+    const status = normalizeWorkflowStatus(assignment?.isgKatipStatus || "kontrol_edilmedi");
 
     const item = {
       id: firmId,
@@ -479,7 +481,7 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     atama_yok: items.filter((item) => item.category === "atama_yok").length,
     onay_bekleyen: items.filter((item) => item.category === "onay_bekleyen").length,
     aktif: items.filter((item) => item.category === "aktif").length,
-    dusen: items.filter((item) => item.category === "dusen").length,
+    dusen: 0,
   };
 
   const lastSyncAt =
@@ -919,10 +921,11 @@ router.post("/extension-sync", async (req, res) => {
         }
       }
 
-      const status =
+      const status = normalizeWorkflowStatus(
         isUnknownSyncStatus(rawStatus) && hasKnownAssignee && hasValidTcValue(personelTc)
           ? "atama_onaylandi"
-          : rawStatus;
+          : rawStatus
+      );
 
       const firmUpdate = firmUpdates.get(String(firm._id)) || {};
       if (tehlike) firmUpdate.tehlike = tehlike;
@@ -1435,10 +1438,11 @@ router.patch("/bulk/status", async (req, res) => {
     if (!orgId) return;
 
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
-    const nextStatus = String(req.body?.isgKatipStatus || "").trim();
-    if (!STATUS_LABELS[nextStatus]) {
+    const requestedStatus = String(req.body?.isgKatipStatus || "").trim();
+    if (!STATUS_LABELS[requestedStatus]) {
       return res.status(400).json({ message: "İSG-KATİP durumu geçersiz" });
     }
+    const nextStatus = normalizeWorkflowStatus(requestedStatus);
 
     const firmaIds = await scopedFirmIds(orgId, req.body?.firmaIds);
     if (firmaIds.length === 0) {
@@ -1670,10 +1674,11 @@ router.patch("/:firmaId/status", async (req, res) => {
     const firm = await Firma.findOne({ _id: firmaId, organization: orgId }).lean();
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
 
-    const nextStatus = String(req.body?.isgKatipStatus || "").trim();
-    if (!STATUS_LABELS[nextStatus]) {
+    const requestedStatus = String(req.body?.isgKatipStatus || "").trim();
+    if (!STATUS_LABELS[requestedStatus]) {
       return res.status(400).json({ message: "İSG-KATİP durumu geçersiz" });
     }
+    const nextStatus = normalizeWorkflowStatus(requestedStatus);
 
     const gorevTuru = normalizeGorevTuru(req.body?.gorevTuru);
     const activeLink = isUzmanGorevi(gorevTuru)
