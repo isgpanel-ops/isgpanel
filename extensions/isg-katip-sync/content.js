@@ -396,6 +396,25 @@ function isContractListPage() {
   );
 }
 
+function isProcessSelectionPage() {
+  return normalizeSearchText(document.body?.innerText || "").includes("surec secimi");
+}
+
+function isCompanySelectionPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return pageText.includes("sozlesme yapilacak isyeri") || pageText.includes("sgk sicil no");
+}
+
+function isPersonSelectionPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return (
+    pageText.includes("gorevlendirilecek is guvenligi uzmani") ||
+    pageText.includes("gorevlendirilecek isyeri hekimi") ||
+    pageText.includes("gorevlendirilecek diger saglik personeli") ||
+    pageText.includes("kisi tckn")
+  );
+}
+
 function currentPagePreview() {
   return cleanText(document.body?.innerText || "")
     .replace(/\s+/g, " ")
@@ -471,7 +490,10 @@ async function chooseProcessForRole(gorevTuru, steps) {
   }
   steps.push("Yeni butonu açıldı");
 
-  await waitFor(() => normalizeSearchText(document.body.innerText).includes("surec secimi"), 8000);
+  const processSelectionOpened = await waitFor(() => isProcessSelectionPage(), 8000);
+  if (!processSelectionOpened) {
+    return { ok: false, message: `Süreç seçimi ekranı açılmadı. Ekran özeti: ${currentPagePreview()}` };
+  }
   const searchField =
     findField(["lutfen surec seciniz", "süreç seçiniz", "surec seciniz"]) || findFirstEmptyTextField();
   if (searchField) {
@@ -492,6 +514,7 @@ async function chooseProcessForRole(gorevTuru, steps) {
     return { ok: false, message: "Başlat butonu bulunamadı." };
   }
   steps.push("Süreç başlatıldı");
+  await delay(1200);
   return { ok: true };
 }
 
@@ -510,6 +533,7 @@ async function approveInfoScreen(steps) {
 
   if (clickButtonByText(["Başlat", "Baslat", "İleri", "Ileri"])) {
     steps.push("Bilgilendirme ekranı geçildi");
+    await delay(1200);
     return { ok: true };
   }
 
@@ -520,7 +544,10 @@ async function fillCompanyStep(job, steps) {
   const sgkNo = String(job?.sgkNo || "").replace(/\D/g, "");
   if (!sgkNo) return { ok: false, message: "Görevde SGK sicil no yok." };
 
-  const ready = await waitFor(() => findField(["sgk", "sicil", "detsis", "26 hane"]), 10000);
+  const ready = await waitFor(
+    () => isCompanySelectionPage() && findField(["sgk", "sicil", "detsis", "26 hane"]),
+    10000
+  );
   if (!ready) return { ok: false, message: "SGK sicil no alanı bulunamadı." };
 
   fillFieldByPatterns(["sgk", "sicil", "detsis", "26 hane"], sgkNo);
@@ -536,6 +563,7 @@ async function fillCompanyStep(job, steps) {
     return { ok: false, message: "Firma ekranında İleri butonu bulunamadı." };
   }
   steps.push("Firma ekranı geçildi");
+  await delay(1200);
   return { ok: true };
 }
 
@@ -543,7 +571,10 @@ async function fillPersonStep(job, steps) {
   const tcKimlik = String(job?.assigneeTcKimlik || "").replace(/\D/g, "");
   if (!tcKimlik) return { ok: false, message: "Görevde atanacak kişinin TC kimlik no bilgisi yok." };
 
-  const ready = await waitFor(() => findField(["tc", "tckn", "kimlik", "kisi tckn", "kişi tckn"]), 10000);
+  const ready = await waitFor(
+    () => isPersonSelectionPage() && findField(["tc", "tckn", "kimlik", "kisi tckn", "kişi tckn"]),
+    10000
+  );
   if (!ready) return { ok: false, message: "TC kimlik no alanı bulunamadı." };
 
   fillFieldByPatterns(["tc", "tckn", "kimlik", "kisi tckn", "kişi tckn"], tcKimlik);
@@ -566,7 +597,6 @@ async function fillDurationStep(steps) {
   const duration = await waitFor(
     () =>
       isSuccessfulTerminalPage() ||
-      isContractListPage() ||
       findValueNearLabel([
         "gerekli toplam isg suresi",
         "gerekli toplam i̇sg süresi",
@@ -580,8 +610,12 @@ async function fillDurationStep(steps) {
       steps.push("İSG-KATİP işlemi başarılı mesajı verdi");
       return { ok: true, duration: "", skipped: true };
     }
-    steps.push("İSG-KATİP liste ekranına döndü");
-    return { ok: true, duration: "" };
+  }
+  if (isContractListPage()) {
+    return {
+      ok: false,
+      message: `İSG-KATİP liste ekranına döndü; atama kaydı oluşmadı. Ekran özeti: ${currentPagePreview()}`,
+    };
   }
   if (!duration) {
     return {
