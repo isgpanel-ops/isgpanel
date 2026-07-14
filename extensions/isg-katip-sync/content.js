@@ -16,6 +16,12 @@ function lowerTR(value) {
     .replace(/ş/g, "s")
     .replace(/ı/g, "i")
     .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
     .replace(/ç/g, "c");
 }
 
@@ -895,7 +901,20 @@ function elementTextWithValues(element) {
   return cleanText(values.filter(Boolean).join(" "));
 }
 
+let assignmentDetailsAutoRun = false;
+
+function kickAssignmentDetailsStepIfNeeded() {
+  if (assignmentDetailsAutoRun || !isAssignmentDetailsPage()) return;
+  assignmentDetailsAutoRun = true;
+  fillAssignmentDetailsStep([])
+    .catch(() => {})
+    .finally(() => {
+      assignmentDetailsAutoRun = false;
+    });
+}
+
 function isSuccessfulTerminalPage() {
+  kickAssignmentDetailsStepIfNeeded();
   const pageText = normalizeSearchText(document.body?.innerText || "");
   return (
     pageText.includes("isleminiz basariyla gerceklestirilmistir") ||
@@ -937,6 +956,14 @@ function isPersonSelectionPage() {
 function isInfoApprovalPage() {
   const pageText = normalizeSearchText(document.body?.innerText || "");
   return pageText.includes("okudum") || pageText.includes("bilgilendirme metni") || pageText.includes("yonetmelik kapsaminda");
+}
+
+function isAssignmentDetailsPage() {
+  const pageText = normalizeSearchText(document.body?.innerText || "");
+  return (
+    pageText.includes("sozlesme bilgileri giris sayfasi") ||
+    (pageText.includes("gorevlendirme tipi") && pageText.includes("calisma suresi"))
+  );
 }
 
 function isCheckedElement(element) {
@@ -1052,6 +1079,133 @@ function fillDurationField(duration) {
   const cleanDuration = parseNumberFromText(duration);
   if (!cleanDuration) return false;
   return fillFieldByPatterns(["calisma suresi", "çalışma süresi"], cleanDuration, { allowFallback: false });
+}
+
+function setSelectOptionByText(select, texts) {
+  const wanted = texts.map(normalizeSearchText);
+  const option = Array.from(select.options || []).find((item) => {
+    const text = normalizeSearchText([item.textContent, item.label, item.value].filter(Boolean).join(" "));
+    return wanted.some((pattern) => text.includes(pattern));
+  });
+  if (!option) return false;
+
+  const wasDisabled = select.disabled;
+  if (wasDisabled) select.disabled = false;
+  select.focus();
+  select.value = option.value;
+  option.selected = true;
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  select.blur();
+  if (wasDisabled) select.disabled = true;
+  return true;
+}
+
+async function clickDropdownOptionByText(texts) {
+  const wanted = texts.map(normalizeSearchText);
+  await delay(350);
+  const candidates = visibleElements(
+    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, div, span"
+  )
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => {
+      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item")
+        ? 0
+        : 1;
+      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item")
+        ? 0
+        : 1;
+      return aRoleScore - bRoleScore || a.children.length - b.children.length;
+    });
+  const option = candidates.find((element) => {
+    const text = normalizeSearchText(element.innerText || element.textContent || element.value || "");
+    return wanted.some((pattern) => text.includes(pattern));
+  });
+  if (!option) return false;
+  clickElement(option);
+  return true;
+}
+
+async function selectPartialTimeAssignmentType() {
+  const optionTexts = ["kismi sureli", "kÄ±smi sÃ¼reli", "kismi", "kÄ±smi"];
+  const field = findField(["gorevlendirme tipi", "gÃ¶revlendirme tipi", "gorevlendirme"]);
+  if (field) {
+    const currentValue = normalizeSearchText(elementTextWithValues(field));
+    if (currentValue.includes("kismi")) return true;
+
+    if (field instanceof HTMLSelectElement && setSelectOptionByText(field, optionTexts)) {
+      return true;
+    }
+
+    const control =
+      field.closest(".ant-select, .select2, .ng-select, [role='combobox'], [class*='select']") ||
+      field.closest(".form-group, .form-line, .ant-form-item, .row") ||
+      field;
+    clickElement(control);
+    if (await clickDropdownOptionByText(optionTexts)) return true;
+
+    clickElement(field);
+    if (await clickDropdownOptionByText(optionTexts)) return true;
+  }
+
+  const nativeSelect = getAllFields().find(
+    (candidate) => candidate instanceof HTMLSelectElement && fieldContext(candidate).includes("gorevlendirme")
+  );
+  if (nativeSelect && setSelectOptionByText(nativeSelect, optionTexts)) return true;
+
+  const dropdown = visibleElements("[role='combobox'], .ant-select, .select2, .select2-selection, .ng-select, .form-control")
+    .filter((element) => !isDisabledElement(element))
+    .find(
+      (element) =>
+        fieldContext(element).includes("gorevlendirme") ||
+        normalizeSearchText(elementTextWithValues(element)).includes("seciniz")
+    );
+  if (dropdown) {
+    clickElement(dropdown);
+    if (await clickDropdownOptionByText(optionTexts)) return true;
+  }
+
+  return false;
+}
+
+async function fillAssignmentDetailsStep(steps) {
+  const ready = await waitFor(() => isAssignmentDetailsPage(), 10000);
+  if (!ready) return { ok: true, skipped: true };
+
+  let selected = false;
+  for (let attempt = 0; attempt < 10 && !selected; attempt += 1) {
+    selected = await selectPartialTimeAssignmentType();
+    if (!selected) await delay(500);
+  }
+  if (!selected) {
+    return {
+      ok: false,
+      message: `GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ilemedi. Ekran Ã¶zeti: ${currentPagePreview()}`,
+    };
+  }
+  steps.push("GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ildi");
+
+  const continued = await waitFor(() => clickButtonByText(["Ä°leri", "Ileri"]), 6000);
+  if (!continued) {
+    return { ok: false, message: "SÃ¶zleÅŸme bilgileri ekranÄ±nda Ä°leri butonu bulunamadÄ±." };
+  }
+  steps.push("SÃ¶zleÅŸme bilgileri ekranÄ± geÃ§ildi");
+
+  const succeeded = await waitFor(() => isSuccessfulTerminalPage() || isContractListPage(), 15000, 300);
+  if (isSuccessfulTerminalPage()) {
+    steps.push("Ä°SG-KATÄ°P baÅŸarÄ± mesajÄ± gÃ¶rÃ¼ldÃ¼");
+    return { ok: true };
+  }
+  if (succeeded && isContractListPage()) {
+    return {
+      ok: false,
+      message: `Ä°SG-KATÄ°P liste ekranÄ±na dÃ¶ndÃ¼; baÅŸarÄ± mesajÄ± gÃ¶rÃ¼lemedi. Ekran Ã¶zeti: ${currentPagePreview()}`,
+    };
+  }
+  return {
+    ok: false,
+    message: `SÃ¶zleÅŸme bilgileri gÃ¶nderildi ama baÅŸarÄ± mesajÄ± gÃ¶rÃ¼lemedi. Ekran Ã¶zeti: ${currentPagePreview()}`,
+  };
 }
 
 async function chooseProcessForRole(gorevTuru, steps) {

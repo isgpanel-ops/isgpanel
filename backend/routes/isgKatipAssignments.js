@@ -107,6 +107,18 @@ function normalizeTehlikeSafe(value) {
     .replace(/ş/g, "s")
     .replace(/ı/g, "i")
     .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
     .replace(/ç/g, "c");
   if (normalized.includes("cok tehlikeli")) return "Çok Tehlikeli";
   if (normalized.includes("az tehlikeli")) return "Az Tehlikeli";
@@ -967,6 +979,7 @@ router.post("/extension-sync", async (req, res) => {
     let matched = 0;
     const latestRowsByIdentity = new Map();
     const ignoredPendingByFirmRole = new Map();
+    const seenFirmRoleKeys = new Set();
 
     rows.forEach((row, index) => {
       const sgkNo = String(row.sgkNo || "").replace(/\D/g, "");
@@ -999,6 +1012,7 @@ router.post("/extension-sync", async (req, res) => {
       }
 
       const assignmentKey = `${String(firm._id)}:${gorevTuru}`;
+      seenFirmRoleKeys.add(assignmentKey);
       if (row.ignoredPending) {
         ignoredPendingByFirmRole.set(assignmentKey, { row, firm, gorevTuru });
         return;
@@ -1135,6 +1149,50 @@ router.post("/extension-sync", async (req, res) => {
       if (shouldPreferSyncRow(nextCandidate, current)) {
         assignmentOpsByKey.set(assignmentKey, nextCandidate);
       }
+    });
+
+    const stalePendingAssignments = await IsgKatipAssignment.find({
+      organization: orgId,
+      gorevTuru: requestedGorevTuru,
+      isgKatipStatus: { $in: ["profesyonel_onayi_bekliyor", "isveren_onayi_bekliyor"] },
+    })
+      .select("firmaId gorevTuru")
+      .lean();
+
+    stalePendingAssignments.forEach((assignment) => {
+      const assignmentKey = `${String(assignment.firmaId)}:${requestedGorevTuru}`;
+      if (seenFirmRoleKeys.has(assignmentKey) || assignmentOpsByKey.has(assignmentKey)) return;
+      assignmentOpsByKey.set(assignmentKey, {
+        priority: statusPriority("atama_yok"),
+        status: "atama_yok",
+        latestValue: 0,
+        op: {
+          updateOne: {
+            filter: {
+              organization: orgId,
+              firmaId: assignment.firmaId,
+              gorevTuru: requestedGorevTuru,
+            },
+            update: {
+              $set: {
+                isgKatipStatus: "atama_yok",
+                sozlesmeId: "",
+                calismaSuresi: "",
+                lastSyncAt: now,
+                lastError: "",
+              },
+              $push: {
+                logs: {
+                  action: "extension_sync_stale_pending_clear",
+                  message: "Guncel ISG-KATIP taramasinda bulunmayan eski onay bekleyen kayit temizlendi",
+                  by: req.user._id || req.user.id || null,
+                  at: now,
+                },
+              },
+            },
+          },
+        },
+      });
     });
 
     ignoredPendingByFirmRole.forEach(({ row, firm, gorevTuru }, assignmentKey) => {
