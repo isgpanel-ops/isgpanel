@@ -15,12 +15,13 @@ window.addEventListener("message", (event) => {
       gorevTuru: message.gorevTuru,
     },
     (response) => {
+      const runtimeError = chrome.runtime.lastError?.message;
       window.postMessage(
         {
           source: EXTENSION_BRIDGE_SOURCE,
           requestId: message.requestId,
           type: message.type === "ISG_KATIP_RUN_JOB_REQUEST" ? "ISG_KATIP_RUN_JOB_RESPONSE" : "ISG_KATIP_SYNC_RESPONSE",
-          response,
+          response: runtimeError ? { ok: false, message: runtimeError } : response,
         },
         window.location.origin
       );

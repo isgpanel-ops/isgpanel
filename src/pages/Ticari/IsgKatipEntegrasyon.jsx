@@ -87,8 +87,8 @@ function requestIsgKatipExtensionSync({ apiBase, token }) {
     const requestId = `isg-katip-sync-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const timer = window.setTimeout(() => {
       window.removeEventListener("message", handleMessage);
-      reject(new Error("İSG-KATİP eklentisi cevap vermedi. Eklentiyi yenileyip tekrar deneyin."));
-    }, 12000);
+      reject(new Error("İSG-KATİP senkronizasyonu zaman aşımına uğradı. Çok sayfalı liste taranıyorsa İSG-KATİP sekmesini açık bırakıp tekrar deneyin."));
+    }, 240000);
 
     function handleMessage(event) {
       if (event.source !== window) return;
