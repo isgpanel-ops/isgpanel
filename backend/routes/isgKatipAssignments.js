@@ -92,10 +92,41 @@ function normalizeWorkflowStatus(status) {
 
 function normalizeTehlike(value) {
   const text = String(value || "").toLocaleLowerCase("tr-TR");
+  if (isCokTehlikeli(value)) return "Çok Tehlikeli";
   if (text.includes("çok")) return "Çok Tehlikeli";
   if (text.includes("az")) return "Az Tehlikeli";
   if (text.includes("tehlikeli")) return "Tehlikeli";
   return "";
+}
+
+function isCokTehlikeli(value) {
+  const text = String(value || "").toLocaleLowerCase("tr-TR");
+  return text.includes("çok") || text.includes("Ã§ok");
+}
+
+function isDspRequiredFirm(firm) {
+  const employeeCount = Number(firm?.calisanSayisi);
+  return isCokTehlikeli(firm?.tehlike) && Number.isFinite(employeeCount) && employeeCount >= 10;
+}
+
+function contractSortValue(row, fallbackIndex = 0) {
+  const contractNo = String(row?.sozlesmeId || "").replace(/\D/g, "");
+  if (contractNo) return Number(contractNo);
+
+  const rawNumbers = String(row?.rawText || "").match(/\b\d{5,}\b/g) || [];
+  if (rawNumbers.length > 0) {
+    return Math.max(...rawNumbers.map((item) => Number(item)).filter(Number.isFinite));
+  }
+
+  return fallbackIndex;
+}
+
+function shouldPreferSyncRow(next, current) {
+  if (!current) return true;
+  const nextPriority = statusPriority(next.status);
+  const currentPriority = statusPriority(current.status);
+  if (nextPriority !== currentPriority) return nextPriority > currentPriority;
+  return next.latestValue >= current.latestValue;
 }
 
 function isAssignableUser(user) {
@@ -399,7 +430,11 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
   const normalizedGorevTuru = normalizeGorevTuru(gorevTuru);
   const uzmanMode = isUzmanGorevi(normalizedGorevTuru);
 
-  const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
+  const allFirms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
+  const firms =
+    normalizedGorevTuru === "diger_saglik_personeli"
+      ? allFirms.filter(isDspRequiredFirm)
+      : allFirms;
   const firmIds = firms.map((firm) => firm._id);
 
   const activeLinks = uzmanMode
@@ -836,7 +871,7 @@ router.post("/extension-sync", async (req, res) => {
       organization: orgId,
       $or: [{ sgkNo: { $in: sgkList } }, { sgkSicilNo: { $in: sgkList } }],
     })
-      .select("_id sgkNo sgkSicilNo")
+      .select("_id sgkNo sgkSicilNo tehlike calisanSayisi")
       .lean();
 
     const firmBySgk = new Map();
@@ -898,18 +933,40 @@ router.post("/extension-sync", async (req, res) => {
     const deactivateLinkFilters = [];
     const firmUpdates = new Map();
     let matched = 0;
+    const latestRowsByIdentity = new Map();
 
-    rows.forEach((row) => {
+    rows.forEach((row, index) => {
       const sgkNo = String(row.sgkNo || "").replace(/\D/g, "");
       const firm = firmBySgk.get(sgkNo);
       if (!firm) return;
-      matched += 1;
 
       const rawStatus = STATUS_LABELS[row.isgKatipStatus]
         ? row.isgKatipStatus
         : "kontrol_edilmedi";
       const gorevTuru = normalizeGorevTuru(row.gorevTuru);
       const personelTc = normalizeTc(row.personelTcKimlik);
+      if (gorevTuru === "diger_saglik_personeli" && !isDspRequiredFirm(firm)) return;
+
+      const latestValue = contractSortValue(row, index);
+      const status = normalizeWorkflowStatus(rawStatus);
+      const identityKey = `${String(firm._id)}:${gorevTuru}:${personelTc || "tc-yok"}:${status}`;
+      const currentIdentity = latestRowsByIdentity.get(identityKey);
+      if (!currentIdentity || latestValue >= currentIdentity.latestValue) {
+        latestRowsByIdentity.set(identityKey, {
+          row,
+          firm,
+          rawStatus,
+          gorevTuru,
+          personelTc,
+          latestValue,
+          status,
+        });
+      }
+    });
+
+    Array.from(latestRowsByIdentity.values()).forEach((syncItem) => {
+      const { row, firm, rawStatus, gorevTuru, personelTc, latestValue } = syncItem;
+      matched += 1;
       const tehlike = normalizeTehlike(row.tehlike);
       const calisanSayisi = Number.isFinite(Number(row.calisanSayisi))
         ? Number(row.calisanSayisi)
@@ -1017,8 +1074,9 @@ router.post("/extension-sync", async (req, res) => {
         },
       };
       const current = assignmentOpsByKey.get(assignmentKey);
-      if (!current || priority >= current.priority) {
-        assignmentOpsByKey.set(assignmentKey, { priority, op: assignmentOp });
+      const nextCandidate = { priority, status, latestValue, op: assignmentOp };
+      if (shouldPreferSyncRow(nextCandidate, current)) {
+        assignmentOpsByKey.set(assignmentKey, nextCandidate);
       }
     });
 

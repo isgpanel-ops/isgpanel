@@ -25,6 +25,14 @@ function normalizeSearchText(value) {
 
 function normalizeStatus(text) {
   const value = lowerTR(text);
+  const normalized = normalizeSearchText(text);
+  if (
+    normalized.includes("sozlesme onay bekliyor") ||
+    normalized.includes("onay bekleyen sozlesme") ||
+    normalized.includes("onay bekliyor")
+  ) {
+    return "profesyonel_onayi_bekliyor";
+  }
   if (
     value.includes("fa-check") ||
     value.includes("glyphicon-ok") ||
