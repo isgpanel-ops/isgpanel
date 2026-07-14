@@ -2,6 +2,11 @@ const ISG_KATIP_URLS = [
   "https://*.isgkatip.csgb.gov.tr/*",
   "https://isgkatip.csgb.gov.tr/*",
 ];
+const GOREV_TURLERI = ["is_guvenligi_uzmani", "isyeri_hekimi", "diger_saglik_personeli"];
+
+function normalizeGorevTuru(value) {
+  return GOREV_TURLERI.includes(value) ? value : "";
+}
 
 function normalizeApiBase(value) {
   return String(value || "").trim().replace(/\/$/, "");
@@ -44,8 +49,9 @@ async function sendIsgKatipMessage(tabId, message) {
   }
 }
 
-async function syncOpenIsgKatipPage({ apiBase, token }) {
+async function syncOpenIsgKatipPage({ apiBase, token, gorevTuru }) {
   const normalizedApiBase = normalizeApiBase(apiBase);
+  const requestedGorevTuru = normalizeGorevTuru(gorevTuru);
   if (!normalizedApiBase || !token) {
     throw new Error("API adresi ve panel tokeni zorunlu.");
   }
@@ -59,7 +65,10 @@ async function syncOpenIsgKatipPage({ apiBase, token }) {
   if (!snapshot?.ok) {
     throw new Error(snapshot?.message || "ISG-KATIP sayfasi okunamadi.");
   }
-  if (!snapshot.rows?.length) {
+  const rows = requestedGorevTuru
+    ? (snapshot.rows || []).filter((row) => !row.gorevTuru || row.gorevTuru === requestedGorevTuru)
+    : snapshot.rows || [];
+  if (!rows.length) {
     throw new Error("Acik ISG-KATIP sayfasinda SGK sicil numarasi olan kayit okunamadi.");
   }
 
@@ -70,12 +79,13 @@ async function syncOpenIsgKatipPage({ apiBase, token }) {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      rows: snapshot.rows,
+      rows,
       source: {
         url: snapshot.url,
         title: snapshot.title,
         capturedAt: snapshot.capturedAt,
         pageGorevTuru: snapshot.pageGorevTuru,
+        requestedGorevTuru,
       },
     }),
   });
@@ -87,7 +97,7 @@ async function syncOpenIsgKatipPage({ apiBase, token }) {
 
   return {
     ...data,
-    scannedRows: snapshot.rows.length,
+    scannedRows: rows.length,
     tabUrl: tab.url,
   };
 }

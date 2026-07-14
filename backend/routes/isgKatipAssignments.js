@@ -99,14 +99,41 @@ function normalizeTehlike(value) {
   return "";
 }
 
+function normalizeTehlikeSafe(value) {
+  const normalized = String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+  if (normalized.includes("cok tehlikeli")) return "Çok Tehlikeli";
+  if (normalized.includes("az tehlikeli")) return "Az Tehlikeli";
+  if (normalized.includes("tehlikeli")) return "Tehlikeli";
+  return normalizeTehlike(value);
+}
+
 function isCokTehlikeli(value) {
   const text = String(value || "").toLocaleLowerCase("tr-TR");
   return text.includes("çok") || text.includes("Ã§ok");
 }
 
+function isCokTehlikeliSafe(value) {
+  const normalized = String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+  return normalized.includes("cok") || isCokTehlikeli(value);
+}
+
 function isDspRequiredFirm(firm) {
   const employeeCount = Number(firm?.calisanSayisi);
-  return isCokTehlikeli(firm?.tehlike) && Number.isFinite(employeeCount) && employeeCount >= 10;
+  return isCokTehlikeliSafe(firm?.tehlike) && Number.isFinite(employeeCount) && employeeCount >= 10;
 }
 
 function contractSortValue(row, fallbackIndex = 0) {
@@ -863,6 +890,10 @@ router.post("/extension-sync", async (req, res) => {
       return res.status(400).json({ message: "Senkronize edilecek kayıt bulunamadı" });
     }
 
+    const requestedGorevTuru = normalizeGorevTuru(
+      req.body?.source?.requestedGorevTuru || req.body?.source?.pageGorevTuru
+    );
+
     const sgkList = [
       ...new Set(rows.map((row) => String(row.sgkNo || "").replace(/\D/g, "")).filter(Boolean)),
     ];
@@ -944,8 +975,26 @@ router.post("/extension-sync", async (req, res) => {
         ? row.isgKatipStatus
         : "kontrol_edilmedi";
       const gorevTuru = normalizeGorevTuru(row.gorevTuru);
+      if (requestedGorevTuru && gorevTuru !== requestedGorevTuru) return;
       const personelTc = normalizeTc(row.personelTcKimlik);
-      if (gorevTuru === "diger_saglik_personeli" && !isDspRequiredFirm(firm)) return;
+      const rowTehlike = normalizeTehlikeSafe(row.tehlike);
+      const rowCalisanSayisi = Number.isFinite(Number(row.calisanSayisi))
+        ? Number(row.calisanSayisi)
+        : null;
+      const firmUpdate = firmUpdates.get(String(firm._id)) || {};
+      if (rowTehlike) firmUpdate.tehlike = rowTehlike;
+      if (rowCalisanSayisi !== null) firmUpdate.calisanSayisi = rowCalisanSayisi;
+      if (Object.keys(firmUpdate).length > 0) firmUpdates.set(String(firm._id), firmUpdate);
+      if (
+        gorevTuru === "diger_saglik_personeli" &&
+        !isDspRequiredFirm({
+          ...firm,
+          tehlike: rowTehlike || firm.tehlike,
+          calisanSayisi: rowCalisanSayisi !== null ? rowCalisanSayisi : firm.calisanSayisi,
+        })
+      ) {
+        return;
+      }
 
       const latestValue = contractSortValue(row, index);
       const status = normalizeWorkflowStatus(rawStatus);
@@ -967,7 +1016,7 @@ router.post("/extension-sync", async (req, res) => {
     Array.from(latestRowsByIdentity.values()).forEach((syncItem) => {
       const { row, firm, rawStatus, gorevTuru, personelTc, latestValue } = syncItem;
       matched += 1;
-      const tehlike = normalizeTehlike(row.tehlike);
+      const tehlike = normalizeTehlikeSafe(row.tehlike);
       const calisanSayisi = Number.isFinite(Number(row.calisanSayisi))
         ? Number(row.calisanSayisi)
         : null;
@@ -1103,7 +1152,7 @@ router.post("/extension-sync", async (req, res) => {
       );
     }
 
-    const overview = await buildOverview(orgId, normalizeGorevTuru(req.body?.source?.pageGorevTuru));
+    const overview = await buildOverview(orgId, requestedGorevTuru);
     return res.json({
       ok: true,
       received: rows.length,

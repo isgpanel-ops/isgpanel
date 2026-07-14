@@ -9,7 +9,14 @@ function cleanText(value) {
 }
 
 function lowerTR(value) {
-  return cleanText(value).toLocaleLowerCase("tr-TR");
+  return cleanText(value)
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
 }
 
 function normalizeSearchText(value) {
@@ -27,11 +34,35 @@ function normalizeStatus(text) {
   const value = lowerTR(text);
   const normalized = normalizeSearchText(text);
   if (
-    normalized.includes("sozlesme onay bekliyor") ||
-    normalized.includes("onay bekleyen sozlesme") ||
-    normalized.includes("onay bekliyor")
+    normalized.includes("sozlesme onaylandi") ||
+    normalized.includes("atama onaylandi") ||
+    normalized.includes("aktif sozlesme") ||
+    normalized.includes("aktif atama")
+  ) {
+    return "atama_onaylandi";
+  }
+  if (normalized.includes("isveren") && (normalized.includes("bek") || normalized.includes("onay"))) {
+    return "isveren_onayi_bekliyor";
+  }
+  if (
+    (normalized.includes("profesyonel") ||
+      normalized.includes("uzman") ||
+      normalized.includes("hekim") ||
+      normalized.includes("dsp")) &&
+    (normalized.includes("bek") || normalized.includes("onay"))
   ) {
     return "profesyonel_onayi_bekliyor";
+  }
+  if (
+    normalized.includes("dust") ||
+    normalized.includes("iptal") ||
+    normalized.includes("pasif") ||
+    normalized.includes("sonlandi")
+  ) {
+    return "atama_dustu";
+  }
+  if (normalized.includes("atama yok") || normalized.includes("bulunamadi") || normalized.includes("sozlesme yok")) {
+    return "atama_yok";
   }
   if (
     value.includes("fa-check") ||
@@ -63,6 +94,76 @@ function normalizeStatus(text) {
   return "kontrol_edilmedi";
 }
 
+function hasGenericPendingText(text) {
+  const normalized = normalizeSearchText(text);
+  return (
+    normalized.includes("sozlesme onay bekliyor") ||
+    normalized.includes("onay bekleyen sozlesme") ||
+    normalized.includes("onay bekliyor")
+  );
+}
+
+function rgbTone(value) {
+  const match = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return "";
+  const red = Number(match[1]);
+  const green = Number(match[2]);
+  const blue = Number(match[3]);
+  if (red > 170 && green < 150 && blue < 150) return "red";
+  if (green > 120 && red < 170 && blue < 170) return "green";
+  return "";
+}
+
+function visualStatusFromRow(row) {
+  if (!row) return "";
+
+  const tokens = normalizeSearchText(
+    [
+      row.className,
+      row.getAttribute("style"),
+      row.getAttribute("title"),
+      row.getAttribute("aria-label"),
+      ...Array.from(row.querySelectorAll("td, th, span, i, svg")).flatMap((node) => [
+        node.className,
+        node.getAttribute?.("style"),
+        node.getAttribute?.("title"),
+        node.getAttribute?.("aria-label"),
+      ]),
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (/(danger|error|red|rose|kirmizi|text-danger|bg-danger|table-danger)/.test(tokens)) {
+    return "profesyonel_onayi_bekliyor";
+  }
+  if (/(success|green|emerald|yesil|text-success|bg-success|table-success)/.test(tokens)) {
+    return "isveren_onayi_bekliyor";
+  }
+
+  const rowStyle = window.getComputedStyle(row);
+  const rowTone =
+    rgbTone(rowStyle.backgroundColor) ||
+    rgbTone(rowStyle.borderLeftColor) ||
+    rgbTone(rowStyle.borderColor) ||
+    rgbTone(rowStyle.color);
+  if (rowTone === "red") return "profesyonel_onayi_bekliyor";
+  if (rowTone === "green") return "isveren_onayi_bekliyor";
+
+  for (const cell of Array.from(row.querySelectorAll("td, th"))) {
+    const cellStyle = window.getComputedStyle(cell);
+    const cellTone =
+      rgbTone(cellStyle.backgroundColor) ||
+      rgbTone(cellStyle.borderLeftColor) ||
+      rgbTone(cellStyle.borderColor) ||
+      rgbTone(cellStyle.color);
+    if (cellTone === "red") return "profesyonel_onayi_bekliyor";
+    if (cellTone === "green") return "isveren_onayi_bekliyor";
+  }
+
+  return "";
+}
+
 function cellTextForSync(cell) {
   const parts = [
     cell.innerText,
@@ -79,6 +180,18 @@ function cellTextForSync(cell) {
 }
 
 function detectGorevTuru(text) {
+  const normalized = normalizeSearchText(text);
+  if (normalized.includes("diger saglik") || normalized.includes("dsp")) return "diger_saglik_personeli";
+  if (normalized.includes("isyeri hekim") || normalized.includes("hekimlik") || normalized.includes("hekim")) {
+    return "isyeri_hekimi";
+  }
+  if (
+    normalized.includes("is guvenligi uzman") ||
+    normalized.includes("igu") ||
+    normalized.includes("isg profesyoneli")
+  ) {
+    return "is_guvenligi_uzmani";
+  }
   const value = lowerTR(text);
   if (value.includes("diğer sağlık") || value.includes("dsp")) return "diger_saglik_personeli";
   if (value.includes("işyeri hekimi") || value.includes("hekim")) return "isyeri_hekimi";
@@ -143,11 +256,29 @@ function findCompanyName(cells, rowText) {
   return cleanText(beforeSgk).slice(0, 180);
 }
 
-function rowToRecord(cells, statusHint = "") {
+function findHazardClassSafe(text) {
+  const value = normalizeSearchText(text);
+  if (value.includes("cok tehlikeli")) return "Çok Tehlikeli";
+  if (value.includes("az tehlikeli")) return "Az Tehlikeli";
+  if (value.includes("tehlikeli")) return "Tehlikeli";
+  return findHazardClass(text);
+}
+
+function rowToRecord(cells, statusHint = "", row = null) {
   const rawText = cleanText(cells.join(" "));
   const sgkNo = findSgkNo(rawText);
   if (!sgkNo) return null;
-  const detectedStatus = normalizeStatus(rawText);
+  const visualStatus = visualStatusFromRow(row);
+  const genericPending = hasGenericPendingText(rawText);
+  const isPendingPage = statusHint === "profesyonel_onayi_bekliyor" || statusHint === "isveren_onayi_bekliyor";
+  if (genericPending && !visualStatus && !isPendingPage) return null;
+  const textStatus = normalizeStatus(rawText);
+  const detectedStatus =
+    genericPending && visualStatus
+      ? visualStatus
+      : textStatus === "kontrol_edilmedi" && isPendingPage && visualStatus
+      ? visualStatus
+      : textStatus;
 
   return {
     sgkNo,
@@ -156,7 +287,7 @@ function rowToRecord(cells, statusHint = "") {
     isgKatipStatus: detectedStatus === "kontrol_edilmedi" && statusHint ? statusHint : detectedStatus,
     personelTcKimlik: findTcKimlik(rawText),
     calisanSayisi: findEmployeeCount(rawText),
-    tehlike: findHazardClass(rawText),
+    tehlike: findHazardClassSafe(rawText),
     calismaSuresi: findDuration(rawText),
     sozlesmeId: findContractId(rawText),
     rawText: rawText.slice(0, 240),
@@ -185,7 +316,7 @@ function readRowsFromTables(statusHint = "") {
     .map((row) => {
       const cells = Array.from(row.querySelectorAll("td, th")).map((cell) => cellTextForSync(cell));
       if (cells.length < 2) return null;
-      return rowToRecord(cells, statusHint);
+      return rowToRecord(cells, statusHint, row);
     })
     .filter(Boolean);
 }
@@ -198,7 +329,7 @@ function readCardsFromPage(statusHint = "") {
     .map((node) => {
       const text = cleanText(node.innerText);
       if (!findSgkNo(text)) return null;
-      return rowToRecord([text], statusHint);
+      return rowToRecord([text], statusHint, node);
     })
     .filter(Boolean);
 }

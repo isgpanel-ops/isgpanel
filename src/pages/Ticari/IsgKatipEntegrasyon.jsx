@@ -48,6 +48,15 @@ const gorevTurleri = [
   { key: "diger_saglik_personeli", label: "Diğer Sağlık Personeli", short: "DSP" },
 ];
 
+function roleAwareStatusLabel(status, gorevShort = "Uzman") {
+  if (status === "profesyonel_onayi_bekliyor") return `${gorevShort} Onayı Bekliyor`;
+  if (status === "isveren_onayi_bekliyor") return "İşveren Onayı Bekliyor";
+  if (status === "atama_onaylandi") return "Atama Onaylandı";
+  if (status === "atama_yok") return "İSG-KATİP Ataması Yok";
+  if (status === "atama_dustu" || status === "yeniden_atama_gerekli") return "Atama Düştü";
+  return "Kontrol Edilmedi";
+}
+
 function tokenHeader() {
   const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -77,7 +86,7 @@ function hasValidTc(value) {
   return String(value || "").replace(/\D/g, "").length === 11;
 }
 
-function requestIsgKatipExtensionSync({ apiBase, token }) {
+function requestIsgKatipExtensionSync({ apiBase, token, gorevTuru }) {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
       reject(new Error("Tarayıcı ortamı bulunamadı."));
@@ -119,6 +128,7 @@ function requestIsgKatipExtensionSync({ apiBase, token }) {
         requestId,
         apiBase: String(apiBase || "").replace(/\/$/, ""),
         token,
+        gorevTuru,
       },
       window.location.origin
     );
@@ -360,6 +370,7 @@ export default function IsgKatipEntegrasyon() {
       const data = await requestIsgKatipExtensionSync({
         apiBase: API_BASE,
         token,
+        gorevTuru,
       });
       setItems(Array.isArray(data?.items) ? data.items : []);
       setCounts(data?.counts || {});
@@ -676,7 +687,7 @@ export default function IsgKatipEntegrasyon() {
         <div className="grid gap-3 md:grid-cols-4">
           <StatCard title="Atanmamış Firmalar" value={tabCount("atanmamis")} sub="Kullanıcı atanmayı bekliyor" icon={ShieldAlert} tone="rose" active={activeTab === "atanmamis"} onClick={() => setActiveTab("atanmamis")} />
           <StatCard title="İSG-KATİP Ataması Yok" value={counts.atama_yok || 0} sub="Panelde atanmış, resmi atama yok" icon={FileCheck2} tone="amber" active={activeTab === "atama_yok"} onClick={() => setActiveTab("atama_yok")} />
-          <StatCard title="Onay Bekleyenler" value={counts.onay_bekleyen || 0} sub="Profesyonel veya işveren onayı" icon={Hourglass} tone="blue" active={activeTab === "onay_bekleyen"} onClick={() => setActiveTab("onay_bekleyen")} />
+          <StatCard title="Onay Bekleyenler" value={counts.onay_bekleyen || 0} sub={`${selectedGorevShort} veya işveren onayı`} icon={Hourglass} tone="blue" active={activeTab === "onay_bekleyen"} onClick={() => setActiveTab("onay_bekleyen")} />
           <StatCard title="Aktif Atamalar" value={counts.aktif || 0} sub="İSG-KATİP'te aktif sözleşme" icon={CheckCircle2} tone="emerald" active={activeTab === "aktif"} onClick={() => setActiveTab("aktif")} />
         </div>
 
@@ -775,7 +786,7 @@ export default function IsgKatipEntegrasyon() {
                       <td className="px-3 py-2">{item.assignedUserName || "-"}</td>
                       <td className="px-3 py-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(item.isgKatipStatus)}`}>
-                          {item.isgKatipStatusLabel}
+                          {roleAwareStatusLabel(item.isgKatipStatus, selectedGorevShort)}
                         </span>
                       </td>
                     </tr>
@@ -967,7 +978,7 @@ export default function IsgKatipEntegrasyon() {
 
                 {isApprovalTab && (
                   <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800">
-                    Seçili firmalar onay sürecinde. Uzman/profesyonel ve işveren onayları İSG-KATİP senkronizasyonu ile güncellenir.
+                    Seçili firmalar onay sürecinde. {selectedGorevShort} ve işveren onayları İSG-KATİP senkronizasyonu ile güncellenir.
                   </div>
                 )}
 
