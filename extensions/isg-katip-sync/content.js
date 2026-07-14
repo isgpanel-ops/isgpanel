@@ -123,21 +123,15 @@ function visualStatusFromRow(row) {
       row.getAttribute("style"),
       row.getAttribute("title"),
       row.getAttribute("aria-label"),
-      ...Array.from(row.querySelectorAll("td, th, span, i, svg")).flatMap((node) => [
-        node.className,
-        node.getAttribute?.("style"),
-        node.getAttribute?.("title"),
-        node.getAttribute?.("aria-label"),
-      ]),
     ]
       .filter(Boolean)
       .join(" ")
   );
 
-  if (/(danger|error|red|rose|kirmizi|text-danger|bg-danger|table-danger)/.test(tokens)) {
+  if (/(danger|error|red|rose|kirmizi|bg-danger|table-danger)/.test(tokens)) {
     return "profesyonel_onayi_bekliyor";
   }
-  if (/(success|green|emerald|yesil|text-success|bg-success|table-success)/.test(tokens)) {
+  if (/(success|green|emerald|yesil|bg-success|table-success)/.test(tokens)) {
     return "isveren_onayi_bekliyor";
   }
 
@@ -145,8 +139,7 @@ function visualStatusFromRow(row) {
   const rowTone =
     rgbTone(rowStyle.backgroundColor) ||
     rgbTone(rowStyle.borderLeftColor) ||
-    rgbTone(rowStyle.borderColor) ||
-    rgbTone(rowStyle.color);
+    rgbTone(rowStyle.borderColor);
   if (rowTone === "red") return "profesyonel_onayi_bekliyor";
   if (rowTone === "green") return "isveren_onayi_bekliyor";
 
@@ -155,8 +148,7 @@ function visualStatusFromRow(row) {
     const cellTone =
       rgbTone(cellStyle.backgroundColor) ||
       rgbTone(cellStyle.borderLeftColor) ||
-      rgbTone(cellStyle.borderColor) ||
-      rgbTone(cellStyle.color);
+      rgbTone(cellStyle.borderColor);
     if (cellTone === "red") return "profesyonel_onayi_bekliyor";
     if (cellTone === "green") return "isveren_onayi_bekliyor";
   }
@@ -264,14 +256,39 @@ function findHazardClassSafe(text) {
   return findHazardClass(text);
 }
 
-function rowToRecord(cells, statusHint = "", row = null) {
+function headerValue(cells, headers, patterns) {
+  const normalizedHeaders = (headers || []).map((header) => normalizeSearchText(header));
+  const index = normalizedHeaders.findIndex((header) => patterns.some((pattern) => header.includes(pattern)));
+  if (index < 0) return "";
+  return cleanText(cells[index] || "");
+}
+
+function findEmployeeCountFromCells(cells, headers, rawText) {
+  const value = headerValue(cells, headers, ["calisan"]);
+  const match = value.match(/\d{1,6}/);
+  if (match) return Number(match[0]);
+  return findEmployeeCount(rawText);
+}
+
+function findHazardClassFromCells(cells, headers, rawText) {
+  const value = headerValue(cells, headers, ["tehlike"]);
+  return findHazardClassSafe(value) || findHazardClassSafe(rawText);
+}
+
+function detectGorevTuruFromCells(cells, headers, rawText) {
+  const sertifika = headerValue(cells, headers, ["sertifika"]);
+  const sozlesme = headerValue(cells, headers, ["sozlesme"]);
+  return detectGorevTuru([sertifika, sozlesme, rawText].filter(Boolean).join(" "));
+}
+
+function rowToRecord(cells, statusHint = "", row = null, headers = []) {
   const rawText = cleanText(cells.join(" "));
   const sgkNo = findSgkNo(rawText);
   if (!sgkNo) return null;
   const visualStatus = visualStatusFromRow(row);
   const genericPending = hasGenericPendingText(rawText);
   const isPendingPage = statusHint === "profesyonel_onayi_bekliyor" || statusHint === "isveren_onayi_bekliyor";
-  if (genericPending && !visualStatus && !isPendingPage) return null;
+  const ignoredPending = genericPending && !visualStatus;
   const textStatus = normalizeStatus(rawText);
   const detectedStatus =
     genericPending && visualStatus
@@ -283,13 +300,18 @@ function rowToRecord(cells, statusHint = "", row = null) {
   return {
     sgkNo,
     firmaAdi: findCompanyName(cells, rawText),
-    gorevTuru: detectGorevTuru(rawText),
-    isgKatipStatus: detectedStatus === "kontrol_edilmedi" && statusHint ? statusHint : detectedStatus,
+    gorevTuru: detectGorevTuruFromCells(cells, headers, rawText),
+    isgKatipStatus: ignoredPending
+      ? "kontrol_edilmedi"
+      : detectedStatus === "kontrol_edilmedi" && statusHint
+      ? statusHint
+      : detectedStatus,
     personelTcKimlik: findTcKimlik(rawText),
-    calisanSayisi: findEmployeeCount(rawText),
-    tehlike: findHazardClassSafe(rawText),
+    calisanSayisi: findEmployeeCountFromCells(cells, headers, rawText),
+    tehlike: findHazardClassFromCells(cells, headers, rawText),
     calismaSuresi: findDuration(rawText),
     sozlesmeId: findContractId(rawText),
+    ignoredPending,
     rawText: rawText.slice(0, 240),
   };
 }
@@ -316,7 +338,13 @@ function readRowsFromTables(statusHint = "") {
     .map((row) => {
       const cells = Array.from(row.querySelectorAll("td, th")).map((cell) => cellTextForSync(cell));
       if (cells.length < 2) return null;
-      return rowToRecord(cells, statusHint, row);
+      const table = row.closest("table");
+      let headers = Array.from(table?.querySelectorAll("thead th") || []).map((cell) => cellTextForSync(cell));
+      if (!headers.length) {
+        const firstRow = table?.querySelector("tr");
+        headers = Array.from(firstRow?.querySelectorAll("th") || []).map((cell) => cellTextForSync(cell));
+      }
+      return rowToRecord(cells, statusHint, row, headers);
     })
     .filter(Boolean);
 }

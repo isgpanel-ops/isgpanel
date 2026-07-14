@@ -308,7 +308,13 @@ export default function IsgKatipEntegrasyon() {
           .join(" ")
           .toLocaleLowerCase("tr-TR")
           .includes(q);
-      });
+      })
+      .sort((a, b) =>
+        String(a.firmaAdi || "").localeCompare(String(b.firmaAdi || ""), "tr-TR", {
+          sensitivity: "base",
+          numeric: true,
+        })
+      );
   }, [activeTab, items, query]);
 
   const selectedItems = useMemo(() => {

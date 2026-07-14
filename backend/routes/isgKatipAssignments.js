@@ -150,10 +150,11 @@ function contractSortValue(row, fallbackIndex = 0) {
 
 function shouldPreferSyncRow(next, current) {
   if (!current) return true;
+  if (next.latestValue !== current.latestValue) return next.latestValue > current.latestValue;
   const nextPriority = statusPriority(next.status);
   const currentPriority = statusPriority(current.status);
   if (nextPriority !== currentPriority) return nextPriority > currentPriority;
-  return next.latestValue >= current.latestValue;
+  return true;
 }
 
 function isAssignableUser(user) {
@@ -965,6 +966,7 @@ router.post("/extension-sync", async (req, res) => {
     const firmUpdates = new Map();
     let matched = 0;
     const latestRowsByIdentity = new Map();
+    const ignoredPendingByFirmRole = new Map();
 
     rows.forEach((row, index) => {
       const sgkNo = String(row.sgkNo || "").replace(/\D/g, "");
@@ -993,6 +995,12 @@ router.post("/extension-sync", async (req, res) => {
           calisanSayisi: rowCalisanSayisi !== null ? rowCalisanSayisi : firm.calisanSayisi,
         })
       ) {
+        return;
+      }
+
+      const assignmentKey = `${String(firm._id)}:${gorevTuru}`;
+      if (row.ignoredPending) {
+        ignoredPendingByFirmRole.set(assignmentKey, { row, firm, gorevTuru });
         return;
       }
 
@@ -1124,6 +1132,46 @@ router.post("/extension-sync", async (req, res) => {
       };
       const current = assignmentOpsByKey.get(assignmentKey);
       const nextCandidate = { priority, status, latestValue, op: assignmentOp };
+      if (shouldPreferSyncRow(nextCandidate, current)) {
+        assignmentOpsByKey.set(assignmentKey, nextCandidate);
+      }
+    });
+
+    ignoredPendingByFirmRole.forEach(({ row, firm, gorevTuru }, assignmentKey) => {
+      if (assignmentOpsByKey.has(assignmentKey)) return;
+      const latestValue = contractSortValue(row, 0);
+      const assignmentOp = {
+        updateOne: {
+          filter: {
+            organization: orgId,
+            firmaId: firm._id,
+            gorevTuru,
+          },
+          update: {
+            $set: {
+              organization: orgId,
+              firmaId: firm._id,
+              gorevTuru,
+              isgKatipStatus: "atama_yok",
+              sozlesmeId: "",
+              calismaSuresi: "",
+              lastSyncAt: now,
+              lastError: "",
+            },
+            $push: {
+              logs: {
+                action: "extension_sync_ignored_pending",
+                message: "Renk isareti olmayan onay bekleyen satir yok sayildi",
+                by: req.user._id || req.user.id || null,
+                at: now,
+              },
+            },
+          },
+          upsert: true,
+        },
+      };
+      const current = assignmentOpsByKey.get(assignmentKey);
+      const nextCandidate = { priority: statusPriority("atama_yok"), status: "atama_yok", latestValue, op: assignmentOp };
       if (shouldPreferSyncRow(nextCandidate, current)) {
         assignmentOpsByKey.set(assignmentKey, nextCandidate);
       }
