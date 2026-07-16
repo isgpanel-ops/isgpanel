@@ -755,18 +755,17 @@ const DURATION_LABELS_BY_ROLE = {
   is_guvenligi_uzmani: [
     "gerekli toplam igu suresi",
     "gerekli toplam isg suresi",
-    "devam eden toplam igu suresi",
-    "devam eden toplam isg suresi",
+    "gerekli toplam is guvenligi uzmani suresi",
+    "gerekli toplam uzman suresi",
   ],
   isyeri_hekimi: [
     "gerekli toplam ih suresi",
     "gerekli toplam isyeri hekimi suresi",
-    "devam eden toplam ih suresi",
+    "gerekli toplam hekim suresi",
   ],
   diger_saglik_personeli: [
     "gerekli toplam dsp suresi",
     "gerekli toplam diger saglik personeli suresi",
-    "devam eden toplam dsp suresi",
   ],
 };
 
@@ -891,7 +890,33 @@ function findAssignmentTypeControl() {
 }
 
 function findDurationInput() {
-  return findControlBetweenLabels({
+  const visibleFields = visibleElements("input[type='text'], input[type='number'], input:not([type]), textarea")
+    .filter((element) => !isDisabledElement(element) && isUsableField(element));
+  const label = findShortLabelElement([["calisma", "suresi"], ["dakika"]]);
+  if (label) {
+    const labelRect = label.getBoundingClientRect();
+    const directBelow = visibleFields
+      .filter((field) => {
+        const rect = field.getBoundingClientRect();
+        const fieldText = asciiSearchText(elementTextWithValues(field));
+        const context = asciiSearchText(fieldContext(field) + " " + elementTextWithValues(field));
+        return (
+          rect.top >= labelRect.bottom - 12 &&
+          rect.top <= labelRect.bottom + 95 &&
+          rect.left >= labelRect.left - 40 &&
+          !fieldText.includes("seciniz") &&
+          !context.includes("gorevlendirme tipi")
+        );
+      })
+      .sort((a, b) => {
+        const ar = a.getBoundingClientRect();
+        const br = b.getBoundingClientRect();
+        return Math.abs(ar.top - labelRect.bottom) - Math.abs(br.top - labelRect.bottom) || ar.left - br.left;
+      })[0];
+    if (directBelow) return directBelow;
+  }
+
+  const direct = findControlBetweenLabels({
     labelGroups: [["calisma", "suresi"], ["dakika"]],
     stopGroups: [["ana", "menu"], ["ileri"], ["sozlesme", "bilgileri"]],
     selector: "input[type='text'], input[type='number'], input:not([type]), textarea",
@@ -902,6 +927,37 @@ function findDurationInput() {
       return type === "text" || type === "number" || type === "search" || !type || element.tagName === "TEXTAREA";
     },
   });
+  if (direct) return direct;
+
+  const labels = visibleElements("label, span, div, p, td, th")
+    .filter((element) => {
+      const text = shortAsciiText(element);
+      return text.includes("calisma") && (text.includes("suresi") || text.includes("dakika"));
+    })
+    .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+
+  const fields = visibleFields
+    .filter((element) => {
+      const context = shortAsciiText(element.closest(".form-group, .form-line, .ant-row, .row, div") || element.parentElement || element);
+      return !context.includes("gorevlendirme tipi");
+    });
+
+  for (const label of labels) {
+    const labelRect = label.getBoundingClientRect();
+    const candidate = fields
+      .filter((field) => {
+        const rect = field.getBoundingClientRect();
+        return rect.top >= labelRect.bottom - 12 && rect.top <= labelRect.bottom + 120;
+      })
+      .sort((a, b) => {
+        const ar = a.getBoundingClientRect();
+        const br = b.getBoundingClientRect();
+        return Math.abs(ar.top - labelRect.bottom) - Math.abs(br.top - labelRect.bottom) || ar.left - br.left;
+      })[0];
+    if (candidate) return candidate;
+  }
+
+  return null;
 }
 
 function clickElement(element) {
@@ -968,6 +1024,25 @@ function clickForwardButton() {
 function clickNextButton() {
   return clickButtonByText(["İleri", "Ileri", "ileri", "Ä°leri"]);
 }
+
+clickNextButton = function clickNextButtonRightAligned() {
+  const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']")
+    .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const raw = element.innerText || element.value || element.getAttribute("aria-label") || "";
+      const ascii = asciiSearchText(raw);
+      return ascii.includes("ileri");
+    })
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return br.bottom - ar.bottom || br.right - ar.right;
+    });
+  const button = candidates[0];
+  if (!button) return false;
+  clickElement(button);
+  return true;
+};
 
 function clickFirstVisibleByText(text) {
   const wanted = asciiSearchText(text);
@@ -1269,6 +1344,93 @@ async function fillDurationField(duration) {
   return fillFieldByPatterns(["calisma suresi", "çalışma süresi"], cleanDuration, { allowFallback: false });
 }
 
+function durationLabelsForRole(gorevTuru) {
+  return [
+    ...(DURATION_LABELS_BY_ROLE[gorevTuru] || DURATION_LABELS_BY_ROLE.is_guvenligi_uzmani),
+    "gerekli toplam sure",
+  ];
+}
+
+function durationFromRawText(rawText, gorevTuru = "is_guvenligi_uzmani") {
+  const normalizedText = asciiSearchText(cleanText(rawText)).replace(/\s+/g, " ");
+  for (const label of durationLabelsForRole(gorevTuru)) {
+    const normalizedLabel = asciiSearchText(label).replace(/\s+/g, " ");
+    const index = normalizedText.indexOf(normalizedLabel);
+    if (index < 0) continue;
+    const afterLabel = normalizedText.slice(index + normalizedLabel.length, index + normalizedLabel.length + 100);
+    const match = afterLabel.match(/(?:^|[^0-9])(\d+(?:[.,]\d+)?)(?:[^0-9]|$)/);
+    if (match?.[1]) return match[1].replace(",", ".");
+  }
+
+  const rolePattern =
+    gorevTuru === "isyeri_hekimi"
+      ? "(?:ih|isyeri\\s+hekimi|hekim)"
+      : gorevTuru === "diger_saglik_personeli"
+        ? "(?:dsp|diger\\s+saglik\\s+personeli)"
+        : "(?:igu|isg|is\\s+guvenligi\\s+uzmani|uzman)";
+  const match = normalizedText.match(
+    new RegExp(`gerekli\\s+toplam\\s+${rolePattern}\\s+suresi\\D{0,30}(\\d+(?:[.,]\\d+)?)`, "i")
+  );
+  return match?.[1] ? match[1].replace(",", ".") : "";
+}
+
+function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
+  const normalizedPatterns = patterns.map(asciiSearchText);
+  const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, .form-line, .ant-row, div"));
+  for (const row of rows) {
+    const rowRawText = elementTextWithValues(row);
+    const directCells = Array.from(row.children).filter(isVisibleElement);
+    if (directCells.length >= 2) {
+      const labelText = asciiSearchText(elementTextWithValues(directCells[0]));
+      if (normalizedPatterns.some((pattern) => labelText.includes(pattern))) {
+        for (let i = 1; i < directCells.length; i += 1) {
+          const value = parseNumberFromText(elementTextWithValues(directCells[i]));
+          if (value) return value;
+        }
+      }
+    }
+
+    const cells = Array.from(row.querySelectorAll("td, th, label, span, div, input, textarea, select")).filter(
+      isVisibleElement
+    );
+    if (cells.length >= 2) {
+      for (let i = 0; i < cells.length - 1; i += 1) {
+        const cellText = asciiSearchText(elementTextWithValues(cells[i]));
+        if (!normalizedPatterns.some((pattern) => cellText.includes(pattern))) continue;
+        for (let j = i + 1; j < cells.length; j += 1) {
+          const value = parseNumberFromText(elementTextWithValues(cells[j]));
+          if (value) return value;
+        }
+      }
+    }
+
+    const directDuration = durationFromRawText(rowRawText, gorevTuru);
+    if (directDuration) return directDuration;
+  }
+  return "";
+}
+
+async function fillDurationField(duration) {
+  const cleanDuration = parseNumberFromText(duration);
+  if (!cleanDuration) return false;
+
+  const directField = findDurationInput();
+  if (!directField) return false;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    directField.scrollIntoView({ block: "center", inline: "center" });
+    setFieldValue(directField, cleanDuration);
+    directField.dispatchEvent(new Event("blur", { bubbles: true }));
+    await delay(220);
+    const currentValue = parseNumberFromText(
+      directField.value || directField.getAttribute("value") || directField.textContent || ""
+    );
+    if (currentValue === cleanDuration) return true;
+  }
+
+  return false;
+}
+
 function setSelectOptionByText(select, texts) {
   const wanted = texts.map(normalizeSearchText);
   const option = Array.from(select.options || []).find((item) => {
@@ -1449,6 +1611,57 @@ async function typeIntoOpenDropdownSearch(value) {
   dispatchKey(field, "Enter");
   await delay(300);
   return true;
+}
+
+function assignmentTypeText() {
+  const directControl = findAssignmentTypeControl();
+  const field = findField(["gorevlendirme tipi", "gÃ¶revlendirme tipi", "gorevlendirme"]);
+  const candidates = [];
+  if (directControl) candidates.push(directControl);
+  if (field) {
+    candidates.push(field);
+    const control =
+      field.closest(".ant-select, .select2, .ng-select, [role='combobox'], [class*='select']") ||
+      field.closest(".form-group, .form-line, .ant-form-item, .row");
+    if (control) candidates.push(control);
+  }
+
+  return asciiSearchText(candidates.map((element) => elementTextWithValues(element)).join(" "));
+}
+
+function durationFieldValue() {
+  const field = findDurationInput();
+  if (!field) return "";
+  return parseNumberFromText(field.value || field.getAttribute("value") || field.textContent || "");
+}
+
+async function ensurePartialTimeSelected() {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (assignmentTypeText().includes("kismi") && !assignmentTypeText().includes("tam sureli")) return true;
+
+    const control = findAssignmentTypeControl();
+    if (control) {
+      clickElement(control);
+      dispatchRealMouseSequence(control);
+      await delay(250);
+      const option =
+        findVisibleTextOptionByAscii({ includes: ["kismi", "sureli"], excludes: ["tam"] }) ||
+        findVisibleTextOptionByAscii({ includes: ["kismi"], excludes: ["tam"] });
+      if (option) {
+        await forceChooseOption(option);
+        await delay(350);
+        if (assignmentTypeText().includes("kismi") && !assignmentTypeText().includes("tam sureli")) return true;
+      }
+
+      if (control instanceof HTMLSelectElement && setSelectOptionByText(control, ["Kısmi Süreli", "kismi sureli"])) {
+        await delay(250);
+        if (assignmentTypeText().includes("kismi") && !assignmentTypeText().includes("tam sureli")) return true;
+      }
+    }
+
+    await delay(300);
+  }
+  return false;
 }
 
 async function clickPartialTimeOption() {
@@ -1792,7 +2005,7 @@ async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
     };
   }
 
-  const selectedAssignmentType = await waitFor(() => selectPartialTimeAssignmentType(), 7000, 300);
+  const selectedAssignmentType = await waitFor(() => ensurePartialTimeSelected(), 9000, 300);
   if (!selectedAssignmentType) {
     return {
       ok: false,
@@ -1832,7 +2045,16 @@ async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
   }
 
   steps.push("Gerekli toplam süre çalışma süresine yazıldı");
-  const continued = await waitFor(() => clickButtonByText(["İleri", "Ileri"]), 6000);
+  await delay(300);
+  if (!durationFieldValue()) {
+    return { ok: false, message: "Calisma suresi dakika alani doldurulamadi." };
+  }
+
+  if (!(await ensurePartialTimeSelected())) {
+    return { ok: false, message: "Gorevlendirme tipi Kismi Sureli olarak dogrulanamadi." };
+  }
+
+  const continued = await waitFor(() => clickNextButton(), 8000, 300);
   if (!continued) {
     return { ok: false, message: "Süre ekranında son İleri butonu bulunamadı." };
   }

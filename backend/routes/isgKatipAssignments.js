@@ -228,6 +228,17 @@ function isPersonnelChangeLockedStatus(status) {
   );
 }
 
+function hasStoredAssigneeForRole(item, gorevTuru) {
+  if (!item) return false;
+  if (isUzmanGorevi(gorevTuru)) return Boolean(item.assignedUserId);
+  const assignee = item.manualAssignee || {};
+  return Boolean(String(assignee.adSoyad || "").trim() && hasValidTcValue(assignee.tcKimlik));
+}
+
+function blocksPanelAssigneeUpdate(item, gorevTuru) {
+  return hasStoredAssigneeForRole(item, gorevTuru) && isPersonnelChangeLockedStatus(item.isgKatipStatus);
+}
+
 async function cancelOpenJobsForAssignments(orgId, gorevTuru, firmaIds, actorId, reason = "Atama bilgisi guncellendi") {
   const validFirmaIds = (Array.isArray(firmaIds) ? firmaIds : [firmaIds]).filter((id) =>
     mongoose.Types.ObjectId.isValid(String(id))
@@ -540,7 +551,8 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
     const assignedName = uzmanMode ? assignedUser?.name || assignedUser?.email || "" : manualName;
     const assignedTc = uzmanMode ? assignedUser?.personal?.tcKimlik || "" : manualTc;
     const hasAssignee = uzmanMode ? Boolean(assignedUserId) : hasManualAssignee;
-    const status = normalizeWorkflowStatus(assignment?.isgKatipStatus || "kontrol_edilmedi");
+    const rawStatus = normalizeWorkflowStatus(assignment?.isgKatipStatus || "kontrol_edilmedi");
+    const status = hasAssignee ? rawStatus : "kontrol_edilmedi";
 
     const item = {
       id: firmId,
@@ -1271,7 +1283,7 @@ router.post("/bulk/assign-user", async (req, res) => {
       firmaId: { $in: scopedFirmaIds },
       gorevTuru,
     }).lean();
-    if (previousAssignments.some((item) => isPersonnelChangeLockedStatus(item.isgKatipStatus))) {
+    if (previousAssignments.some((item) => blocksPanelAssigneeUpdate(item, gorevTuru))) {
       return res.status(400).json({
         message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
       });
@@ -1384,7 +1396,7 @@ router.post("/bulk/manual-assignee", async (req, res) => {
       firmaId: { $in: scopedFirmaIds },
       gorevTuru,
     }).lean();
-    if (previousAssignments.some((item) => isPersonnelChangeLockedStatus(item.isgKatipStatus))) {
+    if (previousAssignments.some((item) => blocksPanelAssigneeUpdate(item, gorevTuru))) {
       return res.status(400).json({
         message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
       });
@@ -1763,7 +1775,7 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       firmaId,
       gorevTuru,
     }).lean();
-    if (isPersonnelChangeLockedStatus(previousAssignment?.isgKatipStatus)) {
+    if (blocksPanelAssigneeUpdate(previousAssignment, gorevTuru)) {
       return res.status(400).json({
         message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
       });
@@ -1861,7 +1873,7 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
       firmaId,
       gorevTuru,
     }).lean();
-    if (isPersonnelChangeLockedStatus(previousAssignment?.isgKatipStatus)) {
+    if (blocksPanelAssigneeUpdate(previousAssignment, gorevTuru)) {
       return res.status(400).json({
         message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
       });
