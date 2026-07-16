@@ -333,7 +333,7 @@ export default function IsgKatipEntegrasyon() {
   const isStartTab = isPanelAssignmentTab || isKatipStartTab;
   const isApprovalTab = activeTab === "onay_bekleyen";
   const isActiveTab = activeTab === "aktif";
-  const canEditAssignee = isStartTab || isApprovalTab || isActiveTab;
+  const canEditAssignee = isPanelAssignmentTab || isKatipStartTab;
   const manualFormValid =
     manualAssigneeForm.adSoyad.trim() && hasValidTc(manualAssigneeForm.tcKimlik);
   const selectedBulkUser = candidateUsers.find((user) => user.id === bulkUserId);
@@ -524,7 +524,6 @@ export default function IsgKatipEntegrasyon() {
       setBulkUserId("");
       setSelectedIds([]);
       setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
-      await runQueuedExtensionJob();
     } catch (err) {
       setError(err?.response?.data?.message || "Kullanıcı ataması kaydedilemedi.");
     } finally {
@@ -561,7 +560,6 @@ export default function IsgKatipEntegrasyon() {
       setLastSyncAt(data?.lastSyncAt || lastSyncAt);
       setSelectedIds([]);
       setSelected(nextItems.find((item) => item.id === selected?.id) || nextItems.find(isInActiveView) || null);
-      await runQueuedExtensionJob();
     } catch (err) {
       setError(err?.response?.data?.message || "Kişi bilgisi kaydedilemedi.");
     } finally {

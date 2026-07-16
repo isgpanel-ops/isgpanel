@@ -219,8 +219,13 @@ function normalizeJobOperation(value) {
   return "create_assignment";
 }
 
-function operationForExistingStatus(status) {
-  return "create_assignment";
+function isPersonnelChangeLockedStatus(status) {
+  const normalized = normalizeWorkflowStatus(status);
+  return (
+    normalized === "profesyonel_onayi_bekliyor" ||
+    normalized === "isveren_onayi_bekliyor" ||
+    normalized === "atama_onaylandi"
+  );
 }
 
 async function cancelOpenJobsForAssignments(orgId, gorevTuru, firmaIds, actorId, reason = "Atama bilgisi guncellendi") {
@@ -1261,17 +1266,11 @@ router.post("/bulk/assign-user", async (req, res) => {
       firmaId: { $in: scopedFirmaIds },
       gorevTuru,
     }).lean();
-    const previousByFirmaId = Object.fromEntries(
-      previousAssignments.map((item) => [
-        String(item.firmaId),
-        {
-          assignedUserId: item.assignedUserId,
-          manualAssignee: item.manualAssignee,
-          sozlesmeId: item.sozlesmeId,
-          isgKatipStatus: item.isgKatipStatus,
-        },
-      ])
-    );
+    if (previousAssignments.some((item) => isPersonnelChangeLockedStatus(item.isgKatipStatus))) {
+      return res.status(400).json({
+        message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
+      });
+    }
 
     await FirmUser.updateMany(
       uzmanLinkFilter({ organization: orgId, firmId: { $in: scopedFirmaIds }, isActive: true }),
@@ -1334,24 +1333,6 @@ router.post("/bulk/assign-user", async (req, res) => {
       "Toplu kullanici atamasi degisti"
     );
 
-    const operationGroups = new Map();
-    scopedFirmaIds.forEach((firmaId) => {
-      const previous = previousByFirmaId[String(firmaId)];
-      const operation = operationForExistingStatus(previous?.isgKatipStatus);
-      if (operation === "create_assignment") return;
-      if (!operationGroups.has(operation)) operationGroups.set(operation, []);
-      operationGroups.get(operation).push(firmaId);
-    });
-    for (const [operation, operationFirmaIds] of operationGroups.entries()) {
-      await queueJobsForAssignments(
-        orgId,
-        gorevTuru,
-        operationFirmaIds,
-        req.user._id || req.user.id || null,
-        { operation, previousByFirmaId }
-      );
-    }
-
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1398,17 +1379,11 @@ router.post("/bulk/manual-assignee", async (req, res) => {
       firmaId: { $in: scopedFirmaIds },
       gorevTuru,
     }).lean();
-    const previousByFirmaId = Object.fromEntries(
-      previousAssignments.map((item) => [
-        String(item.firmaId),
-        {
-          assignedUserId: item.assignedUserId,
-          manualAssignee: item.manualAssignee,
-          sozlesmeId: item.sozlesmeId,
-          isgKatipStatus: item.isgKatipStatus,
-        },
-      ])
-    );
+    if (previousAssignments.some((item) => isPersonnelChangeLockedStatus(item.isgKatipStatus))) {
+      return res.status(400).json({
+        message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
+      });
+    }
 
     await IsgKatipPerson.findOneAndUpdate(
       { organization: orgId, gorevTuru, tcKimlik },
@@ -1461,24 +1436,6 @@ router.post("/bulk/manual-assignee", async (req, res) => {
       req.user._id || req.user.id || null,
       "Toplu kisi bilgisi degisti"
     );
-
-    const operationGroups = new Map();
-    scopedFirmaIds.forEach((firmaId) => {
-      const previous = previousByFirmaId[String(firmaId)];
-      const operation = operationForExistingStatus(previous?.isgKatipStatus);
-      if (operation === "create_assignment") return;
-      if (!operationGroups.has(operation)) operationGroups.set(operation, []);
-      operationGroups.get(operation).push(firmaId);
-    });
-    for (const [operation, operationFirmaIds] of operationGroups.entries()) {
-      await queueJobsForAssignments(
-        orgId,
-        gorevTuru,
-        operationFirmaIds,
-        req.user._id || req.user.id || null,
-        { operation, previousByFirmaId }
-      );
-    }
 
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
@@ -1801,16 +1758,11 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       firmaId,
       gorevTuru,
     }).lean();
-    const operation = operationForExistingStatus(previousAssignment?.isgKatipStatus);
-    const previousByFirmaId = previousAssignment
-      ? {
-          [String(firmaId)]: {
-            assignedUserId: previousAssignment.assignedUserId,
-            manualAssignee: previousAssignment.manualAssignee,
-            sozlesmeId: previousAssignment.sozlesmeId,
-          },
-        }
-      : {};
+    if (isPersonnelChangeLockedStatus(previousAssignment?.isgKatipStatus)) {
+      return res.status(400).json({
+        message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
+      });
+    }
 
     await FirmUser.updateMany(
       uzmanLinkFilter({ organization: orgId, firmId: firmaId, isActive: true }),
@@ -1865,16 +1817,6 @@ router.post("/:firmaId/assign-user", async (req, res) => {
       "Kullanici atamasi degisti"
     );
 
-    if (operation !== "create_assignment") {
-      await queueJobsForAssignments(
-        orgId,
-        gorevTuru,
-        [firmaId],
-        req.user._id || req.user.id || null,
-        { operation, previousByFirmaId }
-      );
-    }
-
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
   } catch (err) {
@@ -1914,16 +1856,11 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
       firmaId,
       gorevTuru,
     }).lean();
-    const operation = operationForExistingStatus(previousAssignment?.isgKatipStatus);
-    const previousByFirmaId = previousAssignment
-      ? {
-          [String(firmaId)]: {
-            assignedUserId: previousAssignment.assignedUserId,
-            manualAssignee: previousAssignment.manualAssignee,
-            sozlesmeId: previousAssignment.sozlesmeId,
-          },
-        }
-      : {};
+    if (isPersonnelChangeLockedStatus(previousAssignment?.isgKatipStatus)) {
+      return res.status(400).json({
+        message: "Onay bekleyen veya aktif İSG-KATİP atamalarında personel değiştirilemez.",
+      });
+    }
 
     await IsgKatipPerson.findOneAndUpdate(
       { organization: orgId, gorevTuru, tcKimlik },
@@ -1972,16 +1909,6 @@ router.post("/:firmaId/manual-assignee", async (req, res) => {
       req.user._id || req.user.id || null,
       "Kisi bilgisi degisti"
     );
-
-    if (operation !== "create_assignment") {
-      await queueJobsForAssignments(
-        orgId,
-        gorevTuru,
-        [firmaId],
-        req.user._id || req.user.id || null,
-        { operation, previousByFirmaId }
-      );
-    }
 
     const overview = await buildOverview(orgId, gorevTuru);
     return res.json({ ok: true, ...overview });
