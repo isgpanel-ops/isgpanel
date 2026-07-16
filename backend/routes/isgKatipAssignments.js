@@ -588,6 +588,12 @@ async function buildOverview(orgId, gorevTuru = "is_guvenligi_uzmani") {
       gorevTuru: assignment?.gorevTuru || normalizedGorevTuru,
       sozlesmeId: assignment?.sozlesmeId || "",
       calismaSuresi: assignment?.calismaSuresi || "",
+      calisanSayisi:
+        Number.isFinite(Number(assignment?.calisanSayisi))
+          ? Number(assignment.calisanSayisi)
+          : Number.isFinite(Number(firm.calisanSayisi))
+            ? Number(firm.calisanSayisi)
+            : null,
       baslangicTarihi: assignment?.baslangicTarihi || null,
       bitisTarihi: assignment?.bitisTarihi || null,
       lastSyncAt: assignment?.lastSyncAt || null,
@@ -1135,6 +1141,7 @@ router.post("/extension-sync", async (req, res) => {
               isgKatipStatus: status,
               sozlesmeId: row.sozlesmeId || "",
               calismaSuresi: row.calismaSuresi || "",
+              calisanSayisi,
               lastSyncAt: now,
               lastError: "",
             },

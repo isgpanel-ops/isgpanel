@@ -69,6 +69,11 @@ function fmtDate(value) {
   return date.toLocaleDateString("tr-TR");
 }
 
+function fmtEmployeeCount(value) {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? count.toLocaleString("tr-TR") : "-";
+}
+
 function fmtDateTime(value) {
   if (!value) return "Henüz yok";
   const date = new Date(value);
@@ -736,7 +741,7 @@ export default function IsgKatipEntegrasyon() {
             </div>
 
             <div className="max-h-[520px] overflow-auto">
-              <table className="min-w-[920px] w-full text-xs">
+              <table className="min-w-[1040px] w-full text-xs">
                 <thead className="sticky top-0 bg-slate-50 text-slate-600 z-10">
                   <tr>
                     <th className="px-3 py-2 text-left font-semibold border-b w-10">
@@ -751,6 +756,7 @@ export default function IsgKatipEntegrasyon() {
                     <th className="px-3 py-2 text-left font-semibold border-b">#</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">Firma Adı</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">SGK Sicil No</th>
+                    <th className="px-3 py-2 text-left font-semibold border-b">Çalışan Sayısı</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">Tehlike Sınıfı</th>
                     <th className="px-3 py-2 text-left font-semibold border-b">
                       {isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}
@@ -784,6 +790,7 @@ export default function IsgKatipEntegrasyon() {
                       <td className="px-3 py-2">{index + 1}</td>
                       <td className="px-3 py-2 font-medium text-slate-800">{item.firmaAdi}</td>
                       <td className="px-3 py-2 tabular-nums">{item.sgkNo || "-"}</td>
+                      <td className="px-3 py-2 tabular-nums">{fmtEmployeeCount(item.calisanSayisi)}</td>
                       <td className="px-3 py-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${hazardClass(item.tehlike)}`}>
                           {item.tehlike || "-"}
@@ -799,7 +806,7 @@ export default function IsgKatipEntegrasyon() {
                   ))}
                   {!loading && visibleItems.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">
                         Bu kategoride kayıt bulunamadı.
                       </td>
                     </tr>
@@ -1021,6 +1028,10 @@ export default function IsgKatipEntegrasyon() {
                   <div>
                     <div className="text-slate-500">Geçerlilik</div>
                     <div className="mt-1 font-semibold text-slate-800">{fmtDate(selected.gecerlilik)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Çalışan Sayısı</div>
+                    <div className="mt-1 font-semibold text-slate-800">{fmtEmployeeCount(selected.calisanSayisi)}</div>
                   </div>
                   <div>
                     <div className="text-slate-500">{isUzmanMode ? "Atanan Kullanıcı" : "Kayıtlı Kişi"}</div>

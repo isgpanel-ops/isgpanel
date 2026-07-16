@@ -1254,7 +1254,7 @@ function currentPagePreview() {
     .slice(0, 220);
 }
 
-function durationLabelsForRole(gorevTuru) {
+function legacyDurationLabelsForRole(gorevTuru) {
   return [
     ...(DURATION_LABELS_BY_ROLE[gorevTuru] || DURATION_LABELS_BY_ROLE.is_guvenligi_uzmani),
     "gerekli toplam sure",
@@ -1262,10 +1262,10 @@ function durationLabelsForRole(gorevTuru) {
   ];
 }
 
-function durationFromRawText(rawText, gorevTuru = "is_guvenligi_uzmani") {
+function legacyDurationFromRawText(rawText, gorevTuru = "is_guvenligi_uzmani") {
   const text = cleanText(rawText);
   const normalizedText = normalizeSearchText(text);
-  for (const label of durationLabelsForRole(gorevTuru)) {
+  for (const label of legacyDurationLabelsForRole(gorevTuru)) {
     const index = normalizedText.indexOf(label);
     if (index >= 0) {
       const nearby = text.slice(Math.max(0, index), index + 180);
@@ -1286,12 +1286,12 @@ function durationFromRawText(rawText, gorevTuru = "is_guvenligi_uzmani") {
   return "";
 }
 
-function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
+function legacyFindValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
   const normalizedPatterns = patterns.map(normalizeSearchText);
   const rows = Array.from(document.querySelectorAll("tr, .row, .form-group, .form-line, .ant-row, div"));
   for (const row of rows) {
     const rowRawText = elementTextWithValues(row);
-    const directDuration = durationFromRawText(rowRawText, gorevTuru);
+    const directDuration = legacyDurationFromRawText(rowRawText, gorevTuru);
     if (directDuration) return directDuration;
 
     const directCells = Array.from(row.children).filter(isVisibleElement);
@@ -1327,9 +1327,10 @@ function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
   return "";
 }
 
-async function fillDurationField(duration) {
+async function legacyFillDurationField(duration) {
   const cleanDuration = parseNumberFromText(duration);
   if (!cleanDuration) return false;
+  if (!/^\d+(?:[.,]\d+)?$/.test(cleanDuration)) return false;
 
   const directField = findDurationInput();
   if (directField) {
@@ -1413,6 +1414,7 @@ function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
 async function fillDurationField(duration) {
   const cleanDuration = parseNumberFromText(duration);
   if (!cleanDuration) return false;
+  if (!/^\d+(?:[.,]\d+)?$/.test(cleanDuration)) return false;
 
   const directField = findDurationInput();
   if (!directField) return false;
@@ -1633,6 +1635,34 @@ function durationFieldValue() {
   const field = findDurationInput();
   if (!field) return "";
   return parseNumberFromText(field.value || field.getAttribute("value") || field.textContent || "");
+}
+
+async function hardSelectPartialAndDuration(duration) {
+  const cleanDuration = parseNumberFromText(duration);
+  const typeOk = (await selectPartialTimeAssignmentType()) || (await ensurePartialTimeSelected());
+  let durationOk = false;
+
+  if (cleanDuration && /^\d+(?:[.,]\d+)?$/.test(cleanDuration)) {
+    const field = findDurationInput();
+    if (field) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        field.scrollIntoView({ block: "center", inline: "center" });
+        field.focus();
+        setFieldValue(field, cleanDuration);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+        field.dispatchEvent(new Event("blur", { bubbles: true }));
+        await delay(250);
+        const value = parseNumberFromText(field.value || field.getAttribute("value") || field.textContent || "");
+        if (value === cleanDuration) {
+          durationOk = true;
+          break;
+        }
+      }
+    }
+  }
+
+  return { typeOk, durationOk };
 }
 
 async function ensurePartialTimeSelected() {
@@ -2007,6 +2037,8 @@ async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
 
   const selectedAssignmentType = await waitFor(() => ensurePartialTimeSelected(), 9000, 300);
   if (!selectedAssignmentType) {
+    steps.push("Gorevlendirme tipi ilk denemede secilemedi, sure ekraninda tekrar denenecek");
+  } else if (false) {
     return {
       ok: false,
       message: `GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ilemedi. Ekran Ã¶zeti: ${currentPagePreview()}`,
@@ -2040,17 +2072,24 @@ async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
     };
   }
 
-  if (!(await fillDurationField(duration))) {
+  let durationFilled = await fillDurationField(duration);
+  let hardResult = { typeOk: selectedAssignmentType, durationOk: durationFilled };
+  if (!durationFilled || !selectedAssignmentType) {
+    hardResult = await hardSelectPartialAndDuration(duration);
+    durationFilled = hardResult.durationOk;
+  }
+  if (!durationFilled) {
     return { ok: false, message: "Çalışma süresi alanı bulunamadı." };
   }
 
   steps.push("Gerekli toplam süre çalışma süresine yazıldı");
   await delay(300);
   if (!durationFieldValue()) {
-    return { ok: false, message: "Calisma suresi dakika alani doldurulamadi." };
+    hardResult = await hardSelectPartialAndDuration(duration);
+    if (!hardResult.durationOk) return { ok: false, message: "Calisma suresi dakika alani doldurulamadi." };
   }
 
-  if (!(await ensurePartialTimeSelected())) {
+  if (!hardResult.typeOk && !(await ensurePartialTimeSelected())) {
     return { ok: false, message: "Gorevlendirme tipi Kismi Sureli olarak dogrulanamadi." };
   }
 

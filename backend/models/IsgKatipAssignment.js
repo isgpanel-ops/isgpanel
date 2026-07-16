@@ -46,6 +46,7 @@ const IsgKatipAssignmentSchema = new mongoose.Schema(
     },
     sozlesmeId: { type: String, default: "" },
     calismaSuresi: { type: String, default: "" },
+    calisanSayisi: { type: Number, default: null },
     baslangicTarihi: { type: Date, default: null },
     bitisTarihi: { type: Date, default: null },
     lastSyncAt: { type: Date, default: null },
