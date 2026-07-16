@@ -114,7 +114,6 @@ export default function Home() {
         </div>
 
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fb] px-12">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-green-600 to-red-500" />
           <div className="w-full max-w-xl">
             <div className="mb-8 text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
