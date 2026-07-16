@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
 import {
-  FaArrowRight,
   FaBuilding,
   FaCheckCircle,
   FaCloud,
   FaFilePdf,
-  FaPlayCircle,
   FaShieldAlt,
   FaUser,
 } from "react-icons/fa";
@@ -25,7 +23,7 @@ const stats = [
 function LoginCard({ elevated = false }) {
   return (
     <div
-      className={`w-full max-w-md rounded-2xl bg-white px-8 py-8 text-center ${
+      className={`mx-auto w-full max-w-md rounded-2xl bg-white px-8 py-8 text-center ${
         elevated ? "shadow-2xl ring-1 ring-slate-200/80" : "shadow-xl"
       }`}
     >
@@ -64,7 +62,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-100">
       <section className="hidden min-h-screen grid-cols-[1.03fr_0.97fr] lg:grid">
-        <div className="relative overflow-hidden bg-[#0b3146] px-14 py-12 text-white">
+        <div className="relative overflow-hidden bg-[linear-gradient(135deg,#08283d_0%,#0b3f4d_46%,#10805d_100%)] px-14 py-12 text-white">
           <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
           <div className="absolute left-0 top-0 h-full w-full opacity-[0.08]">
             <div className="h-full w-full bg-[linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.18)_1px,transparent_1px)] bg-[size:72px_72px]" />
@@ -144,18 +142,6 @@ export default function Home() {
             </div>
           </div>
 
-          <Link
-            to="/login/osgb"
-            className="absolute bottom-8 right-10 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#0b3146] shadow-sm transition hover:border-blue-300 hover:text-blue-700"
-          >
-            Kurumsal giriş
-            <FaArrowRight />
-          </Link>
-
-          <div className="absolute bottom-8 left-10 inline-flex items-center gap-2 text-xs text-slate-400">
-            <FaPlayCircle />
-            İSG Panel dijital çözüm
-          </div>
         </div>
       </section>
 
