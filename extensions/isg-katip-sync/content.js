@@ -975,7 +975,6 @@ function kickAssignmentDetailsStepIfNeeded() {
 }
 
 function isSuccessfulTerminalPage() {
-  kickAssignmentDetailsStepIfNeeded();
   const pageText = normalizeSearchText(document.body?.innerText || "");
   return (
     pageText.includes("isleminiz basariyla gerceklestirilmistir") ||
@@ -1278,15 +1277,22 @@ async function forceChooseOption(element) {
 
 async function typeIntoOpenDropdownSearch(value) {
   const active = document.activeElement;
+  const activeContext = active ? normalizeSearchText(fieldContext(active) + " " + elementTextWithValues(active)) : "";
   const activeField =
     active &&
     active.matches?.("input[type='text'], input:not([type]), [contenteditable='true']") &&
     isVisibleElement(active) &&
-    !isDisabledElement(active)
+    !isDisabledElement(active) &&
+    !activeContext.includes("calisma suresi") &&
+    !activeContext.includes("dakika")
       ? active
       : null;
   const field = activeField || visibleElements("input[type='text'], input:not([type]), [contenteditable='true']")
     .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const context = normalizeSearchText(fieldContext(element) + " " + elementTextWithValues(element));
+      return !context.includes("calisma suresi") && !context.includes("dakika");
+    })
     .sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
@@ -1363,7 +1369,8 @@ async function clickPartialTimeOption() {
     await delay(250);
   }
 
-  if (await typeIntoOpenDropdownSearch("Kısmi Süreli")) {
+  const openDropdown = visibleElements("[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel").length > 0;
+  if (openDropdown && await typeIntoOpenDropdownSearch("Kısmi Süreli")) {
     const typedOption = findVisibleTextOptionByAscii({ includes: ["kismi"], excludes: ["tam"] });
     if (typedOption) {
       if (await forceChooseOption(typedOption)) return true;
@@ -1614,6 +1621,15 @@ async function fillPersonStep(job, steps) {
 }
 
 async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
+  const selectedAssignmentType = await waitFor(() => selectPartialTimeAssignmentType(), 7000, 300);
+  if (!selectedAssignmentType) {
+    return {
+      ok: false,
+      message: `GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ilemedi. Ekran Ã¶zeti: ${currentPagePreview()}`,
+    };
+  }
+  steps.push("GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ildi");
+
   const durationLabels = durationLabelsForRole(gorevTuru);
   const duration = await waitFor(
     () =>
