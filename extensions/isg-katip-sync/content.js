@@ -729,9 +729,9 @@ const PROCESS_KEYWORDS_BY_ROLE = {
   diger_saglik_personeli: ["osgb", "ozel isyeri", "diger saglik personeli", "hizmeti alimi sozlesmesi"],
 };
 
-PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani = "is guvenligi uzmani hizmet alimi sozlesmesi";
-PROCESS_TEXT_BY_ROLE.isyeri_hekimi = "isyeri hekimligi hizmet alimi sozlesmesi";
-PROCESS_TEXT_BY_ROLE.diger_saglik_personeli = "diger saglik personeli hizmeti alimi sozlesmesi";
+PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani = "OSGB ILE OZEL ISYERI ARASINDA IS GUVENLIGI UZMANI HIZMET ALIMI SOZLESMESI";
+PROCESS_TEXT_BY_ROLE.isyeri_hekimi = "OSGB ILE OZEL ISYERI ARASINDA ISYERI HEKIMLIGI HIZMET ALIMI SOZLESMESI";
+PROCESS_TEXT_BY_ROLE.diger_saglik_personeli = "OSGB ILE OZEL ISYERI ARASINDA DIGER SAGLIK PERSONELI HIZMETI ALIMI SOZLESMESI";
 
 const PROCESS_SEARCH_TEXT_BY_ROLE = {
   is_guvenligi_uzmani: "\u0130\u015f G\u00fcvenli\u011fi Uzman\u0131",
@@ -739,9 +739,9 @@ const PROCESS_SEARCH_TEXT_BY_ROLE = {
   diger_saglik_personeli: "Di\u011fer Sa\u011fl\u0131k Personeli",
 };
 
-PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani = ["osgb", "is guvenligi uzmani", "hizmet alimi sozlesmesi"];
-PROCESS_KEYWORDS_BY_ROLE.isyeri_hekimi = ["osgb", "isyeri hekimligi", "hizmet alimi sozlesmesi"];
-PROCESS_KEYWORDS_BY_ROLE.diger_saglik_personeli = ["osgb", "diger saglik personeli", "hizmeti alimi sozlesmesi"];
+PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani = ["osgb", "ozel isyeri", "is guvenligi uzmani", "hizmet alimi sozlesmesi"];
+PROCESS_KEYWORDS_BY_ROLE.isyeri_hekimi = ["osgb", "ozel isyeri", "isyeri hekimligi", "hizmet alimi sozlesmesi"];
+PROCESS_KEYWORDS_BY_ROLE.diger_saglik_personeli = ["osgb", "ozel isyeri", "diger saglik personeli", "hizmeti alimi sozlesmesi"];
 
 const DURATION_LABELS_BY_ROLE = {
   is_guvenligi_uzmani: [
@@ -841,6 +841,11 @@ function clickFirstVisibleByText(text) {
   return true;
 }
 
+function isPrivateOsgbWorkplaceProcessText(text) {
+  const value = asciiSearchText(text);
+  return value.includes("osgb") && value.includes("ozel isyeri") && !value.includes("kamu isyeri");
+}
+
 function clickProcessOption(gorevTuru) {
   const processText = PROCESS_TEXT_BY_ROLE[gorevTuru] || PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani;
   if (clickFirstVisibleByText(processText)) return true;
@@ -862,6 +867,7 @@ function clickProcessOption(gorevTuru) {
 
   const option = candidates.find((element) => {
     const text = asciiSearchText(element.innerText || element.textContent || "");
+    if (!isPrivateOsgbWorkplaceProcessText(text)) return false;
     return keywords.every((keyword) => text.includes(keyword));
   });
   if (!option) return false;
