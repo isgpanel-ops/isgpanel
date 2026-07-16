@@ -809,6 +809,35 @@ function clickElement(element) {
   element.click();
 }
 
+function dispatchRealMouseSequence(element) {
+  if (!element) return false;
+  element.scrollIntoView({ block: "center", inline: "center" });
+  const rect = element.getBoundingClientRect();
+  const clientX = rect.left + Math.max(rect.width / 2, 1);
+  const clientY = rect.top + Math.max(rect.height / 2, 1);
+  const pointTarget = document.elementFromPoint(clientX, clientY) || element;
+  const target = pointTarget.closest("li, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option, button, a") || pointTarget;
+  const eventOptions = { bubbles: true, cancelable: true, view: window, clientX, clientY };
+  const pointerOptions = { ...eventOptions, pointerId: 1, pointerType: "mouse", isPrimary: true };
+  const events = [
+    ["pointerover", pointerOptions],
+    ["mouseover", eventOptions],
+    ["pointermove", pointerOptions],
+    ["mousemove", eventOptions],
+    ["pointerdown", pointerOptions],
+    ["mousedown", eventOptions],
+    ["pointerup", pointerOptions],
+    ["mouseup", eventOptions],
+    ["click", eventOptions],
+  ];
+  for (const [type, options] of events) {
+    const EventCtor = type.startsWith("pointer") && window.PointerEvent ? PointerEvent : MouseEvent;
+    target.dispatchEvent(new EventCtor(type, options));
+  }
+  if (typeof target.click === "function") target.click();
+  return true;
+}
+
 function clickButtonByText(texts) {
   const wanted = texts.map(normalizeSearchText);
   const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']").filter(
@@ -1198,23 +1227,81 @@ function findVisibleTextOptionByAscii({ includes = [], excludes = [] }) {
   return matches[0]?.element || null;
 }
 
+function assignmentTypeLooksPartial() {
+  const field = findField(["gorevlendirme tipi", "gÃƒÂ¶revlendirme tipi", "gorevlendirme"]);
+  const candidates = [];
+  if (field) {
+    candidates.push(field);
+    const control =
+      field.closest(".ant-select, .select2, .ng-select, [role='combobox'], [class*='select']") ||
+      field.closest(".form-group, .form-line, .ant-form-item, .row");
+    if (control) candidates.push(control);
+  }
+
+  candidates.push(
+    ...visibleElements("[role='combobox'], .ant-select, .select2, .select2-selection, .ng-select, .form-control")
+      .filter((element) => !isDisabledElement(element))
+      .filter((element) => fieldContext(element).includes("gorevlendirme"))
+  );
+
+  return candidates.some((element) => {
+    const text = asciiSearchText(elementTextWithValues(element));
+    return text.includes("kismi") && !text.includes("tam");
+  });
+}
+
+function dispatchKey(element, key) {
+  const target = element || document.activeElement || document.body;
+  target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key }));
+  target.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key }));
+}
+
+async function forceChooseOption(element) {
+  if (!element) return false;
+  const targets = [
+    element,
+    element.closest("[role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option, li, button, a"),
+    element.parentElement,
+  ].filter(Boolean);
+
+  for (const target of Array.from(new Set(targets))) {
+    clickElement(target);
+    dispatchRealMouseSequence(target);
+    await delay(180);
+    if (assignmentTypeLooksPartial()) return true;
+  }
+
+  dispatchKey(document.activeElement, "Enter");
+  await delay(180);
+  return assignmentTypeLooksPartial();
+}
+
 async function typeIntoOpenDropdownSearch(value) {
-  const field = visibleElements("input[type='text'], input:not([type]), [contenteditable='true']")
+  const active = document.activeElement;
+  const activeField =
+    active &&
+    active.matches?.("input[type='text'], input:not([type]), [contenteditable='true']") &&
+    isVisibleElement(active) &&
+    !isDisabledElement(active)
+      ? active
+      : null;
+  const field = activeField || visibleElements("input[type='text'], input:not([type]), [contenteditable='true']")
     .filter((element) => !isDisabledElement(element))
     .sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
-      return br.top - ar.top || ar.left - br.left;
+      const aDropdownScore = a.closest("[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel") ? 0 : 1;
+      const bDropdownScore = b.closest("[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel") ? 0 : 1;
+      return aDropdownScore - bDropdownScore || br.top - ar.top || ar.left - br.left;
     })[0];
   if (!field) return false;
 
   clickElement(field);
   setFieldValue(field, value);
-  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "ArrowDown" }));
-  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "ArrowDown" }));
+  field.focus();
+  dispatchKey(field, "ArrowDown");
   await delay(150);
-  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
-  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Enter" }));
+  dispatchKey(field, "Enter");
   await delay(300);
   return true;
 }
@@ -1223,9 +1310,8 @@ async function clickPartialTimeOption() {
   await delay(350);
   const textNodeOption = findVisibleTextOptionByAscii({ includes: ["kismi", "sureli"], excludes: ["tam"] });
   if (textNodeOption) {
-    clickElement(textNodeOption);
+    if (await forceChooseOption(textNodeOption)) return true;
     await delay(300);
-    return true;
   }
 
   const optionSelectors = [
@@ -1255,9 +1341,8 @@ async function clickPartialTimeOption() {
     });
 
   if (exactOptions[0]) {
-    clickElement(exactOptions[0]);
+    if (await forceChooseOption(exactOptions[0])) return true;
     await delay(250);
-    return true;
   }
 
   const looseOptions = visibleElements("div, span")
@@ -1274,18 +1359,17 @@ async function clickPartialTimeOption() {
     });
 
   if (looseOptions[0]) {
-    clickElement(looseOptions[0]);
+    if (await forceChooseOption(looseOptions[0])) return true;
     await delay(250);
-    return true;
   }
 
-  if (await typeIntoOpenDropdownSearch("Kismi Sureli")) {
+  if (await typeIntoOpenDropdownSearch("Kısmi Süreli")) {
     const typedOption = findVisibleTextOptionByAscii({ includes: ["kismi"], excludes: ["tam"] });
     if (typedOption) {
-      clickElement(typedOption);
+      if (await forceChooseOption(typedOption)) return true;
       await delay(300);
     }
-    return true;
+    if (assignmentTypeLooksPartial()) return true;
   }
 
   return false;
@@ -1307,12 +1391,16 @@ async function selectPartialTimeAssignmentType() {
       field.closest(".form-group, .form-line, .ant-form-item, .row") ||
       field;
     clickElement(control);
+    dispatchRealMouseSequence(control);
     if (await clickPartialTimeOption()) return true;
-    if (await clickDropdownOptionByText(optionTexts)) return true;
+    if (await clickDropdownOptionByText(optionTexts) && assignmentTypeLooksPartial()) return true;
+    if (assignmentTypeLooksPartial()) return true;
 
     clickElement(field);
+    dispatchRealMouseSequence(field);
     if (await clickPartialTimeOption()) return true;
-    if (await clickDropdownOptionByText(optionTexts)) return true;
+    if (await clickDropdownOptionByText(optionTexts) && assignmentTypeLooksPartial()) return true;
+    if (assignmentTypeLooksPartial()) return true;
   }
 
   const nativeSelect = getAllFields().find(
@@ -1329,8 +1417,10 @@ async function selectPartialTimeAssignmentType() {
     );
   if (dropdown) {
     clickElement(dropdown);
+    dispatchRealMouseSequence(dropdown);
     if (await clickPartialTimeOption()) return true;
-    if (await clickDropdownOptionByText(optionTexts)) return true;
+    if (await clickDropdownOptionByText(optionTexts) && assignmentTypeLooksPartial()) return true;
+    if (assignmentTypeLooksPartial()) return true;
   }
 
   return false;
