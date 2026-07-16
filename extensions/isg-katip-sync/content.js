@@ -1301,6 +1301,7 @@ async function fillAssignmentDetailsStep(steps) {
 
 async function chooseProcessForRole(gorevTuru, steps) {
   const processText = PROCESS_TEXT_BY_ROLE[gorevTuru] || PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani;
+  const processSearchText = PROCESS_SEARCH_TEXT_BY_ROLE[gorevTuru] || processText;
 
   if (!clickButtonByText(["Yeni", "+ Yeni"])) {
     return { ok: false, message: "Yeni butonu bulunamadı." };
@@ -1314,7 +1315,7 @@ async function chooseProcessForRole(gorevTuru, steps) {
   const searchField =
     findField(["lutfen surec seciniz", "süreç seçiniz", "surec seciniz"]) || findFirstEmptyTextField();
   if (searchField) {
-    setFieldValue(searchField, processText);
+    setFieldValue(searchField, processSearchText);
     clickElement(searchField);
     searchField.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Enter" }));
   } else {
