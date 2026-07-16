@@ -635,7 +635,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
   };
 
   return (
-    <div className="p-6">
+    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
       <h1 className="text-xl font-bold text-[#042f4b] mb-2">Belgeler (Admin)</h1>
 
       {/* Sekmeler */}

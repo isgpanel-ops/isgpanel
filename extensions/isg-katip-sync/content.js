@@ -1158,8 +1158,76 @@ async function clickDropdownOptionByText(texts) {
   return true;
 }
 
+function findVisibleTextOptionByAscii({ includes = [], excludes = [] }) {
+  const includeList = includes.map(asciiSearchText).filter(Boolean);
+  const excludeList = excludes.map(asciiSearchText).filter(Boolean);
+  const matches = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const rawText = cleanText(node.nodeValue || "");
+      if (!rawText) return NodeFilter.FILTER_REJECT;
+      const text = asciiSearchText(rawText);
+      if (!includeList.every((part) => text.includes(part))) return NodeFilter.FILTER_REJECT;
+      if (excludeList.some((part) => text.includes(part))) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (!parent || !isVisibleElement(parent) || isDisabledElement(parent)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  while (walker.nextNode()) {
+    const parent = walker.currentNode.parentElement;
+    const clickable =
+      parent.closest(
+        "[role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option, li, button, a"
+      ) || parent;
+    if (!clickable || !isVisibleElement(clickable) || isDisabledElement(clickable)) continue;
+    const fullText = asciiSearchText(clickable.innerText || clickable.textContent || clickable.value || "");
+    if (!includeList.every((part) => fullText.includes(part))) continue;
+    if (excludeList.some((part) => fullText.includes(part))) continue;
+    const rect = clickable.getBoundingClientRect();
+    matches.push({
+      element: clickable,
+      area: Math.max(rect.width, 1) * Math.max(rect.height, 1),
+      length: cleanText(clickable.innerText || clickable.textContent || "").length,
+      children: clickable.children.length,
+    });
+  }
+
+  matches.sort((a, b) => a.length - b.length || a.children - b.children || a.area - b.area);
+  return matches[0]?.element || null;
+}
+
+async function typeIntoOpenDropdownSearch(value) {
+  const field = visibleElements("input[type='text'], input:not([type]), [contenteditable='true']")
+    .filter((element) => !isDisabledElement(element))
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return br.top - ar.top || ar.left - br.left;
+    })[0];
+  if (!field) return false;
+
+  clickElement(field);
+  setFieldValue(field, value);
+  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "ArrowDown" }));
+  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "ArrowDown" }));
+  await delay(150);
+  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Enter" }));
+  await delay(300);
+  return true;
+}
+
 async function clickPartialTimeOption() {
   await delay(350);
+  const textNodeOption = findVisibleTextOptionByAscii({ includes: ["kismi", "sureli"], excludes: ["tam"] });
+  if (textNodeOption) {
+    clickElement(textNodeOption);
+    await delay(300);
+    return true;
+  }
+
   const optionSelectors = [
     "[role='option']",
     "[role='menuitem']",
@@ -1208,6 +1276,15 @@ async function clickPartialTimeOption() {
   if (looseOptions[0]) {
     clickElement(looseOptions[0]);
     await delay(250);
+    return true;
+  }
+
+  if (await typeIntoOpenDropdownSearch("Kismi Sureli")) {
+    const typedOption = findVisibleTextOptionByAscii({ includes: ["kismi"], excludes: ["tam"] });
+    if (typedOption) {
+      clickElement(typedOption);
+      await delay(300);
+    }
     return true;
   }
 
