@@ -8,6 +8,18 @@ function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function asciiSearchText(value) {
+  return normalizeSearchText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u011f/g, "g")
+    .replace(/\u00fc/g, "u")
+    .replace(/\u015f/g, "s")
+    .replace(/\u0131/g, "i")
+    .replace(/\u00f6/g, "o")
+    .replace(/\u00e7/g, "c");
+}
+
 function lowerTR(value) {
   return cleanText(value)
     .toLocaleLowerCase("tr-TR")
@@ -717,6 +729,20 @@ const PROCESS_KEYWORDS_BY_ROLE = {
   diger_saglik_personeli: ["osgb", "ozel isyeri", "diger saglik personeli", "hizmeti alimi sozlesmesi"],
 };
 
+PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani = "is guvenligi uzmani hizmet alimi sozlesmesi";
+PROCESS_TEXT_BY_ROLE.isyeri_hekimi = "isyeri hekimligi hizmet alimi sozlesmesi";
+PROCESS_TEXT_BY_ROLE.diger_saglik_personeli = "diger saglik personeli hizmeti alimi sozlesmesi";
+
+const PROCESS_SEARCH_TEXT_BY_ROLE = {
+  is_guvenligi_uzmani: "\u0130\u015f G\u00fcvenli\u011fi Uzman\u0131",
+  isyeri_hekimi: "\u0130\u015fyeri Hekimli\u011fi",
+  diger_saglik_personeli: "Di\u011fer Sa\u011fl\u0131k Personeli",
+};
+
+PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani = ["osgb", "is guvenligi uzmani", "hizmet alimi sozlesmesi"];
+PROCESS_KEYWORDS_BY_ROLE.isyeri_hekimi = ["osgb", "isyeri hekimligi", "hizmet alimi sozlesmesi"];
+PROCESS_KEYWORDS_BY_ROLE.diger_saglik_personeli = ["osgb", "diger saglik personeli", "hizmeti alimi sozlesmesi"];
+
 const DURATION_LABELS_BY_ROLE = {
   is_guvenligi_uzmani: [
     "gerekli toplam igu suresi",
@@ -798,7 +824,7 @@ function clickButtonByText(texts) {
 }
 
 function clickFirstVisibleByText(text) {
-  const wanted = normalizeSearchText(text);
+  const wanted = asciiSearchText(text);
   const candidates = visibleElements("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, div, span")
     .filter((element) => !isDisabledElement(element))
     .sort((a, b) => {
@@ -807,7 +833,7 @@ function clickFirstVisibleByText(text) {
       return aRoleScore - bRoleScore || a.children.length - b.children.length;
     });
   const option = candidates.find((element) => {
-    const value = normalizeSearchText(element.innerText || element.textContent || "");
+    const value = asciiSearchText(element.innerText || element.textContent || "");
     return value === wanted || value.includes(wanted);
   });
   if (!option) return false;
@@ -819,23 +845,23 @@ function clickProcessOption(gorevTuru) {
   const processText = PROCESS_TEXT_BY_ROLE[gorevTuru] || PROCESS_TEXT_BY_ROLE.is_guvenligi_uzmani;
   if (clickFirstVisibleByText(processText)) return true;
 
-  const keywords = PROCESS_KEYWORDS_BY_ROLE[gorevTuru] || PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani;
+  const keywords = (PROCESS_KEYWORDS_BY_ROLE[gorevTuru] || PROCESS_KEYWORDS_BY_ROLE.is_guvenligi_uzmani).map(asciiSearchText);
   const candidates = visibleElements(
-    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, div"
+    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .mat-option, mat-option, div"
   )
     .filter((element) => !isDisabledElement(element))
     .sort((a, b) => {
-      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option")
+      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .mat-option, mat-option")
         ? 0
         : 1;
-      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option")
+      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .mat-option, mat-option")
         ? 0
         : 1;
       return aRoleScore - bRoleScore || a.children.length - b.children.length;
     });
 
   const option = candidates.find((element) => {
-    const text = normalizeSearchText(element.innerText || element.textContent || "");
+    const text = asciiSearchText(element.innerText || element.textContent || "");
     return keywords.every((keyword) => text.includes(keyword));
   });
   if (!option) return false;
@@ -1102,23 +1128,23 @@ function setSelectOptionByText(select, texts) {
 }
 
 async function clickDropdownOptionByText(texts) {
-  const wanted = texts.map(normalizeSearchText);
+  const wanted = texts.map(asciiSearchText);
   await delay(350);
   const candidates = visibleElements(
-    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, div, span"
+    "li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option, div, span"
   )
     .filter((element) => !isDisabledElement(element))
     .sort((a, b) => {
-      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item")
+      const aRoleScore = a.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option")
         ? 0
         : 1;
-      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item")
+      const bRoleScore = b.matches("li, a, button, [role='option'], [role='menuitem'], .ant-select-item-option, .select2-results__option, .ng-option, .dropdown-item, .mat-option, mat-option")
         ? 0
         : 1;
       return aRoleScore - bRoleScore || a.children.length - b.children.length;
     });
   const option = candidates.find((element) => {
-    const text = normalizeSearchText(element.innerText || element.textContent || element.value || "");
+    const text = asciiSearchText(element.innerText || element.textContent || element.value || "");
     return wanted.some((pattern) => text.includes(pattern));
   });
   if (!option) return false;
@@ -1571,20 +1597,14 @@ async function runAssignmentJob(job) {
   const operation = jobOperation(job);
   const steps = [];
 
-  if (operation === "cancel_pending" || operation === "cancel_pending_then_create") {
-    const cancelResult = await cancelPendingAssignment(job, steps);
-    if (!cancelResult.ok) return { ok: false, steps, message: cancelResult.message };
+  if (operation !== "create_assignment") {
+    return {
+      ok: false,
+      steps,
+      message:
+        "Guvenlik nedeniyle iptal/sonlandirma otomasyonu kapali. Eklenti yalnizca yeni atama olusturur.",
+    };
   }
-
-  if (operation === "terminate_active" || operation === "terminate_active_then_create") {
-    const terminateResult = await terminateActiveAssignment(job, steps);
-    if (!terminateResult.ok) return { ok: false, steps, message: terminateResult.message };
-  }
-
-  if (operation === "cancel_pending" || operation === "terminate_active") {
-    return { ok: true, steps, message: "Eski İSG-KATİP ataması kapatıldı." };
-  }
-
   const createResult = await autoPrepareAssignmentJob(job);
   return {
     ...createResult,

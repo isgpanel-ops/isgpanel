@@ -216,22 +216,10 @@ function jobKeyFor(orgId, firmaId, gorevTuru) {
 }
 
 function normalizeJobOperation(value) {
-  const allowed = new Set([
-    "create_assignment",
-    "cancel_pending",
-    "terminate_active",
-    "cancel_pending_then_create",
-    "terminate_active_then_create",
-  ]);
-  return allowed.has(value) ? value : "create_assignment";
+  return "create_assignment";
 }
 
 function operationForExistingStatus(status) {
-  const normalized = normalizeWorkflowStatus(status);
-  if (normalized === "profesyonel_onayi_bekliyor" || normalized === "isveren_onayi_bekliyor") {
-    return "cancel_pending_then_create";
-  }
-  if (normalized === "atama_onaylandi") return "terminate_active_then_create";
   return "create_assignment";
 }
 
@@ -756,6 +744,7 @@ router.get("/jobs/next", async (req, res) => {
     const filter = {
       organization: orgId,
       status: { $in: ["pending", "failed"] },
+      operation: "create_assignment",
       ...(gorevTuru ? { gorevTuru } : {}),
     };
 
@@ -779,7 +768,7 @@ router.post("/jobs/:jobId/claim", async (req, res) => {
 
     const now = new Date();
     const job = await IsgKatipJob.findOneAndUpdate(
-      { _id: jobId, organization: orgId, status: { $in: ["pending", "failed", "in_progress"] } },
+      { _id: jobId, organization: orgId, operation: "create_assignment", status: { $in: ["pending", "failed", "in_progress"] } },
       {
         $set: {
           status: "in_progress",
@@ -852,12 +841,9 @@ router.patch("/jobs/:jobId", async (req, res) => {
     if (!job) return res.status(404).json({ message: "Gorev bulunamadi" });
 
     if (job.assignmentId) {
-      const closeOnlyOperations = new Set(["cancel_pending", "terminate_active"]);
       const nextAssignmentStatus =
         status === "done"
-          ? closeOnlyOperations.has(job.operation)
-            ? "atama_yok"
-            : "profesyonel_onayi_bekliyor"
+          ? "profesyonel_onayi_bekliyor"
           : status === "failed"
             ? "atama_yok"
             : null;
@@ -978,7 +964,6 @@ router.post("/extension-sync", async (req, res) => {
     const firmUpdates = new Map();
     let matched = 0;
     const latestRowsByIdentity = new Map();
-    const ignoredPendingByFirmRole = new Map();
     const seenFirmRoleKeys = new Set();
 
     rows.forEach((row, index) => {
@@ -1012,11 +997,10 @@ router.post("/extension-sync", async (req, res) => {
       }
 
       const assignmentKey = `${String(firm._id)}:${gorevTuru}`;
-      seenFirmRoleKeys.add(assignmentKey);
       if (row.ignoredPending) {
-        ignoredPendingByFirmRole.set(assignmentKey, { row, firm, gorevTuru });
         return;
       }
+      seenFirmRoleKeys.add(assignmentKey);
 
       const latestValue = contractSortValue(row, index);
       const status = normalizeWorkflowStatus(rawStatus);
@@ -1193,46 +1177,6 @@ router.post("/extension-sync", async (req, res) => {
           },
         },
       });
-    });
-
-    ignoredPendingByFirmRole.forEach(({ row, firm, gorevTuru }, assignmentKey) => {
-      if (assignmentOpsByKey.has(assignmentKey)) return;
-      const latestValue = contractSortValue(row, 0);
-      const assignmentOp = {
-        updateOne: {
-          filter: {
-            organization: orgId,
-            firmaId: firm._id,
-            gorevTuru,
-          },
-          update: {
-            $set: {
-              organization: orgId,
-              firmaId: firm._id,
-              gorevTuru,
-              isgKatipStatus: "atama_yok",
-              sozlesmeId: "",
-              calismaSuresi: "",
-              lastSyncAt: now,
-              lastError: "",
-            },
-            $push: {
-              logs: {
-                action: "extension_sync_ignored_pending",
-                message: "Renk isareti olmayan onay bekleyen satir yok sayildi",
-                by: req.user._id || req.user.id || null,
-                at: now,
-              },
-            },
-          },
-          upsert: true,
-        },
-      };
-      const current = assignmentOpsByKey.get(assignmentKey);
-      const nextCandidate = { priority: statusPriority("atama_yok"), status: "atama_yok", latestValue, op: assignmentOp };
-      if (shouldPreferSyncRow(nextCandidate, current)) {
-        assignmentOpsByKey.set(assignmentKey, nextCandidate);
-      }
     });
 
     if (deactivateLinkFilters.length > 0) {
