@@ -801,6 +801,101 @@ function visibleElements(selector) {
   return Array.from(document.querySelectorAll(selector)).filter(isVisibleElement);
 }
 
+function shortAsciiText(element) {
+  return asciiSearchText(elementTextWithValues(element));
+}
+
+function matchesAsciiParts(element, parts) {
+  const text = shortAsciiText(element);
+  return parts.every((part) => text.includes(asciiSearchText(part)));
+}
+
+function findShortLabelElement(groups) {
+  const normalizedGroups = groups.map((group) => (Array.isArray(group) ? group : [group]));
+  return visibleElements("label, span, div, p, td, th")
+    .filter((element) => {
+      const rawText = cleanText(element.innerText || element.textContent || "");
+      return rawText.length > 0 && rawText.length <= 140;
+    })
+    .filter((element) => normalizedGroups.some((group) => matchesAsciiParts(element, group)))
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const aText = cleanText(a.innerText || a.textContent || "");
+      const bText = cleanText(b.innerText || b.textContent || "");
+      return ar.top - br.top || ar.left - br.left || aText.length - bText.length;
+    })[0];
+}
+
+function findStopYAfter(label, groups, fallbackDistance = 180) {
+  const labelRect = label.getBoundingClientRect();
+  const stop = findShortLabelElement(groups);
+  if (stop) {
+    const stopRect = stop.getBoundingClientRect();
+    if (stopRect.top > labelRect.top) return stopRect.top;
+  }
+  return labelRect.bottom + fallbackDistance;
+}
+
+function findControlBetweenLabels({ labelGroups, stopGroups, selector, fallbackDistance = 180, filter }) {
+  const label = findShortLabelElement(labelGroups);
+  if (!label) return null;
+
+  const labelRect = label.getBoundingClientRect();
+  const bottomY = findStopYAfter(label, stopGroups, fallbackDistance);
+  const candidates = visibleElements(selector)
+    .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= labelRect.bottom - 8 && rect.top < bottomY - 2;
+    })
+    .filter((element) => (filter ? filter(element) : true))
+    .sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const aText = shortAsciiText(a);
+      const bText = shortAsciiText(b);
+      const aSelectScore = a.matches("select, [role='combobox'], .ant-select, .select2, .select2-selection, .ng-select, [class*='select']") ? 0 : 1;
+      const bSelectScore = b.matches("select, [role='combobox'], .ant-select, .select2, .select2-selection, .ng-select, [class*='select']") ? 0 : 1;
+      const aPlaceholderScore = aText.includes("seciniz") ? 0 : 1;
+      const bPlaceholderScore = bText.includes("seciniz") ? 0 : 1;
+      return ar.top - br.top || aSelectScore - bSelectScore || aPlaceholderScore - bPlaceholderScore || ar.left - br.left;
+    });
+
+  return candidates[0] || null;
+}
+
+function findAssignmentTypeControl() {
+  return findControlBetweenLabels({
+    labelGroups: [["gorevlendirme", "tipi"]],
+    stopGroups: [["calisma", "suresi"], ["dakika"]],
+    selector:
+      "select, [role='combobox'], .ant-select, .select2, .select2-selection, .ng-select, .form-control, .ui-select-container, .selectize-control, input[type='text'], input:not([type])",
+    fallbackDistance: 160,
+    filter(element) {
+      if (element.matches("input, textarea")) {
+        const type = String(element.type || "").toLowerCase();
+        return type === "text" || type === "search" || !type;
+      }
+      return true;
+    },
+  });
+}
+
+function findDurationInput() {
+  return findControlBetweenLabels({
+    labelGroups: [["calisma", "suresi"], ["dakika"]],
+    stopGroups: [["ana", "menu"], ["ileri"], ["sozlesme", "bilgileri"]],
+    selector: "input[type='text'], input[type='number'], input:not([type]), textarea",
+    fallbackDistance: 130,
+    filter(element) {
+      if (!isUsableField(element)) return false;
+      const type = String(element.type || "").toLowerCase();
+      return type === "text" || type === "number" || type === "search" || !type || element.tagName === "TEXTAREA";
+    },
+  });
+}
+
 function clickElement(element) {
   element.scrollIntoView({ block: "center", inline: "center" });
   element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
@@ -1138,6 +1233,12 @@ function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
 function fillDurationField(duration) {
   const cleanDuration = parseNumberFromText(duration);
   if (!cleanDuration) return false;
+
+  const directField = findDurationInput();
+  if (directField) {
+    setFieldValue(directField, cleanDuration);
+    return parseNumberFromText(directField.value || directField.textContent || "") === cleanDuration;
+  }
   return fillFieldByPatterns(["calisma suresi", "çalışma süresi"], cleanDuration, { allowFallback: false });
 }
 
@@ -1227,8 +1328,10 @@ function findVisibleTextOptionByAscii({ includes = [], excludes = [] }) {
 }
 
 function assignmentTypeLooksPartial() {
+  const directControl = findAssignmentTypeControl();
   const field = findField(["gorevlendirme tipi", "gÃƒÂ¶revlendirme tipi", "gorevlendirme"]);
   const candidates = [];
+  if (directControl) candidates.push(directControl);
   if (field) {
     candidates.push(field);
     const control =
@@ -1383,6 +1486,30 @@ async function clickPartialTimeOption() {
 }
 
 async function selectPartialTimeAssignmentType() {
+  const directOptionTexts = ["kismi sureli", "kismi"];
+  const directControl = findAssignmentTypeControl();
+  if (directControl) {
+    const currentValue = normalizeSearchText(elementTextWithValues(directControl));
+    if (currentValue.includes("kismi") && !currentValue.includes("tam")) return true;
+
+    if (directControl instanceof HTMLSelectElement && setSelectOptionByText(directControl, directOptionTexts)) {
+      return true;
+    }
+
+    clickElement(directControl);
+    dispatchRealMouseSequence(directControl);
+    await delay(250);
+    if (await clickPartialTimeOption()) return true;
+    if (await clickDropdownOptionByText(directOptionTexts) && assignmentTypeLooksPartial()) return true;
+
+    dispatchKey(document.activeElement || directControl, "ArrowDown");
+    await delay(120);
+    dispatchKey(document.activeElement || directControl, "ArrowDown");
+    await delay(120);
+    dispatchKey(document.activeElement || directControl, "Enter");
+    await delay(250);
+    if (assignmentTypeLooksPartial()) return true;
+  }
   const optionTexts = ["kismi sureli", "kÄ±smi sÃ¼reli", "kismi", "kÄ±smi"];
   const field = findField(["gorevlendirme tipi", "gÃ¶revlendirme tipi", "gorevlendirme"]);
   if (field) {

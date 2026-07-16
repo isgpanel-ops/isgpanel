@@ -635,11 +635,11 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
-      <h1 className="text-xl font-bold text-[#042f4b] mb-2">Belgeler (Admin)</h1>
+    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-6 font-sans text-slate-800">
+      <h1 className="text-2xl font-bold text-[#042f4b] tracking-tight mb-2">Belgeler (Admin)</h1>
 
       {/* Sekmeler */}
-      <div className="flex gap-6 border-b mb-4 text-sm overflow-x-auto whitespace-nowrap pb-1">
+      <div className="flex gap-6 border-b border-slate-200 mb-4 text-sm overflow-x-auto whitespace-nowrap pb-1">
         {Object.keys(TAB_LABELS).map((tab) => (
           <button
             key={tab}
@@ -647,7 +647,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
             className={`pb-2 ${
               activeTab === tab
                 ? "border-b-2 border-[#042f4b] font-semibold text-[#042f4b]"
-                : "text-gray-500 hover:text-[#042f4b]"
+                : "text-slate-500 hover:text-[#042f4b]"
             }`}
             onClick={() => setActiveTab(tab)}
           >
@@ -682,7 +682,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder="Firma / SGK / Hazırlayan ara..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl border bg-white text-sm outline-none focus:ring-2 focus:ring-[#042f4b]/20"
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#042f4b]/20"
           />
         </div>
 
@@ -690,18 +690,18 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
           <button
             type="button"
             onClick={() => setSortDir((p) => (p === "asc" ? "desc" : "asc"))}
-            className="px-2.5 py-1.5 rounded-xl border bg-white text-sm hover:bg-gray-50"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 hover:bg-slate-50"
             title="Sırala"
           >
             <span className="font-semibold">{sortDir === "asc" ? "A→Z" : "Z→A"}</span>
           </button>
 
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
             <span className="hidden sm:block">Göster:</span>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="px-2.5 py-1.5 rounded-xl border bg-white text-sm outline-none"
+              className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 outline-none"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -718,7 +718,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+            <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="text-left font-semibold px-4 py-3">Firma</th>
                 <th className="text-left font-semibold px-4 py-3">Belge</th>
@@ -747,7 +747,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
                   const hazirlayan = getPreparedBy(d);
 
                   return (
-                    <tr key={id || `${firma}-${tur}-${tarih}`} className="border-t">
+                    <tr key={id || `${firma}-${tur}-${tarih}`} className="border-t border-slate-100 text-sm">
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{firma || "-"}</div>
                         {sgk ? <div className="text-xs text-gray-500">SGK: {sgk}</div> : null}
