@@ -557,7 +557,12 @@ function setFieldValue(field, value) {
   const wasReadOnly = field.readOnly;
   if (wasDisabled) field.disabled = false;
   if (wasReadOnly) field.readOnly = false;
+  clickElement(field);
   field.focus();
+  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Control", ctrlKey: true }));
+  field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a", ctrlKey: true }));
+  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "a", ctrlKey: true }));
+  field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Control", ctrlKey: true }));
   if (field instanceof HTMLInputElement && nativeSetter) {
     nativeSetter.call(field, value);
   } else if (field instanceof HTMLTextAreaElement && nativeTextAreaSetter) {
@@ -567,9 +572,12 @@ function setFieldValue(field, value) {
   }
   field.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: String(value).slice(-1) || "0" }));
   field.dispatchEvent(new KeyboardEvent("keypress", { bubbles: true, key: String(value).slice(-1) || "0" }));
+  field.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "insertText", data: String(value) }));
   field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: String(value) }));
   field.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: String(value).slice(-1) || "0" }));
   field.dispatchEvent(new Event("change", { bubbles: true }));
+  field.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   field.blur();
   if (wasReadOnly) field.readOnly = true;
   if (wasDisabled) field.disabled = true;
@@ -935,16 +943,30 @@ function dispatchRealMouseSequence(element) {
 
 function clickButtonByText(texts) {
   const wanted = texts.map(normalizeSearchText);
+  const wantedAscii = texts.map(asciiSearchText);
   const candidates = visibleElements("button, a, [role='button'], input[type='button'], input[type='submit']").filter(
     (element) => !isDisabledElement(element)
   );
   const button = candidates.find((element) => {
-    const text = normalizeSearchText(element.innerText || element.value || element.getAttribute("aria-label") || "");
-    return wanted.some((item) => text === item || text.includes(item));
+    const raw = element.innerText || element.value || element.getAttribute("aria-label") || "";
+    const text = normalizeSearchText(raw);
+    const ascii = asciiSearchText(raw);
+    return (
+      wanted.some((item) => text === item || text.includes(item)) ||
+      wantedAscii.some((item) => ascii === item || ascii.includes(item))
+    );
   });
   if (!button) return false;
   clickElement(button);
   return true;
+}
+
+function clickForwardButton() {
+  return clickButtonByText(["İleri", "Ileri", "ileri"]);
+}
+
+function clickNextButton() {
+  return clickButtonByText(["İleri", "Ileri", "ileri", "Ä°leri"]);
 }
 
 function clickFirstVisibleByText(text) {
@@ -1230,14 +1252,19 @@ function findValueNearLabel(patterns, gorevTuru = "is_guvenligi_uzmani") {
   return "";
 }
 
-function fillDurationField(duration) {
+async function fillDurationField(duration) {
   const cleanDuration = parseNumberFromText(duration);
   if (!cleanDuration) return false;
 
   const directField = findDurationInput();
   if (directField) {
-    setFieldValue(directField, cleanDuration);
-    return parseNumberFromText(directField.value || directField.textContent || "") === cleanDuration;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      setFieldValue(directField, cleanDuration);
+      await delay(180);
+      const currentValue = parseNumberFromText(directField.value || directField.textContent || "");
+      if (currentValue === cleanDuration) return true;
+    }
+    return false;
   }
   return fillFieldByPatterns(["calisma suresi", "çalışma süresi"], cleanDuration, { allowFallback: false });
 }
@@ -1379,6 +1406,10 @@ async function forceChooseOption(element) {
 }
 
 async function typeIntoOpenDropdownSearch(value) {
+  const dropdownSelectors = "[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel";
+  const openDropdowns = visibleElements(dropdownSelectors).filter((element) => !isDisabledElement(element));
+  if (openDropdowns.length === 0) return false;
+
   const active = document.activeElement;
   const activeContext = active ? normalizeSearchText(fieldContext(active) + " " + elementTextWithValues(active)) : "";
   const activeField =
@@ -1386,12 +1417,17 @@ async function typeIntoOpenDropdownSearch(value) {
     active.matches?.("input[type='text'], input:not([type]), [contenteditable='true']") &&
     isVisibleElement(active) &&
     !isDisabledElement(active) &&
+    openDropdowns.some((dropdown) => dropdown.contains(active)) &&
     !activeContext.includes("calisma suresi") &&
     !activeContext.includes("dakika")
       ? active
       : null;
-  const field = activeField || visibleElements("input[type='text'], input:not([type]), [contenteditable='true']")
+  const dropdownFields = openDropdowns.flatMap((dropdown) =>
+    Array.from(dropdown.querySelectorAll("input[type='text'], input:not([type]), [contenteditable='true']"))
+  );
+  const field = activeField || dropdownFields
     .filter((element) => !isDisabledElement(element))
+    .filter(isVisibleElement)
     .filter((element) => {
       const context = normalizeSearchText(fieldContext(element) + " " + elementTextWithValues(element));
       return !context.includes("calisma suresi") && !context.includes("dakika");
@@ -1399,8 +1435,8 @@ async function typeIntoOpenDropdownSearch(value) {
     .sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
-      const aDropdownScore = a.closest("[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel") ? 0 : 1;
-      const bDropdownScore = b.closest("[role='listbox'], .ant-select-dropdown, .select2-dropdown, .ng-dropdown-panel, .dropdown-menu, .mat-select-panel") ? 0 : 1;
+      const aDropdownScore = a.closest(dropdownSelectors) ? 0 : 1;
+      const bDropdownScore = b.closest(dropdownSelectors) ? 0 : 1;
       return aDropdownScore - bDropdownScore || br.top - ar.top || ar.left - br.left;
     })[0];
   if (!field) return false;
@@ -1486,7 +1522,7 @@ async function clickPartialTimeOption() {
 }
 
 async function selectPartialTimeAssignmentType() {
-  const directOptionTexts = ["kismi sureli", "kismi"];
+  const directOptionTexts = ["Kısmi Süreli", "kismi sureli", "kismi"];
   const directControl = findAssignmentTypeControl();
   if (directControl) {
     const currentValue = normalizeSearchText(elementTextWithValues(directControl));
@@ -1510,7 +1546,7 @@ async function selectPartialTimeAssignmentType() {
     await delay(250);
     if (assignmentTypeLooksPartial()) return true;
   }
-  const optionTexts = ["kismi sureli", "kÄ±smi sÃ¼reli", "kismi", "kÄ±smi"];
+  const optionTexts = ["Kısmi Süreli", "kismi sureli", "kÄ±smi sÃ¼reli", "kismi", "kÄ±smi"];
   const field = findField(["gorevlendirme tipi", "gÃ¶revlendirme tipi", "gorevlendirme"]);
   if (field) {
     const currentValue = normalizeSearchText(elementTextWithValues(field));
@@ -1577,7 +1613,7 @@ async function fillAssignmentDetailsStep(steps) {
   }
   steps.push("GÃ¶revlendirme tipi KÄ±smi SÃ¼reli seÃ§ildi");
 
-  const continued = await waitFor(() => clickButtonByText(["Ä°leri", "Ileri"]), 6000);
+  const continued = await waitFor(() => clickNextButton(), 6000);
   if (!continued) {
     return { ok: false, message: "SÃ¶zleÅŸme bilgileri ekranÄ±nda Ä°leri butonu bulunamadÄ±." };
   }
@@ -1748,6 +1784,14 @@ async function fillPersonStep(job, steps) {
 }
 
 async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
+  const ready = await waitFor(() => isAssignmentDetailsPage(), 12000, 300);
+  if (!ready) {
+    return {
+      ok: false,
+      message: `Sözleşme bilgileri giriş ekranı bulunamadı. Ekran özeti: ${currentPagePreview()}`,
+    };
+  }
+
   const selectedAssignmentType = await waitFor(() => selectPartialTimeAssignmentType(), 7000, 300);
   if (!selectedAssignmentType) {
     return {
@@ -1783,7 +1827,7 @@ async function fillDurationStep(steps, gorevTuru = "is_guvenligi_uzmani") {
     };
   }
 
-  if (!fillDurationField(duration)) {
+  if (!(await fillDurationField(duration))) {
     return { ok: false, message: "Çalışma süresi alanı bulunamadı." };
   }
 

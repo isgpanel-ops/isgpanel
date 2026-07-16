@@ -635,11 +635,15 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-6 font-sans text-slate-800">
-      <h1 className="text-2xl font-bold text-[#042f4b] tracking-tight mb-2">Belgeler (Admin)</h1>
+    <div className="p-6">
+      <div className="mx-auto max-w-7xl space-y-4 font-sans text-slate-800">
+        <div>
+          <h2 className="text-xl font-bold text-[#042f4b] mb-1">Belgeler (Admin)</h2>
+          <p className="text-slate-500 text-xs">Belgeleri görüntüleyin, arşivleyin ve indirin.</p>
+        </div>
 
       {/* Sekmeler */}
-      <div className="flex gap-6 border-b border-slate-200 mb-4 text-sm overflow-x-auto whitespace-nowrap pb-1">
+      <div className="flex gap-6 border-b border-slate-200 text-xs overflow-x-auto whitespace-nowrap pb-1">
         {Object.keys(TAB_LABELS).map((tab) => (
           <button
             key={tab}
@@ -657,8 +661,8 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
       </div>
 
       {/* Kontrol barı */}
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <div className="relative w-full max-w-[420px]">
+      <div className="flex items-center justify-between gap-2">
+        <div className="relative w-72 max-w-full">
           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path
@@ -682,7 +686,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder="Firma / SGK / Hazırlayan ara..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#042f4b]/20"
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#042f4b]/20"
           />
         </div>
 
@@ -690,18 +694,18 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
           <button
             type="button"
             onClick={() => setSortDir((p) => (p === "asc" ? "desc" : "asc"))}
-            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 hover:bg-slate-50"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 hover:bg-slate-50"
             title="Sırala"
           >
             <span className="font-semibold">{sortDir === "asc" ? "A→Z" : "Z→A"}</span>
           </button>
 
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-xs text-slate-600">
             <span className="hidden sm:block">Göster:</span>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 outline-none"
+              className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 outline-none"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -711,28 +715,28 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
         </div>
       </div>
 
-      <CardBox className="p-0 overflow-hidden">
+      <CardBox className="p-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
         <div className="p-4 border-b">
           <SectionTitle title={TAB_LABELS[activeTab]} subtitle={loading ? "Yükleniyor..." : `${total} belge`} />
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="min-w-full text-xs">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="text-left font-semibold px-4 py-3">Firma</th>
-                <th className="text-left font-semibold px-4 py-3">Belge</th>
-                <th className="text-left font-semibold px-4 py-3">Tarih</th>
-                <th className="text-left font-semibold px-4 py-3">Hazırlayan</th>
-                <th className="text-left font-semibold px-4 py-3">Durum</th>
-                <th className="text-right font-semibold px-4 py-3">İşlemler</th>
+                <th className="text-left font-semibold px-3 py-2">Firma</th>
+                <th className="text-left font-semibold px-3 py-2">Belge</th>
+                <th className="text-left font-semibold px-3 py-2">Tarih</th>
+                <th className="text-left font-semibold px-3 py-2">Hazırlayan</th>
+                <th className="text-left font-semibold px-3 py-2">Durum</th>
+                <th className="text-right font-semibold px-3 py-2">İşlemler</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {paged.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-gray-500" colSpan={6}>
+                  <td className="px-3 py-6 text-gray-500 text-center" colSpan={6}>
                     {loading ? "Yükleniyor..." : "Kayıt bulunamadı."}
                   </td>
                 </tr>
@@ -747,23 +751,23 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
                   const hazirlayan = getPreparedBy(d);
 
                   return (
-                    <tr key={id || `${firma}-${tur}-${tarih}`} className="border-t border-slate-100 text-sm">
-                      <td className="px-4 py-3">
+                    <tr key={id || `${firma}-${tur}-${tarih}`} className="hover:bg-slate-50">
+                      <td className="px-3 py-1.5">
                         <div className="font-medium text-gray-900">{firma || "-"}</div>
                         {sgk ? <div className="text-xs text-gray-500">SGK: {sgk}</div> : null}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
                           {tur}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3 text-gray-700">{tarih || "-"}</td>
+                      <td className="px-3 py-1.5 text-gray-700">{tarih || "-"}</td>
 
-                      <td className="px-4 py-3 text-gray-700">{hazirlayan || "-"}</td>
+                      <td className="px-3 py-1.5 text-gray-700">{hazirlayan || "-"}</td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         {durum ? (
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
@@ -779,7 +783,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
                         )}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
@@ -839,7 +843,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
 
         {/* Sayfalama */}
         {totalPages > 1 ? (
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-white text-sm">
+          <div className="flex items-center justify-between px-4 py-2 border-t bg-slate-50 text-[11px] text-slate-600">
             <div className="text-gray-600">Sayfa {pageSafe} / {totalPages}</div>
 
             <div className="flex items-center gap-2">
@@ -880,6 +884,7 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
         onConfirm={confirmData.onConfirm}
         onCancel={confirmData.onCancel}
       />
+      </div>
     </div>
   );
 }
