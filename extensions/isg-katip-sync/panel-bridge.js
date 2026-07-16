@@ -13,6 +13,7 @@ window.addEventListener("message", (event) => {
       apiBase: message.apiBase,
       token: message.token,
       gorevTuru: message.gorevTuru,
+      firmaId: message.firmaId,
     },
     (response) => {
       const runtimeError = chrome.runtime.lastError?.message;

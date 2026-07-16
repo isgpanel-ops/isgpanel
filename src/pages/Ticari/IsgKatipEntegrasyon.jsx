@@ -135,7 +135,7 @@ function requestIsgKatipExtensionSync({ apiBase, token, gorevTuru }) {
   });
 }
 
-function requestIsgKatipExtensionJobRun({ apiBase, token, gorevTuru }) {
+function requestIsgKatipExtensionJobRun({ apiBase, token, gorevTuru, firmaId }) {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
       reject(new Error("Tarayıcı ortamı bulunamadı."));
@@ -178,6 +178,7 @@ function requestIsgKatipExtensionJobRun({ apiBase, token, gorevTuru }) {
         apiBase: String(apiBase || "").replace(/\/$/, ""),
         token,
         gorevTuru,
+        firmaId,
       },
       window.location.origin
     );
@@ -390,7 +391,7 @@ export default function IsgKatipEntegrasyon() {
     }
   };
 
-  const runQueuedExtensionJob = async () => {
+  const runQueuedExtensionJob = async (options = {}) => {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
     if (!token) return;
     try {
@@ -398,6 +399,7 @@ export default function IsgKatipEntegrasyon() {
         apiBase: API_BASE,
         token,
         gorevTuru,
+        firmaId: options.firmaId,
       });
       if (result?.job) await loadOverview();
     } catch (err) {
@@ -491,7 +493,7 @@ export default function IsgKatipEntegrasyon() {
       } else {
         await loadOverview();
       }
-      await runQueuedExtensionJob();
+      await runQueuedExtensionJob({ firmaId: isBulkMode ? undefined : target.firmaId });
     } catch (err) {
       setError(err?.response?.data?.message || "Atama süreci başlatılamadı.");
     } finally {

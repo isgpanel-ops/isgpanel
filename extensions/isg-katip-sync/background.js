@@ -116,7 +116,7 @@ async function panelFetchJson(apiBase, token, path, options = {}) {
   return data;
 }
 
-async function runNextIsgKatipJob({ apiBase, token, gorevTuru }) {
+async function runNextIsgKatipJob({ apiBase, token, gorevTuru, firmaId }) {
   const normalizedApiBase = normalizeApiBase(apiBase);
   if (!normalizedApiBase || !token) {
     throw new Error("API adresi ve panel tokeni zorunlu.");
@@ -127,7 +127,10 @@ async function runNextIsgKatipJob({ apiBase, token, gorevTuru }) {
     throw new Error("Acik ISG-KATIP sekmesi bulunamadi. ISG-KATIP'e girip tekrar deneyin.");
   }
 
-  const query = gorevTuru ? `?gorevTuru=${encodeURIComponent(gorevTuru)}` : "";
+  const params = new URLSearchParams();
+  if (gorevTuru) params.set("gorevTuru", gorevTuru);
+  if (firmaId) params.set("firmaId", firmaId);
+  const query = params.toString() ? `?${params.toString()}` : "";
   const nextData = await panelFetchJson(normalizedApiBase, token, `/api/isg-katip/jobs/next${query}`);
   if (!nextData?.job?.id) {
     return { message: "Bekleyen eklenti gorevi bulunamadi.", job: null };

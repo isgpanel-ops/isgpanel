@@ -746,11 +746,16 @@ router.get("/jobs/next", async (req, res) => {
     if (!orgId) return;
 
     const gorevTuru = req.query?.gorevTuru ? normalizeGorevTuru(req.query.gorevTuru) : null;
+    const firmaId = req.query?.firmaId ? String(req.query.firmaId) : "";
+    if (firmaId && !mongoose.Types.ObjectId.isValid(firmaId)) {
+      return res.status(400).json({ message: "Firma bilgisi gecersiz" });
+    }
     const filter = {
       organization: orgId,
       status: { $in: ["pending", "failed"] },
       operation: "create_assignment",
       ...(gorevTuru ? { gorevTuru } : {}),
+      ...(firmaId ? { firmaId } : {}),
     };
 
     const job = await IsgKatipJob.findOne(filter).sort({ updatedAt: 1 }).lean();

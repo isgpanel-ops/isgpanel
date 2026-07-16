@@ -1158,6 +1158,62 @@ async function clickDropdownOptionByText(texts) {
   return true;
 }
 
+async function clickPartialTimeOption() {
+  await delay(350);
+  const optionSelectors = [
+    "[role='option']",
+    "[role='menuitem']",
+    ".ant-select-item-option",
+    ".select2-results__option",
+    ".ng-option",
+    ".dropdown-item",
+    ".mat-option",
+    "mat-option",
+    "li",
+    "button",
+    "a",
+  ].join(", ");
+
+  const exactOptions = visibleElements(optionSelectors)
+    .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const text = asciiSearchText(element.innerText || element.textContent || element.value || "");
+      return text.includes("kismi") && !text.includes("tam");
+    })
+    .sort((a, b) => {
+      const aText = cleanText(a.innerText || a.textContent || a.value || "");
+      const bText = cleanText(b.innerText || b.textContent || b.value || "");
+      return aText.length - bText.length || a.children.length - b.children.length;
+    });
+
+  if (exactOptions[0]) {
+    clickElement(exactOptions[0]);
+    await delay(250);
+    return true;
+  }
+
+  const looseOptions = visibleElements("div, span")
+    .filter((element) => !isDisabledElement(element))
+    .filter((element) => {
+      const rawText = cleanText(element.innerText || element.textContent || element.value || "");
+      const text = asciiSearchText(rawText);
+      return rawText.length <= 40 && text.includes("kismi") && !text.includes("tam");
+    })
+    .sort((a, b) => {
+      const aText = cleanText(a.innerText || a.textContent || a.value || "");
+      const bText = cleanText(b.innerText || b.textContent || b.value || "");
+      return aText.length - bText.length || a.children.length - b.children.length;
+    });
+
+  if (looseOptions[0]) {
+    clickElement(looseOptions[0]);
+    await delay(250);
+    return true;
+  }
+
+  return false;
+}
+
 async function selectPartialTimeAssignmentType() {
   const optionTexts = ["kismi sureli", "kÄ±smi sÃ¼reli", "kismi", "kÄ±smi"];
   const field = findField(["gorevlendirme tipi", "gÃ¶revlendirme tipi", "gorevlendirme"]);
@@ -1174,9 +1230,11 @@ async function selectPartialTimeAssignmentType() {
       field.closest(".form-group, .form-line, .ant-form-item, .row") ||
       field;
     clickElement(control);
+    if (await clickPartialTimeOption()) return true;
     if (await clickDropdownOptionByText(optionTexts)) return true;
 
     clickElement(field);
+    if (await clickPartialTimeOption()) return true;
     if (await clickDropdownOptionByText(optionTexts)) return true;
   }
 
@@ -1194,6 +1252,7 @@ async function selectPartialTimeAssignmentType() {
     );
   if (dropdown) {
     clickElement(dropdown);
+    if (await clickPartialTimeOption()) return true;
     if (await clickDropdownOptionByText(optionTexts)) return true;
   }
 
