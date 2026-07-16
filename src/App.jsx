@@ -47,6 +47,7 @@ import TicariBelgeler from "./pages/Ticari/TicariBelgeler";
 import AdminFirmalar from "./pages/Ticari/AdminFirmalar";
 import AdminAtamaBekleyen from "./pages/Ticari/AdminAtamaBekleyen";
 import IsgKatipEntegrasyon from "./pages/Ticari/IsgKatipEntegrasyon";
+import IsgFaturaEntegrasyon from "./pages/Ticari/IsgFaturaEntegrasyon";
 import TicariUserPanel from "./pages/Ticari/TicariUserPanel";
 import UserFirmalarim from "./pages/Ticari/UserFirmalarim";
 import TicariKullaniciYonetimi from "./pages/Ticari/TicariKullaniciYonetimi";
@@ -272,6 +273,7 @@ function App() {
             <Route path="firmalar" element={<AdminFirmalar />} />
             <Route path="atama-bekleyen" element={<AdminAtamaBekleyen />} />
             <Route path="atama-yonetimi" element={<IsgKatipEntegrasyon />} />
+            <Route path="isg-fatura-entegrasyonu" element={<IsgFaturaEntegrasyon />} />
             <Route path="kullanicilar" element={<TicariKullaniciYonetimi />} />
             <Route path="kurumsal-kimlik" element={<TicariKurumsalKimlik />} />
             <Route path="guvenlik" element={<TicariGuvenlikGiris />} />
