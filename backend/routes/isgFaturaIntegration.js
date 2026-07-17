@@ -281,20 +281,24 @@ router.get("/firms", integrationAuth, async (req, res) => {
   try {
     const mode = req.query?.mode === "count" ? "count" : "initial";
     const firms = await Firma.find({ organization: req.integrationConnection.organization })
-      .select("firmaAdi adres tehlike calisanSayisi durum updatedAt")
+      .select("firmaAdi sgkNo sgkSicilNo adres il tehlike calisanSayisi durum updatedAt")
       .sort({ firmaAdi: 1 })
       .lean();
     const data = firms.map((firm) =>
       mode === "count"
         ? {
             panelFirmId: String(firm._id),
+            firmaAdi: firm.firmaAdi || "",
+            sgkSicilNo: firm.sgkNo || firm.sgkSicilNo || "",
             calisanSayisi: Number.isFinite(Number(firm.calisanSayisi)) ? Number(firm.calisanSayisi) : 0,
             updatedAt: firm.updatedAt,
           }
         : {
             panelFirmId: String(firm._id),
             firmaAdi: firm.firmaAdi || "",
+            sgkSicilNo: firm.sgkNo || firm.sgkSicilNo || "",
             adres: firm.adres || "",
+            il: firm.il || "",
             tehlike: firm.tehlike || "",
             calisanSayisi: Number.isFinite(Number(firm.calisanSayisi)) ? Number(firm.calisanSayisi) : 0,
             durum: firm.durum || "Aktif",
