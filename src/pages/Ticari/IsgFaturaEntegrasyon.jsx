@@ -211,7 +211,7 @@ export default function IsgFaturaEntegrasyon() {
                       <span className="inline-flex items-center gap-2 text-xs text-slate-300">
                         <Clock3 className="h-4 w-4" /> {remaining > 0 ? `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")} içinde geçerli` : "Yeni kod oluşturun"}
                       </span>
-                      <button onClick={createCode} disabled={actionLoading} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                      <button onClick={createCode} disabled={actionLoading} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                         <RefreshCw className={`h-4 w-4 ${actionLoading ? "animate-spin" : ""}`} /> {pairing ? "Yeni Kod" : "Kod Oluştur"}
                       </button>
                     </div>
@@ -228,7 +228,7 @@ export default function IsgFaturaEntegrasyon() {
             <div className="mt-5 space-y-3">
               {[
                 [Building2, "İlk firma aktarımı", "Firma adı, adres ve tehlike sınıfı"],
-                [Users, "Güncel çalışan sayısı", "İlk aktarım ve düzenli senkronizasyon"],
+                [Users, "Güncel çalışan sayısı", "Atama Yönetimi > Uzman bölümündeki tüm firmalar"],
                 [ShieldCheck, "Salt okunur erişim", "İSG Panel verilerini değiştiremez veya silemez"],
               ].map(([Icon, title, text]) => (
                 <div key={title} className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">

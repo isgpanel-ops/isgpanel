@@ -8,7 +8,6 @@ import {
   FileCheck2,
   Users,
   CreditCard,
-  ArrowRightLeft,
 } from "lucide-react";
 
 function readTokenFlags() {
@@ -117,11 +116,6 @@ export default function AdminSidebar({
       name: "Atama Yönetimi",
       path: "/ticari/admin/atama-yonetimi",
       icon: FileCheck2,
-    },
-    {
-      name: "İSG Fatura Entegrasyonu",
-      path: "/ticari/admin/isg-fatura-entegrasyonu",
-      icon: ArrowRightLeft,
     },
     {
       name: "Kullanıcı Listesi",

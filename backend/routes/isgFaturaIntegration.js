@@ -309,6 +309,7 @@ router.get("/firms", integrationAuth, async (req, res) => {
     return res.json({
       ok: true,
       mode,
+      source: "atama_yonetimi_uzman_tum_firmalar",
       organization: {
         id: String(req.integrationOrganization._id),
         name: req.integrationOrganization.name,
