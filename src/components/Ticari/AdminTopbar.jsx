@@ -426,7 +426,7 @@ export default function AdminTopbar({ setMobileOpen }) {
                   }}
                   className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-700"
                 >
-                  İSG Fatura Entegrasyonu
+                  Entegrasyonlar
                 </button>
 
                 <button
@@ -629,7 +629,7 @@ export default function AdminTopbar({ setMobileOpen }) {
               }}
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
             >
-              İSG Fatura Entegrasyonu
+              Entegrasyonlar
             </li>
 
             <li
