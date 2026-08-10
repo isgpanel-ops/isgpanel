@@ -539,11 +539,11 @@ async function placeSignatures(pdfPath, data) {
       if (!image) continue;
 
       drawImageCentered(page, image, {
-        x: centerX - 38,
+        x: centerX - 32,
         y: imageY,
-        width: 76,
-        height: 24,
-      }, 76, 22);
+        width: 64,
+        height: 20,
+      }, 64, 18);
     }
   });
 

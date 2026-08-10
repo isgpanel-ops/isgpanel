@@ -202,7 +202,7 @@ async function placeSignatures(pdfPath, data) {
     const box = rowBoxes[role];
     if (!image || !box) continue;
 
-    drawImageCentered(page, image, box, 90, 26);
+    drawImageCentered(page, image, box, 102, 30);
   }
 
   // İşveren imzasını ayrıca alttaki imza alanına bas
