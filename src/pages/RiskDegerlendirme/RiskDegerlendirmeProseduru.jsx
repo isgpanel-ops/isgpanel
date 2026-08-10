@@ -988,7 +988,7 @@ const handleHekimBlur = (e) => {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "#1E40AF";
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.6;
 
     if (!signatureDrawingEmpty && existingData && existingData !== "data:,") {
       const img = new Image();
@@ -1097,6 +1097,32 @@ const handleHekimBlur = (e) => {
     setActiveSignatureType("imza");
     setSignatureConsent(false);
     setSignatureDrawingEmpty(true);
+  };
+
+  const clearSavedSignature = (roleKey, type) => {
+    const role = ROLE_DEFS.find((item) => item.key === roleKey);
+    const roleLabel = role?.label || "Kişi";
+    const typeLabel = type === "imza" ? "imza" : "paraf";
+
+    setConfirmData({
+      title: "İmza / Paraf Sil",
+      message: `${roleLabel} için kayıtlı ${typeLabel} silinsin mi?\n\nKalıcı olması için alttaki Kaydet butonuna basınız.`,
+      variant: "danger",
+      confirmText: "Sil",
+      cancelText: "Vazgeç",
+      onConfirm: () => {
+        setSignatureState((prev) => ({
+          ...prev,
+          [roleKey]: {
+            ...(prev?.[roleKey] || { imza: null, paraf: null }),
+            [type]: null,
+          },
+        }));
+        setConfirmOpen(false);
+      },
+      onCancel: () => setConfirmOpen(false),
+    });
+    setConfirmOpen(true);
   };
 
   const saveSignatureDrawing = async () => {
@@ -1905,18 +1931,36 @@ createdByUserId: user?._id || user?.id,
                             {currentName || "Kişi adı girilmedi"}
                           </div>
 
-                          <div className="mt-1 flex flex-wrap gap-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-medium ${statusBadgeClass(imzaStatus)}`}
                             >
                               İmza: {imzaStatus}
                             </span>
+                            {roleRecord.imza?.dataUrl && (
+                              <button
+                                type="button"
+                                onClick={() => clearSavedSignature(role.key, "imza")}
+                                className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-red-600 hover:bg-red-50"
+                              >
+                                Sil
+                              </button>
+                            )}
 
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-medium ${statusBadgeClass(parafStatus)}`}
                             >
                               Paraf: {parafStatus}
                             </span>
+                            {roleRecord.paraf?.dataUrl && (
+                              <button
+                                type="button"
+                                onClick={() => clearSavedSignature(role.key, "paraf")}
+                                className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-red-600 hover:bg-red-50"
+                              >
+                                Sil
+                              </button>
+                            )}
                           </div>
                         </div>
 
