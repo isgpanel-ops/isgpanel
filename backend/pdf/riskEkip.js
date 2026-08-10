@@ -163,6 +163,23 @@ async function placeSignatures(pdfPath, data) {
     };
   }
 
+  function drawImageCentered(page, image, box, maxWidth, maxHeight) {
+    if (!image || !box) return;
+
+    const sourceWidth = image.width || maxWidth;
+    const sourceHeight = image.height || maxHeight;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+    const width = sourceWidth * scale;
+    const height = sourceHeight * scale;
+
+    page.drawImage(image, {
+      x: box.x + (box.width - width) / 2,
+      y: box.y + (box.height - height) / 2,
+      width,
+      height,
+    });
+  }
+
   const page = pages[0];
 
   /*
@@ -185,23 +202,18 @@ async function placeSignatures(pdfPath, data) {
     const box = rowBoxes[role];
     if (!image || !box) continue;
 
-    page.drawImage(image, {
-      x: box.x,
-      y: box.y,
-      width: box.width,
-      height: box.height,
-    });
+    drawImageCentered(page, image, box, 90, 26);
   }
 
   // İşveren imzasını ayrıca alttaki imza alanına bas
   const isverenAltImza = images?.isveren?.imza;
   if (isverenAltImza) {
-    page.drawImage(isverenAltImza, {
+    drawImageCentered(page, isverenAltImza, {
       x: 355,
       y: 102,
       width: 170,
       height: 72,
-    });
+    }, 120, 44);
   }
 
   const pdfBytes = await pdfDoc.save();

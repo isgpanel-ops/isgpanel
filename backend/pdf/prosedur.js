@@ -473,6 +473,23 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
     }
   }
 
+  function drawImageCentered(page, image, box, maxWidth, maxHeight) {
+    if (!image || !box) return;
+
+    const sourceWidth = image.width || maxWidth;
+    const sourceHeight = image.height || maxHeight;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+    const width = sourceWidth * scale;
+    const height = sourceHeight * scale;
+
+    page.drawImage(image, {
+      x: box.x + (box.width - width) / 2,
+      y: box.y + (box.height - height) / 2,
+      width,
+      height,
+    });
+  }
+
   const roles = ["isveren", "uzman", "hekim", "temsilci", "destek", "bilgi"];
 
   const roleImages = {};
@@ -500,23 +517,17 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
     for (const role of roles) {
       let image = null;
-      let width = 0;
-      let height = 0;
       let imageY = 0;
       let stampBaseY = 0;
 
       if (pageIndex === 1) {
         image = roleImages[role]?.imza;
-        width = 135;
-        height = 54;
-        imageY = 5;
+        imageY = 7;
         // Kaşe isim satırının hemen altına gelsin diye yukarı aldık
         stampBaseY =30;
       } else {
         image = roleImages[role]?.paraf;
-        width = 135;
-        height = 54;
-        imageY = 5;
+        imageY = 8;
         stampBaseY = 30;
       }
 
@@ -532,14 +543,12 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
       if (!image) continue;
 
-      const x = centerX - width / 2;
-
-      page.drawImage(image, {
-        x,
+      drawImageCentered(page, image, {
+        x: centerX - 38,
         y: imageY,
-        width,
-        height,
-      });
+        width: 76,
+        height: 24,
+      }, 76, 22);
     }
   });
 

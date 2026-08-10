@@ -1025,7 +1025,7 @@ const resizeCanvas = useCallback(() => {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#1E40AF";
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2.6;
   ctx.clearRect(0, 0, rect.width, rect.height);
 
   if (oldData) {
