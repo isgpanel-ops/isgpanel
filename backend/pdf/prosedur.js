@@ -511,6 +511,13 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
   const uzmanStamp = buildUzmanStampData(data);
   const hekimStamp = buildHekimStampData(data);
+  const signatureBox = {
+    width: 58,
+    height: 20,
+    maxWidth: 54,
+    maxHeight: 15,
+    y: 17,
+  };
 
   pages.forEach((page, pageIndex) => {
     if (pageIndex === 0) return;
@@ -522,12 +529,12 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
 
       if (pageIndex === 1) {
         image = roleImages[role]?.imza;
-        imageY = 7;
+        imageY = signatureBox.y;
         // Kaşe isim satırının hemen altına gelsin diye yukarı aldık
-        stampBaseY =30;
+        stampBaseY = 30;
       } else {
         image = roleImages[role]?.paraf;
-        imageY = 8;
+        imageY = signatureBox.y;
         stampBaseY = 30;
       }
 
@@ -544,11 +551,11 @@ const boldFont = await embedBoldFont(pdfDoc, fontkit);
       if (!image) continue;
 
       drawImageCentered(page, image, {
-        x: centerX - 32,
+        x: centerX - signatureBox.width / 2,
         y: imageY,
-        width: 64,
-        height: 20,
-      }, 64, 18);
+        width: signatureBox.width,
+        height: signatureBox.height,
+      }, signatureBox.maxWidth, signatureBox.maxHeight);
     }
   });
 
