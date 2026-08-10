@@ -508,11 +508,11 @@ async function placeSignatures(pdfPath, data) {
   const uzmanStamp = buildUzmanStampData(data);
   const hekimStamp = buildHekimStampData(data);
   const signatureBox = {
-    width: 58,
-    height: 20,
-    maxWidth: 54,
-    maxHeight: 15,
-    y: 17,
+    width: 78,
+    height: 26,
+    maxWidth: 74,
+    maxHeight: 22,
+    y: 13,
   };
 
   pages.forEach((page, pageIndex) => {
