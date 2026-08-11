@@ -1069,7 +1069,12 @@ const [draftSavedAt, setDraftSavedAt] = useState(null);
 const [savingDraft, setSavingDraft] = useState(false);
 const [loadingDraft, setLoadingDraft] = useState(false);
 const [savingDoc, setSavingDoc] = useState(false);
+const [pdfProgress, setPdfProgress] = useState({ active: false, value: 0, label: "" });
 const saveLockRef = useRef(false);
+const autoSaveTimerRef = useRef(null);
+const autoSaveRequestRef = useRef(0);
+const draftLoadedFirmRef = useRef(null);
+const pdfProgressTimeoutRef = useRef(null);
 const DOCS_SYNC_KEY = "docs:lastChangeAt";
 
 function getFirmIdSafe(firm) {
@@ -1266,6 +1271,7 @@ useEffect(() => {
   const firmIdSafe = getFirmIdSafe(selectedFirm);
 
   if (!firmIdSafe) {
+    draftLoadedFirmRef.current = null;
     setRows([]);
     setDraftExists(false);
     setDraftSavedAt(null);
@@ -1279,6 +1285,7 @@ useEffect(() => {
 
   const token = getAuthTokenSafe();
   if (!token) {
+    draftLoadedFirmRef.current = null;
     setRows([]);
     setDraftExists(false);
     setDraftSavedAt(null);
@@ -1293,6 +1300,7 @@ useEffect(() => {
   let cancelled = false;
 
   const loadDraft = async () => {
+    draftLoadedFirmRef.current = null;
     setLoadingDraft(true);
 
     try {
@@ -1315,6 +1323,7 @@ useEffect(() => {
         setPageNo("");
         setRowStart("");
         setPageNoLocked(false);
+        draftLoadedFirmRef.current = String(firmIdSafe);
         return;
       }
 
@@ -1336,6 +1345,7 @@ useEffect(() => {
       setPageNoLocked(!!payload?.pageNoLocked);
       setDraftExists(true);
       setDraftSavedAt(payload?.savedAt || saved?.updatedAt || null);
+      draftLoadedFirmRef.current = String(firmIdSafe);
     } catch (e) {
       if (!cancelled) {
         console.error("Risk taslağı okunamadı:", e);
@@ -1409,6 +1419,7 @@ useEffect(() => {
 
     setDraftExists(true);
     setDraftSavedAt(saved?.payload?.savedAt || payload.savedAt);
+    draftLoadedFirmRef.current = String(firmIdSafe);
 
     try {
       localStorage.setItem(DOCS_SYNC_KEY, String(Date.now()));
@@ -1454,6 +1465,7 @@ useEffect(() => {
       setPageNoLocked(!!payload?.pageNoLocked);
       setDraftExists(true);
       setDraftSavedAt(payload?.savedAt || saved?.updatedAt || null);
+      draftLoadedFirmRef.current = String(firmIdSafe);
     } catch (e) {
       console.error("Risk taslağı yeniden yüklenemedi:", e);
     }
@@ -1474,6 +1486,89 @@ useEffect(() => {
     window.removeEventListener("riskDraftUpdated", onFocus);
   };
 }, [selectedFirm, API_BASE]);
+
+useEffect(() => {
+  return () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (pdfProgressTimeoutRef.current) clearTimeout(pdfProgressTimeoutRef.current);
+  };
+}, []);
+
+useEffect(() => {
+  const firmIdSafe = getFirmIdSafe(selectedFirm);
+  const token = getAuthTokenSafe();
+
+  if (!firmIdSafe || !token) return;
+  if (loadingDraft || savingDraft || savingDoc) return;
+  if (draftLoadedFirmRef.current !== String(firmIdSafe)) return;
+  if (!Array.isArray(rows)) return;
+
+  if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+  const requestId = autoSaveRequestRef.current + 1;
+  autoSaveRequestRef.current = requestId;
+
+  autoSaveTimerRef.current = setTimeout(async () => {
+    try {
+      const payload = buildDraftPayload({
+        rows,
+        revNo,
+        revDate,
+        pageNo,
+        rowStart,
+        pageNoLocked,
+      });
+
+      const res = await fetch(`${API_BASE}/risk-assessments/draft/${firmIdSafe}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firmaId: String(firmIdSafe),
+          firmaAdi: selectedFirm?.firmaAdi || "",
+          payload,
+        }),
+      });
+
+      if (!res.ok || autoSaveRequestRef.current !== requestId) return;
+
+      let saved = null;
+      try {
+        saved = await res.json();
+      } catch {
+        saved = null;
+      }
+
+      setDraftExists(true);
+      setDraftSavedAt(saved?.payload?.savedAt || payload.savedAt);
+
+      try {
+        localStorage.setItem(DOCS_SYNC_KEY, String(Date.now()));
+        window.dispatchEvent(new Event("documentsUpdated"));
+      } catch {}
+    } catch (e) {
+      console.warn("Risk otomatik taslak kaydı yapılamadı:", e);
+    }
+  }, 900);
+
+  return () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+  };
+}, [
+  rows,
+  revNo,
+  revDate,
+  pageNo,
+  rowStart,
+  pageNoLocked,
+  selectedFirm,
+  API_BASE,
+  loadingDraft,
+  savingDraft,
+  savingDoc,
+]);
 
   /* Pop-up state’leri */
   const [mdOpen, setMdOpen] = useState(false);
@@ -1577,85 +1672,101 @@ useEffect(() => {
   };
 
   /* Kaydet – Mevcut Durum */
-  const saveMD = () => {
-    const combined = [...mdSelected, ...(mdManual.trim() ? [mdManual.trim()] : [])];
-    if (combined.length === 0) return;
+  const applyMDRows = (selected, manual, applyAll = mdApplyAll) => {
+    const combined = [...selected, ...(manual.trim() ? [manual.trim()] : [])];
 
     setRows((prev) => {
       const clone = prev.map((x) => ({ ...x }));
       const apply = (r) => {
         r.mevcutDurum = combined;
       };
-      if (mdApplyAll) clone.forEach(apply);
+      if (applyAll) clone.forEach(apply);
       else if (clone[aktifIndex]) apply(clone[aktifIndex]);
       return clone;
     });
+  };
+
+  const saveMD = () => {
+    applyMDRows(mdSelected, mdManual, mdApplyAll);
     setMdOpen(false);
   };
 
   /* Kaydet – Sorumlu */
-  const toggleSR = (name, checked) => {
-    setSrList((prev) => {
-      const s = new Set(prev);
-      if (checked) s.add(name);
-      else s.delete(name);
-      return [...s];
-    });
-  };
-  const saveSR = () => {
+  const applySRRows = (list, applyAll = srApplyAll) => {
     setRows((prev) => {
       const clone = prev.map((x) => ({ ...x }));
-      if (srApplyAll) clone.forEach((r) => (r.sorumlu = [...srList]));
-      else if (clone[aktifIndex]) clone[aktifIndex].sorumlu = [...srList];
+      if (applyAll) clone.forEach((r) => (r.sorumlu = [...list]));
+      else if (clone[aktifIndex]) clone[aktifIndex].sorumlu = [...list];
       return clone;
     });
+  };
+
+  const toggleSR = (name, checked) => {
+    const s = new Set(srList);
+    if (checked) s.add(name);
+    else s.delete(name);
+    const next = [...s];
+    setSrList(next);
+    applySRRows(next, srApplyAll);
+  };
+  const saveSR = () => {
+    applySRRows(srList, srApplyAll);
     setSrOpen(false);
   };
 
   /* Kaydet – Termin */
-  const saveTM = () => {
-    if (!tmDeger) return;
+  const applyTMRows = (value, applyAll = tmApplyAll) => {
     setRows((prev) => {
       const clone = prev.map((x) => ({ ...x }));
-      if (tmApplyAll) clone.forEach((r) => (r.termin = tmDeger));
-      else if (clone[aktifIndex]) clone[aktifIndex].termin = tmDeger;
+      if (applyAll) clone.forEach((r) => (r.termin = value));
+      else if (clone[aktifIndex]) clone[aktifIndex].termin = value;
       return clone;
     });
+  };
+
+  const saveTM = () => {
+    applyTMRows(tmDeger, tmApplyAll);
     setTmOpen(false);
   };
 
   /* Kaydet – Etki Alanı */
-  const toggleEA = (name, checked) => {
-    setEaList((prev) => {
-      const s = new Set(prev);
-      if (checked) s.add(name);
-      else s.delete(name);
-      return [...s];
+  const applyEARows = (list, applyAll = eaApplyAll) => {
+    setRows((prev) => {
+      const clone = prev.map((x) => ({ ...x }));
+      if (applyAll) clone.forEach((r) => (r.etkiAlani = [...list]));
+      else if (clone[aktifIndex]) clone[aktifIndex].etkiAlani = [...list];
+      return clone;
     });
+  };
+
+  const toggleEA = (name, checked) => {
+    const s = new Set(eaList);
+    if (checked) s.add(name);
+    else s.delete(name);
+    const next = [...s];
+    setEaList(next);
+    applyEARows(next, eaApplyAll);
   };
   const addEAOther = () => {
     const v = (eaNew || "").trim();
     if (!v) return;
-    setEaList((prev) => (prev.includes(v) ? prev : [...prev, v]));
+    const next = eaList.includes(v) ? eaList : [...eaList, v];
+    setEaList(next);
+    applyEARows(next, eaApplyAll);
     setEaNew("");
   };
   const saveEA = () => {
-    setRows((prev) => {
-      const clone = prev.map((x) => ({ ...x }));
-      if (eaApplyAll) clone.forEach((r) => (r.etkiAlani = [...eaList]));
-      else if (clone[aktifIndex]) clone[aktifIndex].etkiAlani = [...eaList];
-      return clone;
-    });
+    applyEARows(eaList, eaApplyAll);
     setEaOpen(false);
   };
 
   /* Kaydet – Son Değerlendirme */
-  const saveSD = () => {
+  const applySDRows = (olasilik, siddet, applyAll = sdApplyAll) => {
     setRows((prev) => {
       const clone = prev.map((x) => ({ ...x }));
       const apply = (r) => {
-        const vOl = sdOl === "" || sdOl === null ? "" : Number(sdOl);
-        const vSd = sdSd === "" || sdSd === null ? "" : Number(sdSd);
+        const vOl = olasilik === "" || olasilik === null ? "" : Number(olasilik);
+        const vSd = siddet === "" || siddet === null ? "" : Number(siddet);
         r.olasilikSon = vOl === "" || Number.isNaN(vOl) ? "" : vOl;
         r.siddetSon = vSd === "" || Number.isNaN(vSd) ? "" : vSd;
         if (r.olasilikSon === "" || r.siddetSon === "" || Number.isNaN(r.olasilikSon) || Number.isNaN(r.siddetSon)) {
@@ -1664,10 +1775,14 @@ useEffect(() => {
           r.rdsSon = Number(r.olasilikSon) * Number(r.siddetSon);
         }
       };
-      if (sdApplyAll) clone.forEach(apply);
+      if (applyAll) clone.forEach(apply);
       else if (clone[aktifIndex]) apply(clone[aktifIndex]);
       return clone;
     });
+  };
+
+  const saveSD = () => {
+    applySDRows(sdOl, sdSd, sdApplyAll);
     setSdOpen(false);
   };
 
@@ -1808,23 +1923,57 @@ useEffect(() => {
     link.remove();
   };
 
-  const exportPdf = async (mode = "save") => {
+  const setPdfProgressValue = (value, label) => {
+    const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    setPdfProgress((prev) => ({
+      active: true,
+      value: safeValue,
+      label: label || prev.label || "İşlem hazırlanıyor...",
+    }));
+  };
+
+  const resetPdfProgress = () => {
+    if (pdfProgressTimeoutRef.current) clearTimeout(pdfProgressTimeoutRef.current);
+    pdfProgressTimeoutRef.current = null;
+    setPdfProgress({ active: false, value: 0, label: "" });
+  };
+
+  const finishPdfProgress = (label = "İşlem tamamlandı.") => {
+    if (pdfProgressTimeoutRef.current) clearTimeout(pdfProgressTimeoutRef.current);
+    setPdfProgress({ active: true, value: 100, label });
+    pdfProgressTimeoutRef.current = setTimeout(() => {
+      setPdfProgress({ active: false, value: 0, label: "" });
+      pdfProgressTimeoutRef.current = null;
+    }, 650);
+  };
+
+  const exportPdf = async (mode = "save", options = {}) => {
     if (!printRef.current) return null;
+    const reportProgress =
+      typeof options.onProgress === "function" ? options.onProgress : null;
+    const report = (value, label) => {
+      if (reportProgress) reportProgress(value, label);
+    };
 
     const cached = pdfCacheRef.current;
     if (cached.key === pdfCacheKey && cached.blob) {
       if (mode === "open") {
+        report(100, "PDF yeni sekmede açılıyor...");
         window.open(getCachedPdfUrl(cached.blob), "_blank", "noopener");
         return { blob: cached.blob, blobUrl: getCachedPdfUrl(cached.blob), fileName: cached.fileName };
       }
       if (mode === "bloburl") {
+        report(100, "PDF hazır.");
         return { blob: cached.blob, blobUrl: getCachedPdfUrl(cached.blob), fileName: cached.fileName };
       }
+      report(100, "PDF indiriliyor...");
       downloadPdfBlob(cached.blob, cached.fileName);
       return { fileName: cached.fileName };
     }
 
+    report(3, "PDF motoru hazırlanıyor...");
     const { default: html2canvas } = await import("html2canvas");
+    report(6, "PDF sayfaları hazırlanıyor...");
 
     // unit: pt kullanıyorsun, aynen bırakıyorum.
     const doc = new jsPDF({
@@ -1851,7 +2000,7 @@ useEffect(() => {
 
       const canvas = await html2canvas(node, {
         // Netlik: Önizleme ile birebir keskinlik için yüksek ölçek
-        scale: 1.12,
+        scale: 1,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
@@ -1867,7 +2016,7 @@ useEffect(() => {
 
       node.style.overflow = prevOverflow;
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.72);
+      const imgData = canvas.toDataURL("image/jpeg", 0.68);
 
       return { imgData };
     };
@@ -1877,9 +2026,14 @@ useEffect(() => {
     const oldPage = page;
 
     try {
+      const safeTotalPages = Math.max(totalPages, 1);
       for (let p = 1; p <= totalPages; p++) {
+        report(8 + Math.floor(((p - 1) / safeTotalPages) * 84), `PDF hazırlanıyor: ${p}/${totalPages}`);
         setPage(p);
-        await new Promise((r) => setTimeout(r, 35));
+        await new Promise((r) => {
+          if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => r());
+          else setTimeout(r, 10);
+        });
 
         const { imgData } = await renderOnePage();
 
@@ -1895,6 +2049,7 @@ useEffect(() => {
           pageW - 2 * marginX,
           pageH - 2 * marginY
         );
+        report(8 + Math.floor((p / safeTotalPages) * 84), `PDF hazırlanıyor: ${p}/${totalPages}`);
       }
     } finally {
       setPage(oldPage);
@@ -1909,8 +2064,10 @@ useEffect(() => {
     const safeFirma = (firmaAdi || "Firma").trim() || "Firma";
     const fileName = `${safeFirma} - Risk Değerlendirmesi - ${belgeTarihTr}.pdf`;
 
+    report(94, "PDF dosyası oluşturuluyor...");
     const blob = doc.output("blob");
     pdfCacheRef.current = { key: pdfCacheKey, blob, blobUrl: "", fileName };
+    report(98, "PDF hazırlandı.");
 
     if (mode === "open") {
       const blobUrl = getCachedPdfUrl(blob);
@@ -1925,6 +2082,21 @@ useEffect(() => {
 
     downloadPdfBlob(blob, fileName);
     return { fileName };
+  };
+
+  const runPdfAction = async (mode) => {
+    const startLabel =
+      mode === "open" ? "PDF yeni sekmeye hazırlanıyor..." : "PDF indiriliyor...";
+    setPdfProgressValue(1, startLabel);
+
+    try {
+      await exportPdf(mode, { onProgress: setPdfProgressValue });
+      finishPdfProgress(mode === "open" ? "PDF yeni sekmede açıldı." : "PDF indirildi.");
+    } catch (e) {
+      console.error("PDF işlemi başarısız:", e);
+      resetPdfProgress();
+      showError("PDF hazırlanırken bir hata oluştu.");
+    }
   };
 
   /* ==================== Belgelerime Kaydet – Risk Değerlendirmesi (aynı tarih uyarılı) */
@@ -2010,6 +2182,7 @@ const saveToDocs = async () => {
 
     saveLockRef.current = true;
     setSavingDoc(true);
+    let progressCompleted = false;
 
     try {
       const KEY = "belgelerim_risk_listesi";
@@ -2052,12 +2225,18 @@ const saveToDocs = async () => {
         return;
       }
 
+      setPdfProgressValue(1, "Belgelerime kayit hazirlaniyor...");
+
       const createdBy = getCreatedBy();
       const userObj = getUserObj();
       const token = getAuthTokenSafe?.() || null;
 
       if (isBireyselUser()) {
-  const pdfRes = await exportPdf("bloburl");
+  const pdfRes = await exportPdf("bloburl", {
+    onProgress: (value, label) =>
+      setPdfProgressValue(Math.min(value, 82), label || "PDF hazirlaniyor..."),
+  });
+  setPdfProgressValue(84, "PDF sunucuya yukleniyor...");
   const pdfBlob = pdfRes?.blob;
 
   if (!pdfBlob) {
@@ -2119,6 +2298,8 @@ createdByUserId: userObj?._id || userObj?.id,
     fileName,
   };
 
+  setPdfProgressValue(90, "Belge kaydi olusturuluyor...");
+
   const res = await fetch(`${API_BASE}/documents`, {
     method: "POST",
     headers: {
@@ -2174,14 +2355,20 @@ createdByUserId: userObj?._id || userObj?.id,
   try {
     window.dispatchEvent(new Event("documentsUpdated"));
     window.dispatchEvent(new Event("ticari_docs_refresh"));
-    window.dispatchEvent(new Event("belgelerimUpdated"));
+	    window.dispatchEvent(new Event("belgelerimUpdated"));
+	    progressCompleted = true;
+	    finishPdfProgress("Belgelerime kaydedildi.");
   } catch {}
 
   showInfo("Belgelerim, Risk Değerlendirme sekmesine kaydedildi ✅");
   return;
 }
 
-      const pdfRes = await exportPdf("bloburl");
+      const pdfRes = await exportPdf("bloburl", {
+        onProgress: (value, label) =>
+          setPdfProgressValue(Math.min(value, 82), label || "PDF hazirlaniyor..."),
+      });
+      setPdfProgressValue(84, "PDF sunucuya yukleniyor...");
       const pdfBlob = pdfRes?.blob;
 
       if (!pdfBlob) {
@@ -2241,6 +2428,8 @@ createdByUserId: userObj?._id || userObj?.id,
         fileName,
       };
 
+      setPdfProgressValue(90, "Belge kaydi olusturuluyor...");
+
       const res = await fetch(`${API_BASE}/documents`, {
         method: "POST",
         headers: {
@@ -2296,7 +2485,9 @@ createdByUserId: userObj?._id || userObj?.id,
      try {
   window.dispatchEvent(new Event("documentsUpdated"));
   window.dispatchEvent(new Event("ticari_docs_refresh"));
-  window.dispatchEvent(new Event("belgelerimUpdated"));
+	  window.dispatchEvent(new Event("belgelerimUpdated"));
+	  progressCompleted = true;
+	  finishPdfProgress("Belgelerime kaydedildi.");
 } catch {}
 
       showInfo("Belgelerim, Risk Değerlendirme sekmesine kaydedildi ✅");
@@ -2304,6 +2495,7 @@ createdByUserId: userObj?._id || userObj?.id,
       console.error("Belgelerime kaydedilemedi:", e);
       showError("Belge kaydedilirken bir hata oluştu.");
     } finally {
+      if (!progressCompleted) resetPdfProgress();
       setSavingDoc(false);
       saveLockRef.current = false;
     }
@@ -2314,7 +2506,26 @@ createdByUserId: userObj?._id || userObj?.id,
 
 /* =============== RENDER =============== */
   return (
-    <div className="w-full">
+	    <div className="w-full">
+	      {pdfProgress.active && (
+	        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/30 backdrop-blur-[1px]">
+	          <div className="w-[min(420px,calc(100vw-32px))] rounded-lg border border-slate-200 bg-white p-5 shadow-2xl">
+	            <div className="mb-3 flex items-center justify-between gap-3">
+	              <div className="font-semibold text-slate-900">Islem yapiliyor</div>
+	              <div className="text-sm font-semibold text-blue-700">{pdfProgress.value}%</div>
+	            </div>
+	            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+	              <div
+	                className="h-full rounded-full bg-blue-600 transition-all duration-200"
+	                style={{ width: `${pdfProgress.value}%` }}
+	              />
+	            </div>
+	            <div className="mt-3 text-sm text-slate-600">
+	              {pdfProgress.label || "Lutfen bekleyin..."}
+	            </div>
+	          </div>
+	        </div>
+	      )}
       <h2 className="font-bold text-lg mb-4">Risk Değerlendirmesi</h2>
 
       {/* Ara + Faaliyet Seç */}
@@ -2561,16 +2772,18 @@ createdByUserId: userObj?._id || userObj?.id,
                    <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
   <button
     type="button"
-    className="w-full sm:w-auto px-2 py-1 text-[10px] sm:text-xs rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-    onClick={() => exportPdf("open")}
+	    className="w-full sm:w-auto px-2 py-1 text-[10px] sm:text-xs rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+	    onClick={() => runPdfAction("open")}
+	    disabled={pdfProgress.active}
   >
     Yeni sekmede aç
   </button>
 
   <button
     type="button"
-    className="w-full sm:w-auto px-2 py-1 text-[10px] sm:text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700"
-    onClick={() => exportPdf("save")}
+	    className="w-full sm:w-auto px-2 py-1 text-[10px] sm:text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+	    onClick={() => runPdfAction("save")}
+	    disabled={pdfProgress.active}
   >
     İndir (PDF)
   </button>
@@ -2580,9 +2793,9 @@ createdByUserId: userObj?._id || userObj?.id,
     variant="green"
     className="w-full sm:w-auto px-2 py-1 text-[10px] sm:text-xs"
     onClick={saveToDocs}
-    disabled={savingDoc}
-  >
-    {savingDoc ? "Kaydediliyor..." : "Belgelerime Kaydet"}
+	    disabled={savingDoc || pdfProgress.active}
+	  >
+	    {savingDoc || pdfProgress.active ? "Hazirlaniyor..." : "Belgelerime Kaydet"}
   </PrimaryButton>
 
   <button
@@ -2706,7 +2919,7 @@ createdByUserId: userObj?._id || userObj?.id,
                   setPageNo(sayfaNoInput.trim());
                   setPreview(true);
                   setTimeout(async () => {
-                    await exportPdf("save");
+                    await runPdfAction("save");
                     setPreview(false);
                   }, 120);
                 }}
@@ -2732,13 +2945,12 @@ createdByUserId: userObj?._id || userObj?.id,
                     className="mt-1"
                     checked={mdSelected.includes(opt)}
                     onChange={(e) => {
-                      const checked = e.target.checked;
-                      setMdSelected((prev) => {
-                        const s = new Set(prev);
-                        if (checked) s.add(opt);
-                        else s.delete(opt);
-                        return [...s];
-                      });
+                      const s = new Set(mdSelected);
+                      if (e.target.checked) s.add(opt);
+                      else s.delete(opt);
+                      const next = [...s];
+                      setMdSelected(next);
+                      applyMDRows(next, mdManual, mdApplyAll);
                     }}
                   />
                   <span>{opt}</span>
@@ -2748,11 +2960,11 @@ createdByUserId: userObj?._id || userObj?.id,
 
             <div className="mb-3">
               <label className="text-sm font-medium">Manuel giriş (opsiyonel)</label>
-              <textarea className="border rounded w-full p-2 min-h-20 mt-1" placeholder="Eklemek istediğin özel not..." value={mdManual} onChange={(e) => setMdManual(e.target.value)} />
+              <textarea className="border rounded w-full p-2 min-h-20 mt-1" placeholder="Eklemek istediğin özel not..." value={mdManual} onChange={(e) => { const value = e.target.value; setMdManual(value); applyMDRows(mdSelected, value, mdApplyAll); }} />
             </div>
 
             <label className="flex items-center gap-2 mb-3">
-              <input type="checkbox" checked={mdApplyAll} onChange={(e) => setMdApplyAll(e.target.checked)} />
+              <input type="checkbox" checked={mdApplyAll} onChange={(e) => { const checked = e.target.checked; setMdApplyAll(checked); applyMDRows(mdSelected, mdManual, checked); }} />
               Diğer satırlara da uygulansın mı?
             </label>
 
@@ -2784,7 +2996,7 @@ createdByUserId: userObj?._id || userObj?.id,
             </div>
 
             <label className="flex items-center gap-2 my-3">
-              <input type="checkbox" checked={srApplyAll} onChange={(e) => setSrApplyAll(e.target.checked)} />
+              <input type="checkbox" checked={srApplyAll} onChange={(e) => { const checked = e.target.checked; setSrApplyAll(checked); applySRRows(srList, checked); }} />
               Diğer satırlara da uygulansın mı?
             </label>
 
@@ -2806,7 +3018,7 @@ createdByUserId: userObj?._id || userObj?.id,
           <div className="relative z-[1000] bg-white p-4 rounded-xl w-[min(420px,95vw)]" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold mb-2">Termin Seç</h3>
 
-            <select className="border rounded px-2 h-9 w-full mb-3" value={tmDeger} onChange={(e) => setTmDeger(e.target.value)}>
+            <select className="border rounded px-2 h-9 w-full mb-3" value={tmDeger} onChange={(e) => { const value = e.target.value; setTmDeger(value); applyTMRows(value, tmApplyAll); }}>
               <option value="">— Seç —</option>
               {TERMIN_SECENEKLERI.map((t) => (
                 <option key={t} value={t}>
@@ -2816,7 +3028,7 @@ createdByUserId: userObj?._id || userObj?.id,
             </select>
 
             <label className="flex items-center gap-2 mb-3">
-              <input type="checkbox" checked={tmApplyAll} onChange={(e) => setTmApplyAll(e.target.checked)} />
+              <input type="checkbox" checked={tmApplyAll} onChange={(e) => { const checked = e.target.checked; setTmApplyAll(checked); applyTMRows(tmDeger, checked); }} />
               Diğer satırlara da uygulansın mı?
             </label>
 
@@ -2866,7 +3078,7 @@ createdByUserId: userObj?._id || userObj?.id,
             </div>
 
             <label className="flex items-center gap-2 my-3">
-              <input type="checkbox" checked={eaApplyAll} onChange={(e) => setEaApplyAll(e.target.checked)} />
+              <input type="checkbox" checked={eaApplyAll} onChange={(e) => { const checked = e.target.checked; setEaApplyAll(checked); applyEARows(eaList, checked); }} />
               Diğer satırlara da uygulansın mı?
             </label>
 
@@ -2897,7 +3109,7 @@ createdByUserId: userObj?._id || userObj?.id,
                   max="5"
                   className="border rounded px-2 h-9 w-full"
                   value={sdOl}
-                  onChange={(e) => setSdOl(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={(e) => { const value = e.target.value === "" ? "" : Number(e.target.value); setSdOl(value); applySDRows(value, sdSd, sdApplyAll); }}
                 />
               </div>
               <div>
@@ -2908,13 +3120,13 @@ createdByUserId: userObj?._id || userObj?.id,
                   max="5"
                   className="border rounded px-2 h-9 w-full"
                   value={sdSd}
-                  onChange={(e) => setSdSd(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={(e) => { const value = e.target.value === "" ? "" : Number(e.target.value); setSdSd(value); applySDRows(sdOl, value, sdApplyAll); }}
                 />
               </div>
             </div>
 
             <label className="flex items-center gap-2 mb-3">
-              <input type="checkbox" checked={sdApplyAll} onChange={(e) => setSdApplyAll(e.target.checked)} />
+              <input type="checkbox" checked={sdApplyAll} onChange={(e) => { const checked = e.target.checked; setSdApplyAll(checked); applySDRows(sdOl, sdSd, checked); }} />
               Diğer satırlara da uygula
             </label>
 
