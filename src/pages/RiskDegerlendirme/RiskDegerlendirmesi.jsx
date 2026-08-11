@@ -2511,7 +2511,7 @@ createdByUserId: userObj?._id || userObj?.id,
 	        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/30 backdrop-blur-[1px]">
 	          <div className="w-[min(420px,calc(100vw-32px))] rounded-lg border border-slate-200 bg-white p-5 shadow-2xl">
 	            <div className="mb-3 flex items-center justify-between gap-3">
-	              <div className="font-semibold text-slate-900">Islem yapiliyor</div>
+	              <div className="font-semibold text-slate-900">İşlem yapılıyor</div>
 	              <div className="text-sm font-semibold text-blue-700">{pdfProgress.value}%</div>
 	            </div>
 	            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
