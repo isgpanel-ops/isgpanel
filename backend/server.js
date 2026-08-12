@@ -102,6 +102,7 @@ require("./cron/notificationCron");
 
 const meAnnouncementsRoutes = require("./routes/meAnnouncements");
 const documentsRoutes = require("./routes/documents");
+const auditPackageRoutes = require("./routes/auditPackages");
 const supportRoutes = require("./routes/support");
 const dashboardRoutes = require("./routes/dashboard");
 const kkdRoutes = require("./routes/kkd");
@@ -849,6 +850,7 @@ app.use("/api", yuksekteCalismaKatilimcilarRoutes);
 app.use("/api/dof", authMiddleware, dofRoutes);
 app.use("/api/guvenlik-giris", guvenlikGirisRoutes);
 app.use("/api/documents", documentsRoutes);
+app.use("/api/audit-packages", auditPackageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/kkd", kkdRoutes);
 app.use("/api/defter-nushalari", authMiddleware, defterNushalariRoutes);
