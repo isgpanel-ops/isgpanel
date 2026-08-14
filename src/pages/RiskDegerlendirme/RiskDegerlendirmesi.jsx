@@ -1637,6 +1637,7 @@ useEffect(() => {
     const other = list.filter((x) => !MD_KNOWN.has(x)).join("; ");
     setMdSelected(known);
     setMdManual(other);
+    setMdApplyAll(false);
     setMdOpen(true);
   };
   const onEditSR = (i) => {
@@ -1678,10 +1679,10 @@ useEffect(() => {
     setRows((prev) => {
       const clone = prev.map((x) => ({ ...x }));
       const apply = (r) => {
-        r.mevcutDurum = combined;
+        r.mevcutDurum = [...combined];
       };
       if (applyAll) clone.forEach(apply);
-      else if (clone[aktifIndex]) apply(clone[aktifIndex]);
+      else if (Number.isInteger(aktifIndex) && clone[aktifIndex]) apply(clone[aktifIndex]);
       return clone;
     });
   };
@@ -2950,7 +2951,6 @@ createdByUserId: userObj?._id || userObj?.id,
                       else s.delete(opt);
                       const next = [...s];
                       setMdSelected(next);
-                      applyMDRows(next, mdManual, mdApplyAll);
                     }}
                   />
                   <span>{opt}</span>
@@ -2960,11 +2960,11 @@ createdByUserId: userObj?._id || userObj?.id,
 
             <div className="mb-3">
               <label className="text-sm font-medium">Manuel giriş (opsiyonel)</label>
-              <textarea className="border rounded w-full p-2 min-h-20 mt-1" placeholder="Eklemek istediğin özel not..." value={mdManual} onChange={(e) => { const value = e.target.value; setMdManual(value); applyMDRows(mdSelected, value, mdApplyAll); }} />
+              <textarea className="border rounded w-full p-2 min-h-20 mt-1" placeholder="Eklemek istediğin özel not..." value={mdManual} onChange={(e) => setMdManual(e.target.value)} />
             </div>
 
             <label className="flex items-center gap-2 mb-3">
-              <input type="checkbox" checked={mdApplyAll} onChange={(e) => { const checked = e.target.checked; setMdApplyAll(checked); applyMDRows(mdSelected, mdManual, checked); }} />
+              <input type="checkbox" checked={mdApplyAll} onChange={(e) => setMdApplyAll(e.target.checked)} />
               Diğer satırlara da uygulansın mı?
             </label>
 
