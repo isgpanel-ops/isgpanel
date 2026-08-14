@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { Readable } = require("stream");
 const mongoose = require("mongoose");
 const Document = require("../models/Document");
 const AuditPackage = require("../models/AuditPackage");
@@ -402,7 +403,18 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
     if (localPath) return res.sendFile(localPath);
 
     const remoteUrl = doc.fileUrl || doc.absoluteUrl || "";
-    if (/^https?:\/\//i.test(remoteUrl)) return res.redirect(remoteUrl);
+    if (/^https?:\/\//i.test(remoteUrl)) {
+      const remoteResponse = await fetch(remoteUrl, { redirect: "follow" });
+      if (remoteResponse.ok && remoteResponse.body) {
+        const contentType = remoteResponse.headers.get("content-type");
+        const contentLength = remoteResponse.headers.get("content-length");
+        const disposition = remoteResponse.headers.get("content-disposition");
+        if (contentType) res.setHeader("Content-Type", contentType);
+        if (contentLength) res.setHeader("Content-Length", contentLength);
+        if (disposition) res.setHeader("Content-Disposition", disposition);
+        return Readable.fromWeb(remoteResponse.body).pipe(res);
+      }
+    }
 
     res.status(404).json({ message: "Belge dosyası bulunamadı." });
   } catch (err) {

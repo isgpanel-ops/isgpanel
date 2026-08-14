@@ -27,6 +27,9 @@ import PeriyodikIsHijyen from "./pages/PeriyodikIsHijyen/PeriyodikIsHijyen";
 import Belgelerim from "./pages/Belgelerim/Belgelerim";
 import RiskBelgeleri from "./pages/Belgelerim/RiskBelgeleri";
 import TicariRiskBelgeleri from "./pages/Ticari/TicariRiskBelgeleri";
+import DenetimHazirla from "./pages/Denetim/DenetimHazirla";
+import DenetimPaketiHazir from "./pages/Denetim/DenetimPaketiHazir";
+import DenetimGoruntule from "./pages/Denetim/DenetimGoruntule";
 
 import KisiselBilgiler from "./pages/KisiselBilgiler";
 import KurumsalKimlik from "./pages/KurumsalKimlik";
@@ -240,6 +243,8 @@ function App() {
 <Route path="defter-kurul" element={<DefterKurul />} />
 <Route path="periyodik-is-hijyen" element={<PeriyodikIsHijyen />} />
 <Route path="belgelerim" element={<Belgelerim />} />
+            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="kisisel-bilgiler" element={<KisiselBilgiler />} />
             <Route path="kurumsal-kimlik" element={<KurumsalKimlik />} />
             <Route path="guvenlik-giris" element={<GuvenlikGiris />} />
@@ -270,6 +275,8 @@ function App() {
           >
             <Route index element={<TicariDashboard />} />
             <Route path="belgeler" element={<TicariAdminBelgeler />} />
+            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="firmalar" element={<AdminFirmalar />} />
             <Route path="atama-bekleyen" element={<AdminAtamaBekleyen />} />
             <Route path="atama-yonetimi" element={<IsgKatipEntegrasyon />} />
@@ -290,6 +297,8 @@ function App() {
             }
           >
             <Route index element={<TicariBelgeler />} />
+            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
           </Route>
 
           {/* 🔵 TİCARİ USER */}
@@ -304,6 +313,8 @@ function App() {
             <Route index element={<UserFirmalarim />} />
             <Route path="firmalarim" element={<UserFirmalarim />} />
             <Route path="belgelerim" element={<Belgelerim />} />
+            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
           </Route>
 
 {/* 🩺 İŞYERİ HEKİMİ PANELİ */}

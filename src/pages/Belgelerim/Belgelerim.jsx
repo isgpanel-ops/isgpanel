@@ -6,6 +6,7 @@ import EgitimBelgeleri from "./EgitimBelgeleri";
 import TalimatBelgeleri from "./TalimatBelgeleri";
 import DefterKurulBelgeleri from "./DefterKurulBelgeleri";
 import PeriyodikIsHijyeniBelgeleri from "./PeriyodikIsHijyeniBelgeleri";
+import DenetimeHazirlanButton from "../../components/DenetimeHazirlanButton";
 
 const STORAGE_KEY = "belgelerim_active_tab";
 
@@ -21,9 +22,10 @@ export default function Belgelerim() {
 
   return (
     <div className="p-3 sm:p-4 md:p-6">
-      <h1 className="text-lg sm:text-xl font-bold text-[#042f4b] mb-4">
-        Belgelerim
-      </h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg sm:text-xl font-bold text-[#042f4b]">Belgelerim</h1>
+        <DenetimeHazirlanButton />
+      </div>
 
       <div className="border-b mb-6 overflow-x-auto">
         <div className="flex gap-4 sm:gap-6 min-w-max text-sm">

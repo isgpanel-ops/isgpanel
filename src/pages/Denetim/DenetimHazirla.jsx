@@ -51,6 +51,7 @@ function headers() {
 function basePath(pathname) {
   if (pathname.startsWith("/ticari/admin")) return "/ticari/admin";
   if (pathname.startsWith("/ticari/user")) return "/ticari/user";
+  if (pathname.startsWith("/ticari/belgeler")) return "/ticari/belgeler";
   return "/panel";
 }
 
