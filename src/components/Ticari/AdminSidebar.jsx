@@ -8,6 +8,7 @@ import {
   FileCheck2,
   Users,
   CreditCard,
+  Share2,
 } from "lucide-react";
 
 function readTokenFlags() {
@@ -106,6 +107,11 @@ export default function AdminSidebar({
       icon: CreditCard,
     },
     { name: "Belgeler", path: "/ticari/admin/belgeler", icon: FolderOpen },
+    {
+      name: "Belge Paylaşımı",
+      path: "/ticari/admin/denetim/hazirla",
+      icon: Share2,
+    },
     { name: "Firmalar", path: "/ticari/admin/firmalar", icon: Building2 },
     {
       name: "Atama Bekleyen Firmalar",

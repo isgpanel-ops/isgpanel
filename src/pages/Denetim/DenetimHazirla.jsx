@@ -55,6 +55,11 @@ function basePath(pathname) {
   return "/panel";
 }
 
+function localDateTimeValue(date) {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
 export default function DenetimHazirla() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,6 +73,14 @@ export default function DenetimHazirla() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientType, setRecipientType] = useState("INSPECTOR");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [accessType, setAccessType] = useState("TIMED");
+  const [expiresAt, setExpiresAt] = useState(() => localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)));
+  const [password, setPassword] = useState("");
+  const [allowDownload, setAllowDownload] = useState(true);
 
   useEffect(() => {
     let ignore = false;
@@ -144,6 +157,14 @@ export default function DenetimHazirla() {
           companyId: company.id,
           companyName: company.name,
           documentIds: [...selectedDocs],
+          recipientName: recipientName.trim(),
+          recipientType,
+          recipientEmail: recipientEmail.trim(),
+          note: note.trim(),
+          accessType,
+          expiresAt: accessType === "TIMED" ? new Date(expiresAt).toISOString() : null,
+          password,
+          allowDownload,
         }),
       });
       const data = await res.json();
@@ -157,6 +178,10 @@ export default function DenetimHazirla() {
     }
   }
 
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim());
+  const expiryValid = accessType !== "TIMED" || (expiresAt && new Date(expiresAt).getTime() > Date.now());
+  const canCreate = selectedDocs.size > 0 && recipientName.trim() && emailValid && expiryValid;
+
   if (loading) {
     return <div className="mx-auto max-w-7xl p-8 text-slate-600">Denetim belgeleri hazırlanıyor...</div>;
   }
@@ -165,7 +190,7 @@ export default function DenetimHazirla() {
     <div className="mx-auto max-w-7xl p-6 text-[#042f4b]">
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Denetime Hazırlan</h1>
+          <h1 className="text-2xl font-bold">Belge Paylaşımı</h1>
           <p className="mt-1 text-sm text-slate-600">
             Firmanıza ait İSG belgelerini kontrol edin, denetim dosyanızı oluşturun ve güvenli bağlantı ile paylaşın.
           </p>
@@ -175,18 +200,35 @@ export default function DenetimHazirla() {
         </div>
         <button
           type="button"
-          disabled={selectedDocs.size < 1}
+          disabled={!canCreate}
           onClick={() => setConfirmOpen(true)}
           className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-sm ${
-            selectedDocs.size < 1 ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"
+            !canCreate ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"
           }`}
         >
           <ShieldCheck size={17} />
-          Denetim Dosyası Oluştur
+          Paylaşım Oluştur
         </button>
       </div>
 
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+      <section className="mb-5 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-base font-bold">Paylaşım Bilgileri</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-500">Bağlantının gönderileceği kişiyi ve erişim kurallarını belirleyin.</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <label className="text-sm font-semibold text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Ad soyad" /></label>
+          <label className="text-sm font-semibold text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="OTHER">Diğer</option></select></label>
+          <label className="text-sm font-semibold text-slate-700">E-posta adresi<input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="ornek@firma.com" /></label>
+          <label className="text-sm font-semibold text-slate-700">Erişim türü<select value={accessType} onChange={(e) => setAccessType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="TIMED">Süreli</option><option value="UNLIMITED">Süresiz</option></select></label>
+          {accessType === "TIMED" && <label className="text-sm font-semibold text-slate-700">Son erişim zamanı<input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>}
+          <label className="text-sm font-semibold text-slate-700">Erişim şifresi (isteğe bağlı)<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Şifresiz paylaşmak için boş bırakın" /></label>
+        </div>
+        <label className="mt-4 block text-sm font-semibold text-slate-700">Not (isteğe bağlı)<textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1 w-full resize-y rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>
+        <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />Belgelerin indirilmesine izin ver</label>
+        {!emailValid && recipientEmail && <p className="mt-2 text-xs text-red-600">Geçerli bir e-posta adresi giriniz.</p>}
+        {!expiryValid && <p className="mt-2 text-xs text-red-600">Erişim bitiş zamanı gelecekte olmalıdır.</p>}
+      </section>
 
       <div className="mb-5 grid gap-4 md:grid-cols-3">
         <SummaryCard icon={<FileCheck size={22} />} label="Toplam Belge" value={totalDocCount} />
@@ -350,7 +392,7 @@ export default function DenetimHazirla() {
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-bold">Denetim Dosyası Oluşturulsun mu?</h2>
+            <h2 className="text-lg font-bold">Belge Paylaşımı Oluşturulsun mu?</h2>
             <p className="mt-3 text-sm text-slate-600">
               {company?.name || "Seçili firma"} için {selectedDocs.size} belge içeren dijital denetim dosyası oluşturulacaktır.
             </p>
@@ -359,7 +401,7 @@ export default function DenetimHazirla() {
                 Vazgeç
               </button>
               <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white" onClick={createPackage} disabled={creating}>
-                {creating ? "Oluşturuluyor..." : "Dosyayı Oluştur"}
+                {creating ? "Oluşturuluyor..." : "Paylaşımı Oluştur"}
               </button>
             </div>
           </div>

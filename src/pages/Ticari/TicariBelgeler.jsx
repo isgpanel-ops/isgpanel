@@ -7,7 +7,6 @@ import TicariEgitimBelgeleri from "./TicariEgitimBelgeleri";
 import TicariTalimatBelgeleri from "./TicariTalimatBelgeleri";
 import TicariDefterKurulBelgeleri from "./TicariDefterKurulBelgeleri";
 import TicariPeriyodikBelgeleri from "./TicariPeriyodikBelgeleri";
-import DenetimeHazirlanButton from "../../components/DenetimeHazirlanButton";
 
 const LS_ACTIVE_TAB_KEY = "isgpanel:ticariBelgelerActiveTab";
 
@@ -73,7 +72,6 @@ export default function TicariBelgeler() {
     <div className="p-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-[#042f4b]">Belgeler</h1>
-        <DenetimeHazirlanButton />
       </div>
 
       {/* Sekmeler */}

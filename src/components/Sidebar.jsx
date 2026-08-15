@@ -12,6 +12,7 @@ import {
   CreditCard,
   ClipboardList,
   FlaskConical,
+  Share2,
 } from "lucide-react";
 
 /* 🔐 JWT payload decode */
@@ -85,6 +86,12 @@ const isPaymentPending =
       name: "Belgelerim",
       path: "/panel/belgelerim",
       icon: FolderOpen,
+    },
+
+    {
+      name: "Belge Paylaşımı",
+      path: "/panel/denetim/hazirla",
+      icon: Share2,
     },
 
     {

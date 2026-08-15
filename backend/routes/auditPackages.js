@@ -8,8 +8,43 @@ const Document = require("../models/Document");
 const AuditPackage = require("../models/AuditPackage");
 const AuditPackageDocument = require("../models/AuditPackageDocument");
 const auth = require("../middleware/auth");
+const { sendMail } = require("../utils/mailer");
 
 const router = express.Router();
+
+function normalizeEmail(value = "") {
+  return String(value).trim().toLowerCase();
+}
+
+function dayRange(date = new Date()) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+function makePasswordHash(password) {
+  if (!password) return {};
+  const salt = crypto.randomBytes(16).toString("hex");
+  return { passwordSalt: salt, passwordHash: crypto.scryptSync(String(password), salt, 64).toString("hex") };
+}
+
+function passwordMatches(pkg, password) {
+  if (!pkg.passwordHash) return true;
+  if (!password || !pkg.passwordSalt) return false;
+  const actual = crypto.scryptSync(String(password), pkg.passwordSalt, 64);
+  const expected = Buffer.from(pkg.passwordHash, "hex");
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
+function packageAvailable(pkg) {
+  return pkg && pkg.status === "ACTIVE" && !pkg.revokedAt && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date());
+}
+
+function requestPassword(req) {
+  return req.get("x-audit-password") || req.query.password || "";
+}
 
 const CATEGORIES = [
   "Risk Değerlendirmesi",
@@ -259,6 +294,15 @@ async function packagePayload(req, pkg) {
       status: pkg.status,
       publicToken: pkg.publicToken,
       publicUrl: publicUrl(req, pkg),
+      recipientName: pkg.recipientName,
+      recipientType: pkg.recipientType,
+      recipientEmail: pkg.recipientEmail,
+      note: pkg.note || "",
+      accessType: pkg.accessType,
+      requiresPassword: Boolean(pkg.passwordHash),
+      allowDownload: pkg.allowDownload !== false,
+      expiresAt: pkg.expiresAt || null,
+      emailStatus: pkg.emailStatus || "NOT_SENT",
       documentCount: safeDocs.length,
       categoryCount: categories.length,
     },
@@ -307,6 +351,13 @@ router.get("/prepare", auth, async (req, res) => {
           status: pkg.status,
           publicToken: pkg.publicToken,
           publicUrl: publicUrl(req, pkg),
+          recipientName: pkg.recipientName,
+          recipientType: pkg.recipientType,
+          recipientEmail: pkg.recipientEmail,
+          accessType: pkg.accessType,
+          expiresAt: pkg.expiresAt,
+          allowDownload: pkg.allowDownload,
+          emailStatus: pkg.emailStatus,
           documentCount: stat?.documentCount || 0,
           categoryCount: stat?.categories?.filter(Boolean).length || 0,
         };
@@ -322,11 +373,26 @@ router.post("/", auth, async (req, res) => {
   try {
     const companyId = String(req.body.companyId || "").trim();
     const companyName = String(req.body.companyName || "").trim();
+    const recipientName = String(req.body.recipientName || "").trim();
+    const recipientType = ["INSPECTOR", "EMPLOYER", "HR", "OTHER"].includes(req.body.recipientType)
+      ? req.body.recipientType
+      : "OTHER";
+    const recipientEmail = normalizeEmail(req.body.recipientEmail);
+    const note = String(req.body.note || "").trim();
+    const accessType = req.body.accessType === "TIMED" ? "TIMED" : "UNLIMITED";
+    const expiresAt = accessType === "TIMED" ? new Date(req.body.expiresAt) : null;
+    const password = String(req.body.password || "");
+    const allowDownload = req.body.allowDownload !== false;
     const documentIds = Array.isArray(req.body.documentIds) ? req.body.documentIds.map(String) : [];
     const uniqueIds = [...new Set(documentIds)].filter((id) => mongoose.Types.ObjectId.isValid(id));
 
     if (!companyId && !companyName) return res.status(400).json({ message: "Firma bilgisi gerekli." });
     if (!uniqueIds.length) return res.status(400).json({ message: "En az 1 belge seçilmelidir." });
+    if (!recipientName) return res.status(400).json({ message: "Alıcı adı gereklidir." });
+    if (!/^\S+@\S+\.\S+$/.test(recipientEmail)) return res.status(400).json({ message: "Geçerli bir e-posta adresi giriniz." });
+    if (accessType === "TIMED" && (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date())) {
+      return res.status(400).json({ message: "Süreli paylaşım için ileri bir son tarih seçiniz." });
+    }
 
     const allowedDocs = await Document.find({
       ...buildDocumentQuery(req, companyId, companyName),
@@ -336,18 +402,47 @@ router.post("/", auth, async (req, res) => {
     if (!allowedDocs.length) return res.status(400).json({ message: "Seçilen belgeler bu firma için bulunamadı." });
 
     const organizationId = primaryOrgId(req.user);
+    const { start, end } = dayRange();
+    const companyMatch = companyId ? { companyId } : { companyName };
+    const sameDayPackages = await AuditPackage.find({
+      organizationId,
+      ...companyMatch,
+      recipientEmail,
+      createdAt: { $gte: start, $lt: end },
+    }).select("_id").lean();
+    const alreadyShared = sameDayPackages.length
+      ? await AuditPackageDocument.find({ auditPackageId: { $in: sameDayPackages.map((item) => item._id) } })
+          .select("documentId").lean()
+      : [];
+    const sharedIds = new Set(alreadyShared.map((item) => String(item.documentId)));
+    const packageDocs = allowedDocs.filter((doc) => !sharedIds.has(String(doc._id)));
+    if (!packageDocs.length) {
+      return res.status(409).json({ message: "Seçilen belgeler bu alıcıyla bugün zaten paylaşılmıştır." });
+    }
+
+    const passwordFields = makePasswordHash(password);
     let pkg = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         pkg = await AuditPackage.create({
           organizationId,
-          companyId: companyId || String(allowedDocs[0].firmaId || allowedDocs[0].companyId || ""),
-          companyName: companyName || allowedDocs[0].firmaAdi || allowedDocs[0].companyName || "",
+          companyId: companyId || String(packageDocs[0].firmaId || packageDocs[0].companyId || ""),
+          companyName: companyName || packageDocs[0].firmaAdi || packageDocs[0].companyName || "",
           packageNumber: await nextPackageNumber(),
           createdBy: req.user?.name || req.user?.adSoyad || req.user?.email || "",
           createdByUserId: String(req.user?._id || req.user?.id || ""),
           status: "ACTIVE",
           publicToken: crypto.randomBytes(32).toString("hex"),
+          recipientName,
+          recipientType,
+          recipientEmail,
+          note,
+          accessType,
+          expiresAt,
+          allowDownload,
+          documentCount: packageDocs.length,
+          categoryCount: new Set(packageDocs.map(inferCategory)).size,
+          ...passwordFields,
         });
         break;
       } catch (err) {
@@ -356,7 +451,7 @@ router.post("/", auth, async (req, res) => {
     }
 
     await AuditPackageDocument.insertMany(
-      allowedDocs.map((doc) => ({
+      packageDocs.map((doc) => ({
         auditPackageId: pkg._id,
         documentId: doc._id,
         organizationId,
@@ -367,7 +462,23 @@ router.post("/", auth, async (req, res) => {
       { ordered: false }
     );
 
-    res.status(201).json(await packagePayload(req, pkg));
+    const url = publicUrl(req, pkg);
+    try {
+      await sendMail({
+        to: recipientEmail,
+        subject: `${pkg.companyName} - İSG Belge Paylaşımı`,
+        text: `${recipientName},\n\n${pkg.companyName} firmasına ait belgeler sizinle paylaşılmıştır.\nDosya No: ${pkg.packageNumber}\n${url}`,
+        html: `<p>Sayın ${recipientName},</p><p><strong>${pkg.companyName}</strong> firmasına ait belgeler sizinle paylaşılmıştır.</p><p>Dosya No: <strong>${pkg.packageNumber}</strong></p><p><a href="${url}">Belgeleri görüntüle</a></p>`,
+      });
+      pkg.emailStatus = "SENT";
+      pkg.emailSentAt = new Date();
+    } catch (mailErr) {
+      console.error("audit package mail error:", mailErr);
+      pkg.emailStatus = "FAILED";
+    }
+    await pkg.save();
+
+    res.status(201).json({ ...(await packagePayload(req, pkg)), skippedDuplicateCount: allowedDocs.length - packageDocs.length });
   } catch (err) {
     console.error("audit create error:", err);
     res.status(500).json({ message: "Denetim dosyası oluşturulamadı." });
@@ -376,8 +487,13 @@ router.post("/", auth, async (req, res) => {
 
 router.get("/public/:publicToken", async (req, res) => {
   try {
-    const pkg = await AuditPackage.findOne({ publicToken: req.params.publicToken, status: "ACTIVE" }).lean();
-    if (!pkg) return res.status(404).json({ message: "Denetim bağlantısı geçersiz." });
+    const pkg = await AuditPackage.findOne({ publicToken: req.params.publicToken })
+      .select("+passwordHash +passwordSalt")
+      .lean();
+    if (!packageAvailable(pkg)) return res.status(404).json({ message: "Denetim bağlantısı geçersiz." });
+    if (!passwordMatches(pkg, requestPassword(req))) {
+      return res.status(401).json({ requiresPassword: true, message: "Paylaşım şifresi gereklidir." });
+    }
     res.json(await packagePayload(req, pkg));
   } catch (err) {
     console.error("audit public error:", err);
@@ -390,8 +506,12 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
     const { publicToken, documentId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(documentId)) return res.status(404).end();
 
-    const pkg = await AuditPackage.findOne({ publicToken, status: "ACTIVE" }).lean();
-    if (!pkg) return res.status(404).end();
+    const pkg = await AuditPackage.findOne({ publicToken })
+      .select("+passwordHash +passwordSalt")
+      .lean();
+    if (!packageAvailable(pkg)) return res.status(404).end();
+    if (!passwordMatches(pkg, requestPassword(req))) return res.status(401).end();
+    if (req.query.download === "1" && !pkg.allowDownload) return res.status(403).end();
 
     const link = await AuditPackageDocument.findOne({ auditPackageId: pkg._id, documentId }).lean();
     if (!link) return res.status(404).end();
@@ -426,7 +546,9 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
 router.get("/:id", auth, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: "Paket bulunamadı." });
-    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) }).lean();
+    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) })
+      .select("+passwordHash")
+      .lean();
     if (!pkg) return res.status(404).json({ message: "Paket bulunamadı." });
     res.json(await packagePayload(req, pkg));
   } catch (err) {

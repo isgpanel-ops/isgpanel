@@ -1,38 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { CheckCircle2, Copy, Mail, MessageCircle, QrCode, ShieldCheck } from "lucide-react";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { CheckCircle2, Copy, ExternalLink, Mail, QrCode } from "lucide-react";
 import { API_BASE } from "../../config/api";
 
-function authToken() {
-  const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
-  return (
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("token") ||
-    localStorage.getItem("authToken") ||
-    sessionStorage.getItem("authToken") ||
-    localStorage.getItem(`isgpanel:${activeEmail}:token`) ||
-    ""
-  );
-}
-
 function authHeaders() {
-  const token = authToken();
+  const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token") ||
+    localStorage.getItem("authToken") || sessionStorage.getItem("authToken") ||
+    localStorage.getItem(`isgpanel:${activeEmail}:token`) || "";
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function formatDate(value) {
-  if (!value) return "-";
-  try {
-    return new Date(value).toLocaleString("tr-TR");
-  } catch {
-    return "-";
-  }
+  return value ? new Date(value).toLocaleString("tr-TR") : "-";
 }
+
+const recipientLabels = { INSPECTOR: "Müfettiş", EMPLOYER: "İşveren", HR: "İnsan Kaynakları", OTHER: "Diğer" };
 
 export default function DenetimPaketiHazir() {
   const { packageId } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const [auditPackage, setAuditPackage] = useState(location.state?.auditPackage || null);
   const [loading, setLoading] = useState(!location.state?.auditPackage);
   const [error, setError] = useState("");
@@ -40,145 +27,81 @@ export default function DenetimPaketiHazir() {
 
   useEffect(() => {
     if (auditPackage || !packageId) return;
-    let alive = true;
-    setLoading(true);
     fetch(`${API_BASE}/api/audit-packages/${packageId}`, { headers: authHeaders() })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.message || "Denetim paketi getirilemedi.");
+        if (!res.ok) throw new Error(data?.message || "Belge paylaşımı getirilemedi.");
         return data;
       })
-      .then((data) => {
-        if (alive) setAuditPackage(data.auditPackage || data);
-      })
-      .catch((err) => {
-        if (alive) setError(err.message || "Denetim paketi getirilemedi.");
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
+      .then(setAuditPackage)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [auditPackage, packageId]);
 
-  const publicUrl = useMemo(() => {
-    if (!auditPackage?.publicToken) return "";
-    return `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}`;
-  }, [auditPackage?.publicToken]);
+  const publicUrl = useMemo(() => auditPackage?.publicToken
+    ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : "", [auditPackage]);
+  const qrUrl = publicUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}` : "";
+  const mailSubject = `${auditPackage?.companyName || "Firma"} - İSG Belge Paylaşımı`;
+  const mailBody = `${auditPackage?.companyName || "Firma"} için hazırlanan İSG belgelerine aşağıdaki güvenli bağlantıdan ulaşabilirsiniz.\n\nDosya No: ${auditPackage?.packageNumber || "-"}\n\n${publicUrl}`;
 
-  const qrUrl = useMemo(() => {
-    if (!publicUrl) return "";
-    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}`;
-  }, [publicUrl]);
-
-  const shareText = useMemo(() => {
-    if (!auditPackage) return "";
-    return `${auditPackage.companyName || "Firma"} Dijital İSG Denetim Dosyası\n\nDosya No: ${
-      auditPackage.packageNumber || "-"
-    }\n\nDenetim belgelerine aşağıdaki güvenli bağlantı üzerinden ulaşabilirsiniz:\n\n${publicUrl}`;
-  }, [auditPackage, publicUrl]);
-
-  const copyLink = async () => {
-    if (!publicUrl) return;
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-    } catch {
-      const input = document.createElement("input");
-      input.value = publicUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      input.remove();
-    }
+  async function copyLink() {
+    await navigator.clipboard.writeText(publicUrl);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  if (loading) {
-    return <div className="p-6 text-sm text-slate-600">Denetim dosyası yükleniyor...</div>;
+    setTimeout(() => setCopied(false), 2200);
   }
 
-  if (error || !auditPackage) {
-    return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">{error || "Denetim paketi bulunamadı."}</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-6 text-sm text-slate-600">Belge paylaşımı yükleniyor...</div>;
+  if (error || !auditPackage) return <div className="p-6"><div className="rounded border border-red-200 bg-red-50 p-4 text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
 
   return (
-    <div className="mx-auto max-w-6xl p-4 md:p-6">
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <main className="mx-auto w-full max-w-6xl p-6">
+      <header className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-            <ShieldCheck size={15} /> Denetim Dosyası Hazır
-          </div>
-          <h1 className="text-2xl font-bold text-[#042f4b]">Denetim Dosyası Hazır</h1>
-          <p className="text-sm text-slate-500">Güvenli bağlantı ve QR kod ile paylaşabilirsiniz.</p>
+          <div className="mb-2 inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 size={16} /> Belge Paylaşımı Hazır</div>
+          <h1 className="text-2xl font-bold text-slate-900">{auditPackage.companyName}</h1>
+          <p className="mt-1 text-sm text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
         </div>
-        <button className="rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold" onClick={() => navigate(-1)}>
-          Geri Dön
-        </button>
-      </div>
+        <Link to="/denetim/hazirla" className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="rounded-full bg-emerald-50 p-3 text-emerald-600">
-              <CheckCircle2 size={24} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-[#042f4b]">{auditPackage.companyName || "-"}</h2>
-              <p className="text-sm text-slate-500">Dijital İSG Denetim Dosyası</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+      <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Paylaşım Bilgileri</h2>
+          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
             <Info label="Dosya No" value={auditPackage.packageNumber} />
             <Info label="Oluşturulma" value={formatDate(auditPackage.createdAt)} />
-            <Info label="Belge Sayısı" value={auditPackage.documentCount} />
-            <Info label="Kategori Sayısı" value={auditPackage.categoryCount} />
-            <Info label="Durum" value={auditPackage.status === "ACTIVE" ? "Aktif" : auditPackage.status} />
-          </div>
-        </section>
+            <Info label="Alıcı" value={auditPackage.recipientName} />
+            <Info label="Alıcı Türü" value={recipientLabels[auditPackage.recipientType] || auditPackage.recipientType} />
+            <Info label="E-posta" value={auditPackage.recipientEmail} />
+            <Info label="Belge / Kategori" value={`${auditPackage.documentCount || 0} belge / ${auditPackage.categoryCount || 0} kategori`} />
+            <Info label="Erişim" value={auditPackage.accessType === "UNLIMITED" ? "Süresiz" : formatDate(auditPackage.expiresAt)} />
+            <Info label="İndirme Yetkisi" value={auditPackage.allowDownload ? "Açık" : "Kapalı"} />
+            <Info label="Şifre Koruması" value={auditPackage.requiresPassword ? "Var" : "Yok"} />
+            <Info label="E-posta Durumu" value={auditPackage.emailSentAt ? `Gönderildi (${formatDate(auditPackage.emailSentAt)})` : "Gönderilemedi veya bekliyor"} />
+          </dl>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-2 font-bold text-[#042f4b]">
-            <QrCode size={20} /> QR Kod ve Paylaşım
+          <div className="mt-6">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Güvenli paylaşım bağlantısı</label>
+            <div className="flex gap-2"><input readOnly value={publicUrl} className="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2 text-sm" /><button onClick={copyLink} className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white"><Copy size={16} /> {copied ? "Kopyalandı" : "Linki Kopyala"}</button></div>
           </div>
-          <div className="flex flex-col items-center gap-4">
-            {qrUrl && <img className="h-60 w-60 rounded-lg border border-slate-200 bg-white p-3" src={qrUrl} alt="Denetim QR kodu" />}
-            <div className="flex w-full gap-2">
-              <input className="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm" value={publicUrl} readOnly />
-              <button className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white" onClick={copyLink}>
-                <Copy size={16} /> Kopyala
-              </button>
-            </div>
-            {copied && <div className="w-full rounded-md border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-700">Denetim bağlantısı kopyalandı.</div>}
-            <div className="grid w-full gap-2 sm:grid-cols-2">
-              <a className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white" href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer">
-                <MessageCircle size={17} /> WhatsApp ile Gönder
-              </a>
-              <a className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-[#042f4b]" href={`mailto:?subject=${encodeURIComponent(`${auditPackage.companyName || "Firma"} - Dijital İSG Denetim Dosyası`)}&body=${encodeURIComponent(shareText)}`}>
-                <Mail size={17} /> E-posta ile Gönder
-              </a>
-            </div>
-            <Link className="w-full rounded-md border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-[#042f4b]" to={`/denetim/goruntule/${auditPackage.publicToken}`} target="_blank">
-              Public Portalı Aç
-            </Link>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href={`mailto:${encodeURIComponent(auditPackage.recipientEmail || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`} className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"><Mail size={16} /> E-posta ile Gönder</a>
+            <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"><ExternalLink size={16} /> Paylaşımı Aç</a>
           </div>
-        </section>
-      </div>
-    </div>
+        </div>
+
+        <aside className="rounded border border-slate-200 bg-white p-5 text-center shadow-sm">
+          <div className="mb-3 flex items-center justify-center gap-2 font-bold text-slate-900"><QrCode size={18} /> QR Kod</div>
+          <img src={qrUrl} alt="Belge paylaşımı QR kodu" className="mx-auto h-60 w-60 border border-slate-200 p-2" />
+          <p className="mt-3 text-xs leading-5 text-slate-500">QR kod okutulduğunda yalnızca bu paylaşım paketine eklenen belgeler açılır.</p>
+        </aside>
+      </section>
+    </main>
   );
 }
 
 function Info({ label, value }) {
-  return (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 font-bold text-[#042f4b]">{value ?? "-"}</div>
-    </div>
-  );
+  return <div><dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-slate-900">{value || "-"}</dd></div>;
 }

@@ -223,6 +223,7 @@ function App() {
 
           <Route path="/kayit/teklif/:token/basvuru" element={<TeklifBasvuru />} />
           <Route path="/kayit/teklif/:token" element={<TeklifKayit />} />
+          <Route path="/denetim/goruntule/:publicToken" element={<DenetimGoruntule />} />
 
           {/* 🟢 BİREYSEL PANEL */}
           <Route

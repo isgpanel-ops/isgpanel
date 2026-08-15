@@ -4,7 +4,6 @@ import axios from "axios";
 
 import { CardBox, SectionTitle } from "../../components/ui";
 import ConfirmModal from "../../components/ui/ConfirmModal";
-import DenetimeHazirlanButton from "../../components/DenetimeHazirlanButton";
 
 const API_BASE =
   (import.meta?.env?.VITE_API_URL || "").trim().replace(/\/$/, "") ||
@@ -643,7 +642,6 @@ openInfo("Bilgilendirme", "Belge silindi ✅");
           <h2 className="text-xl font-bold text-[#042f4b] mb-1">Belgeler (Admin)</h2>
           <p className="text-slate-500 text-xs">Belgeleri görüntüleyin, arşivleyin ve indirin.</p>
           </div>
-          <DenetimeHazirlanButton />
         </div>
 
       {/* Sekmeler */}
