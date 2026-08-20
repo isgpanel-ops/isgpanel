@@ -173,12 +173,12 @@ function drawStampBlock(page, font, centerX, baseY, stampData) {
   const stampColor = rgb(29 / 255, 78 / 255, 216 / 255);
   const stampOpacity = 0.42;
 
- drawCenteredText(page, font, name, centerX, baseY + 30, 7.8, stampColor, stampOpacity);
-drawCenteredText(page, font, title, centerX, baseY + 22, 6.0, stampColor, stampOpacity);
+  drawCenteredText(page, font, name, centerX, baseY + 34, 10.2, stampColor, stampOpacity);
+  drawCenteredText(page, font, title, centerX, baseY + 23, 7.8, stampColor, stampOpacity);
 
-if (certNo) {
-  drawCenteredText(page, font, certNo, centerX, baseY + 14, 6.0, stampColor, stampOpacity);
-}
+  if (certNo) {
+    drawCenteredText(page, font, certNo, centerX, baseY + 13, 7.8, stampColor, stampOpacity);
+  }
 }
 
 async function placeSignatures(pdfPath, payload = {}) {
