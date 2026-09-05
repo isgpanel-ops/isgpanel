@@ -102,6 +102,12 @@ function primaryOrgId(user = {}) {
   return orgCandidates(user)[0] || "default";
 }
 
+function organizationSlug(user = {}) {
+  const raw = user.organizationName || user.orgName || user.osgbName || user.firmaAdi || "isg-panel";
+  const slug = normalizeText(raw).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "isg-panel";
+}
+
 function companyConditions(companyId, companyName) {
   const id = String(companyId || "").trim();
   const name = String(companyName || "").trim();
@@ -242,7 +248,7 @@ function publicBaseUrl(req) {
 }
 
 function publicUrl(req, pkg) {
-  return `${publicBaseUrl(req)}/denetim/goruntule/${pkg.publicToken}`;
+  return `${publicBaseUrl(req)}/p/${pkg.organizationSlug || "isg-panel"}/paylas/${pkg.publicToken}`;
 }
 
 async function nextPackageNumber() {
@@ -445,6 +451,7 @@ router.post("/", auth, async (req, res) => {
       try {
         pkg = await AuditPackage.create({
           organizationId,
+          organizationSlug: organizationSlug(req.user),
           companyId: companyId || String(packageDocs[0].firmaId || packageDocs[0].companyId || ""),
           companyName: companyName || packageDocs[0].firmaAdi || packageDocs[0].companyName || "",
           packageNumber: await nextPackageNumber(),

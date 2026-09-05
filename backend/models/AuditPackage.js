@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const AuditPackageSchema = new mongoose.Schema(
   {
     organizationId: { type: String, required: true, index: true },
+    organizationSlug: { type: String, default: "isg-panel", index: true },
     companyId: { type: String, required: true, index: true },
     companyName: { type: String, default: "" },
     packageNumber: { type: String, required: true, unique: true, index: true },
