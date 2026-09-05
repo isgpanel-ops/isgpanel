@@ -107,8 +107,11 @@ async function organizationBrand(user = {}) {
     .select("firmaAdi logo logoUrl")
     .lean();
   const name = String(identity?.firmaAdi || fallbackName || "İSG Panel").trim();
-  // Eski kurumsal kimlik kayıtlarında logo yalnızca base64 "logo" alanında olabilir.
-  return { name, logoUrl: String(identity?.logoUrl || identity?.logo || "").trim(), slug: slugify(name) };
+  // Kurumsal Kimlik ekranının kullandığı gerçek önizleme logosunu öncele.
+  // Bazı eski kayıtlarda logoUrl dosyası silinmiş, fakat logo alanı geçerlidir.
+  const embeddedLogo = String(identity?.logo || "").trim();
+  const logoUrl = embeddedLogo.startsWith("data:image") ? embeddedLogo : String(identity?.logoUrl || embeddedLogo || "").trim();
+  return { name, logoUrl, slug: slugify(name) };
 }
 
 function companyConditions(companyId, companyName) {
