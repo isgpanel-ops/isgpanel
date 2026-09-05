@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { CheckCircle2, Copy, ExternalLink, Mail, QrCode } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, Mail } from "lucide-react";
 import { API_BASE } from "../../config/api";
 
 const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
@@ -62,7 +62,6 @@ export default function DenetimPaketiHazir() {
 
   const publicUrl = useMemo(() => auditPackage?.publicUrl || (auditPackage?.publicToken
     ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : ""), [auditPackage]);
-  const qrUrl = auditPackage?.qrCodeDataUrl || "";
   const mailSubject = `${auditPackage?.companyName || "Firma"} - İSG Belge Paylaşımı`;
   const mailBody = `${auditPackage?.companyName || "Firma"} için hazırlanan İSG belgelerine aşağıdaki güvenli bağlantıdan ulaşabilirsiniz.\n\nDosya No: ${auditPackage?.packageNumber || "-"}\n\n${publicUrl}`;
 
@@ -95,10 +94,10 @@ export default function DenetimPaketiHazir() {
           <p className="mt-1 text-sm text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
           {newDocumentCount > 0 && <div className="mt-3 flex items-center justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"><span>Bu paylaşım oluşturulduktan sonra {newDocumentCount} yeni belge eklendi.</span><button onClick={addAllNewDocuments} disabled={addingNewDocuments} className="rounded border border-amber-300 bg-white px-3 py-1 font-semibold">{addingNewDocuments ? "Ekleniyor..." : "Yeni Belgeleri İncele ve Ekle"}</button></div>}
         </div>
-        <Link to={`${basePath(location.pathname)}/denetim/hazirla`} className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
+        <Link to={`${basePath(location.pathname)}/belge-paylasimi`} className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
       </header>
 
-      <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <section>
         <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-slate-900">Paylaşım Bilgileri</h2>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -125,11 +124,6 @@ export default function DenetimPaketiHazir() {
           </div>
         </div>
 
-        <aside className="rounded border border-slate-200 bg-white p-5 text-center shadow-sm">
-          <div className="mb-3 flex items-center justify-center gap-2 font-bold text-slate-900"><QrCode size={18} /> QR Kod</div>
-          {qrUrl ? <img src={qrUrl} alt="Belge paylaşımı QR kodu" className="mx-auto h-60 w-60 border border-slate-200 p-2" /> : <div className="mx-auto grid h-60 w-60 place-items-center border border-slate-200 text-sm text-slate-500">QR kod hazırlanamadı.</div>}
-          <p className="mt-3 text-xs leading-5 text-slate-500">QR kod okutulduğunda yalnızca bu paylaşım paketine eklenen belgeler açılır.</p>
-        </aside>
       </section>
     </main>
   );

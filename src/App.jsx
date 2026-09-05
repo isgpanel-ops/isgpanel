@@ -244,7 +244,7 @@ function App() {
 <Route path="defter-kurul" element={<DefterKurul />} />
 <Route path="periyodik-is-hijyen" element={<PeriyodikIsHijyen />} />
 <Route path="belgelerim" element={<Belgelerim />} />
-            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="kisisel-bilgiler" element={<KisiselBilgiler />} />
             <Route path="kurumsal-kimlik" element={<KurumsalKimlik />} />
@@ -276,7 +276,7 @@ function App() {
           >
             <Route index element={<TicariDashboard />} />
             <Route path="belgeler" element={<TicariAdminBelgeler />} />
-            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="firmalar" element={<AdminFirmalar />} />
             <Route path="atama-bekleyen" element={<AdminAtamaBekleyen />} />
@@ -298,7 +298,7 @@ function App() {
             }
           >
             <Route index element={<TicariBelgeler />} />
-            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
           </Route>
 
@@ -314,7 +314,7 @@ function App() {
             <Route index element={<UserFirmalarim />} />
             <Route path="firmalarim" element={<UserFirmalarim />} />
             <Route path="belgelerim" element={<Belgelerim />} />
-            <Route path="denetim/hazirla" element={<DenetimHazirla />} />
+            <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
           </Route>
 

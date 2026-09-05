@@ -119,6 +119,7 @@ export default function DenetimHazirla() {
         return;
       }
       try {
+        setError("");
         setLoading(true);
         const params = new URLSearchParams({ companyId: company.id, companyName: company.name || "" });
         const res = await fetch(`${AUDIT_API_BASE}/audit-packages/prepare?${params}`, { headers: headers() });

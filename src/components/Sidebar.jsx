@@ -90,7 +90,7 @@ const isPaymentPending =
 
     {
       name: "Belge Paylaşımı",
-      path: "/panel/denetim/hazirla",
+      path: "/panel/belge-paylasimi",
       icon: Share2,
     },
 

@@ -109,7 +109,7 @@ export default function AdminSidebar({
     { name: "Belgeler", path: "/ticari/admin/belgeler", icon: FolderOpen },
     {
       name: "Belge Paylaşımı",
-      path: "/ticari/admin/denetim/hazirla",
+      path: "/ticari/admin/belge-paylasimi",
       icon: Share2,
     },
     { name: "Firmalar", path: "/ticari/admin/firmalar", icon: Building2 },
