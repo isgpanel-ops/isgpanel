@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, Search, ShieldCheck, X } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, Search, ShieldCheck, Trash2, X } from "lucide-react";
 import { API_BASE } from "../../config/api";
 import { useFirmalar } from "../../context/FirmaContext";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+const panelButton = "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a2b45] disabled:cursor-not-allowed disabled:opacity-60";
+const ghostButton = `${panelButton} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`;
+const primaryButton = `${panelButton} bg-[#2563eb] text-white hover:bg-[#1d4ed8]`;
+const upperTR = (value = "") => String(value).toLocaleUpperCase("tr-TR");
 
 function authToken() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
@@ -98,7 +103,7 @@ export default function DenetimHazirla() {
   const [packages, setPackages] = useState([]);
   const [selectedDocs, setSelectedDocs] = useState(new Set());
   const [detailCategory, setDetailCategory] = useState(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -176,7 +181,6 @@ export default function DenetimHazirla() {
   }
 
   async function deletePackage(id) {
-    if (!window.confirm("Bu paylaşım ve bağlantısı kalıcı olarak silinsin mi?")) return;
     const res = await fetch(`${AUDIT_API_BASE}/audit-packages/${id}`, { method: "DELETE", headers: headers() });
     if (!res.ok) return setError("Paylaşım silinemedi.");
     setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
@@ -206,7 +210,7 @@ export default function DenetimHazirla() {
       navigate(`${basePath(location.pathname)}/denetim/paket/${data.package?.id}`, { state: { auditPackage: data.package } });
     } catch (err) {
       setError(err.message || "Denetim dosyası oluşturulamadı.");
-      setConfirmOpen(false);
+      setConfirmAction(null);
     } finally {
       setCreating(false);
     }
@@ -225,41 +229,41 @@ export default function DenetimHazirla() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold sm:text-xl">Belge Paylaşımı</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-xs text-slate-500">
             Firmanıza ait İSG belgelerini seçin, güvenli paylaşım paketinizi oluşturun ve bağlantı ile paylaşın.
           </p>
-          <p className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
+          <p className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs">
             <span className="font-semibold">Firma:</span> {company?.name || "-"}
           </p>
         </div>
         <button
           type="button"
           disabled={!canCreate}
-          onClick={() => setConfirmOpen(true)}
-          className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold shadow-sm ${
-            !canCreate ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"
+          onClick={() => setConfirmAction({ type: "create" })}
+          className={`${panelButton} ${
+            !canCreate ? "bg-slate-200 text-slate-500" : "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
           }`}
         >
-          <ShieldCheck size={17} />
+          <ShieldCheck size={14} />
           Paylaşım Oluştur
         </button>
       </div>
 
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <section className="mb-5 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold">Paylaşım Bilgileri</h2>
-        <p className="mb-4 mt-1 text-sm text-slate-500">Bağlantının gönderileceği kişiyi ve erişim kurallarını belirleyin.</p>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <label className="text-sm font-semibold text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Ad soyad" /></label>
-          <label className="text-sm font-semibold text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="COMPANY_REPRESENTATIVE">Firma Yetkilisi</option><option value="OHS_PROFESSIONAL">İSG Profesyoneli</option><option value="OTHER">Diğer</option></select></label>
-          <label className="text-sm font-semibold text-slate-700">E-posta adresi<input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="ornek@firma.com" /></label>
-          <label className="text-sm font-semibold text-slate-700">Erişim türü<select value={accessType} onChange={(e) => setAccessType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="TIMED">Süreli</option><option value="UNLIMITED">Süresiz</option></select></label>
-          {accessType === "TIMED" && <label className="text-sm font-semibold text-slate-700">Son erişim zamanı<input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>}
-          <label className="text-sm font-semibold text-slate-700">Erişim şifresi (isteğe bağlı)<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Şifresiz paylaşmak için boş bırakın" /></label>
+        <p className="mb-3 mt-1 text-xs text-slate-500">Bağlantının gönderileceği kişiyi ve erişim kurallarını belirleyin.</p>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <label className="text-xs font-medium text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(upperTR(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" placeholder="AD SOYAD" /></label>
+          <label className="text-xs font-medium text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="COMPANY_REPRESENTATIVE">Firma Yetkilisi</option><option value="OHS_PROFESSIONAL">İSG Profesyoneli</option><option value="OTHER">Diğer</option></select></label>
+          <label className="text-xs font-medium text-slate-700">E-posta adresi<input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" placeholder="ornek@firma.com" /></label>
+          <label className="text-xs font-medium text-slate-700">Erişim türü<select value={accessType} onChange={(e) => setAccessType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal"><option value="TIMED">Süreli</option><option value="UNLIMITED">Süresiz</option></select></label>
+          {accessType === "TIMED" && <label className="text-xs font-medium text-slate-700">Son erişim zamanı<input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" /></label>}
+          <label className="text-xs font-medium text-slate-700">Erişim şifresi (isteğe bağlı)<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" placeholder="Şifresiz paylaşmak için boş bırakın" /></label>
         </div>
-        <label className="mt-4 block text-sm font-semibold text-slate-700">Not (isteğe bağlı)<textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1 w-full resize-y rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>
-        <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />Belgelerin indirilmesine izin ver</label>
+        <label className="mt-3 block text-xs font-medium text-slate-700">Not (isteğe bağlı)<textarea value={note} onChange={(e) => setNote(upperTR(e.target.value))} rows={2} className="mt-1 w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" /></label>
+        <label className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-700"><input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />Belgelerin indirilmesine izin ver</label>
         {!emailValid && recipientEmail && <p className="mt-2 text-xs text-red-600">Geçerli bir e-posta adresi giriniz.</p>}
         {!expiryValid && <p className="mt-2 text-xs text-red-600">Erişim bitiş zamanı gelecekte olmalıdır.</p>}
       </section>
@@ -271,25 +275,25 @@ export default function DenetimHazirla() {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-3 md:flex-row md:items-center md:justify-between">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-2.5 text-slate-400" size={17} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-md border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-400"
+              className="w-full rounded-lg border border-slate-300 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-[#0a2b45]"
               placeholder="Kategori ara..."
             />
           </div>
           <div className="flex gap-2">
             <button
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+              className={ghostButton}
               onClick={() => setSelectedDocs(new Set(categories.flatMap((cat) => cat.documents.map((doc) => doc.id))))}
             >
               Tümünü Seç
             </button>
             <button
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+              className={ghostButton}
               onClick={() => setSelectedDocs(new Set())}
             >
               Seçimi Temizle
@@ -303,7 +307,7 @@ export default function DenetimHazirla() {
             const allSelected = cat.count > 0 && selectedCount === cat.count;
             const someSelected = selectedCount > 0 && selectedCount < cat.count;
             return (
-              <div key={cat.name} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_92px_112px_118px] md:items-center">
+              <div key={cat.name} className="grid gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_92px_112px_118px] md:items-center">
                 <label className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -316,7 +320,7 @@ export default function DenetimHazirla() {
                     className="mt-1 h-4 w-4"
                   />
                   <span>
-                    <span className="block text-sm font-semibold">{cat.name}</span>
+                    <span className="block text-xs font-medium">{cat.name}</span>
                     <span className="text-xs text-slate-500">{cat.count} belge</span>
                   </span>
                 </label>
@@ -327,9 +331,9 @@ export default function DenetimHazirla() {
                 <button
                   disabled={cat.count === 0}
                   onClick={() => setDetailCategory(cat)}
-                  className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className={`${ghostButton} w-fit disabled:text-slate-400`}
                 >
-                  <Eye size={16} />
+                  <Eye size={14} />
                   Detayları Gör
                 </button>
               </div>
@@ -338,13 +342,13 @@ export default function DenetimHazirla() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-bold">Paylaşım Geçmişi</h2>
+      <div className="mt-5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <h2 className="mb-3 text-base font-bold">Paylaşım Geçmişi</h2>
         {packages.length === 0 ? (
           <p className="text-sm text-slate-500">Bu firma için oluşturulmuş paylaşım bulunamadı.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-xs">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-3 py-3">Dosya No</th>
@@ -361,7 +365,7 @@ export default function DenetimHazirla() {
               <tbody>
                 {packages.map((pkg) => (
                   <tr key={pkg.id} className="border-t border-slate-100">
-                    <td className="px-3 py-3 font-semibold">{pkg.packageNumber}</td>
+                    <td className="px-3 py-3 font-medium">{pkg.packageNumber}</td>
                     <td className="px-3 py-3">{pkg.recipientName || "-"}</td>
                     <td className="px-3 py-3">{{ INSPECTOR: "Müfettiş", EMPLOYER: "İşveren", HR: "İnsan Kaynakları", COMPANY_REPRESENTATIVE: "Firma Yetkilisi", OHS_PROFESSIONAL: "İSG Profesyoneli", OTHER: "Diğer" }[pkg.recipientType] || "-"}</td>
                     <td className="px-3 py-3">{pkg.createdAt ? new Date(pkg.createdAt).toLocaleString("tr-TR") : "-"}</td>
@@ -372,12 +376,12 @@ export default function DenetimHazirla() {
                     <td className="px-3 py-3 text-right">
                       <button
                         onClick={() => navigate(`${basePath(location.pathname)}/denetim/paket/${pkg.id}`, { state: { auditPackage: pkg } })}
-                        className="rounded-md border border-slate-200 px-3 py-2 font-semibold hover:bg-slate-50"
+                        className={ghostButton}
                       >
-                        Detay
+                        <Eye size={14} /> Detay
                       </button>
-                      <button title="Linki kopyala" onClick={() => navigator.clipboard.writeText(pkg.publicUrl)} className="ml-2 rounded-md border border-slate-200 p-2 hover:bg-slate-50"><Copy size={15} /></button>
-                      <button title="Sil" onClick={() => deletePackage(pkg.id)} className="ml-2 rounded-md border border-red-200 px-2 py-2 text-red-700 hover:bg-red-50">Sil</button>
+                      <button title="Linki kopyala" onClick={() => navigator.clipboard.writeText(pkg.publicUrl)} className={`ml-2 ${ghostButton} !px-2`}><Copy size={14} /></button>
+                      <button title="Sil" onClick={() => setConfirmAction({ type: "delete", id: pkg.id })} className={`ml-2 ${panelButton} border border-rose-200 bg-white text-rose-600 hover:bg-rose-50`}><Trash2 size={14} /> Sil</button>
                     </td>
                   </tr>
                 ))}
@@ -431,34 +435,28 @@ export default function DenetimHazirla() {
         </div>
       )}
 
-      {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-bold">Belge Paylaşımı Oluşturulsun mu?</h2>
-            <p className="mt-3 text-sm text-slate-600">
-              {company?.name || "Seçili firma"} için {selectedDocs.size} belge içeren dijital denetim dosyası oluşturulacaktır.
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button className="rounded-md border border-slate-200 px-4 py-2 font-semibold" onClick={() => setConfirmOpen(false)} disabled={creating}>
-                Vazgeç
-              </button>
-              <button className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white" onClick={createPackage} disabled={creating}>
-                {creating ? "Oluşturuluyor..." : "Paylaşımı Oluştur"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={Boolean(confirmAction)}
+        title={confirmAction?.type === "delete" ? "Uyarı" : "Belge Paylaşımı Oluşturulsun mu?"}
+        message={confirmAction?.type === "delete"
+          ? "Bu paylaşım ve bağlantısı kalıcı olarak silinsin mi?"
+          : `${company?.name || "Seçili firma"} için ${selectedDocs.size} belge içeren belge paylaşımı oluşturulacaktır.`}
+        variant={confirmAction?.type === "delete" ? "warning" : "info"}
+        confirmText={confirmAction?.type === "delete" ? "Sil" : (creating ? "Oluşturuluyor..." : "Oluştur")}
+        cancelText="İptal"
+        onCancel={() => !creating && setConfirmAction(null)}
+        onConfirm={() => confirmAction?.type === "delete" ? deletePackage(confirmAction.id) : createPackage()}
+      />
     </div>
   );
 }
 
 function SummaryCard({ icon, label, value }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 inline-flex rounded-full bg-blue-50 p-2 text-blue-600">{icon}</div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm text-slate-500">{label}</div>
+    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="mb-2 inline-flex rounded-full bg-blue-50 p-2 text-blue-600">{icon}</div>
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-xs text-slate-500">{label}</div>
     </div>
   );
 }
