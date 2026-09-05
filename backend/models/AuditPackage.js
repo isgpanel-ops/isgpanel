@@ -18,10 +18,11 @@ const AuditPackageSchema = new mongoose.Schema(
     recipientName: { type: String, default: "", trim: true },
     recipientType: {
       type: String,
-      enum: ["INSPECTOR", "EMPLOYER", "HR", "OTHER"],
+      enum: ["INSPECTOR", "EMPLOYER", "HR", "COMPANY_REPRESENTATIVE", "OHS_PROFESSIONAL", "OTHER"],
       default: "OTHER",
     },
     recipientEmail: { type: String, default: "", trim: true, lowercase: true, index: true },
+    recipientPhone: { type: String, default: "", trim: true },
     note: { type: String, default: "", trim: true, maxlength: 2000 },
     accessType: {
       type: String,
@@ -39,6 +40,8 @@ const AuditPackageSchema = new mongoose.Schema(
       enum: ["NOT_SENT", "SENT", "FAILED"],
       default: "NOT_SENT",
     },
+    lastAccessAt: { type: Date, default: null },
+    viewCount: { type: Number, default: 0, min: 0 },
     expiresAt: { type: Date, default: null, index: true },
     revokedAt: { type: Date, default: null, index: true },
   },

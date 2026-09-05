@@ -33,6 +33,9 @@ export default function DenetimPaketiHazir() {
   const [loading, setLoading] = useState(!location.state?.auditPackage);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [newDocumentCount, setNewDocumentCount] = useState(null);
+  const [newDocuments, setNewDocuments] = useState([]);
+  const [addingNewDocuments, setAddingNewDocuments] = useState(false);
 
   useEffect(() => {
     if (!packageId) return;
@@ -49,6 +52,14 @@ export default function DenetimPaketiHazir() {
     return () => { cancelled = true; };
   }, [packageId]);
 
+  useEffect(() => {
+    if (!packageId) return;
+    fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}/new-documents`, { headers: authHeaders() })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { setNewDocumentCount(data?.count ?? null); setNewDocuments(data?.categories?.flatMap((item) => item.documents || []) || []); })
+      .catch(() => setNewDocumentCount(null));
+  }, [packageId]);
+
   const publicUrl = useMemo(() => auditPackage?.publicUrl || (auditPackage?.publicToken
     ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : ""), [auditPackage]);
   const qrUrl = auditPackage?.qrCodeDataUrl || "";
@@ -61,6 +72,17 @@ export default function DenetimPaketiHazir() {
     setTimeout(() => setCopied(false), 2200);
   }
 
+  async function addAllNewDocuments() {
+    if (!newDocuments.length) return;
+    setAddingNewDocuments(true);
+    try {
+      const response = await fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}/documents`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ documentIds: newDocuments.map((doc) => doc.id) }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Yeni belgeler eklenemedi.");
+      setAuditPackage(data.package); setNewDocuments([]); setNewDocumentCount(0);
+    } catch (err) { setError(err.message); } finally { setAddingNewDocuments(false); }
+  }
+
   if (loading) return <div className="p-6 text-sm text-slate-600">Belge paylaşımı yükleniyor...</div>;
   if (error || !auditPackage) return <div className="p-6"><div className="rounded border border-red-200 bg-red-50 p-4 text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
 
@@ -71,6 +93,7 @@ export default function DenetimPaketiHazir() {
           <div className="mb-2 inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 size={16} /> Belge Paylaşımı Hazır</div>
           <h1 className="text-2xl font-bold text-slate-900">{auditPackage.companyName}</h1>
           <p className="mt-1 text-sm text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
+          {newDocumentCount > 0 && <div className="mt-3 flex items-center justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"><span>Bu paylaşım oluşturulduktan sonra {newDocumentCount} yeni belge eklendi.</span><button onClick={addAllNewDocuments} disabled={addingNewDocuments} className="rounded border border-amber-300 bg-white px-3 py-1 font-semibold">{addingNewDocuments ? "Ekleniyor..." : "Yeni Belgeleri İncele ve Ekle"}</button></div>}
         </div>
         <Link to={`${basePath(location.pathname)}/denetim/hazirla`} className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
       </header>

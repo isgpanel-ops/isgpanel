@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle2, ClipboardCheck, Eye, FileCheck, Search, ShieldCheck, X } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, QrCode, Search, ShieldCheck, X } from "lucide-react";
 import { API_BASE } from "../../config/api";
 import { useFirmalar } from "../../context/FirmaContext";
 
@@ -104,6 +104,7 @@ export default function DenetimHazirla() {
   const [recipientName, setRecipientName] = useState("");
   const [recipientType, setRecipientType] = useState("INSPECTOR");
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
   const [note, setNote] = useState("");
   const [accessType, setAccessType] = useState("TIMED");
   const [expiresAt, setExpiresAt] = useState(() => localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)));
@@ -174,6 +175,13 @@ export default function DenetimHazirla() {
     });
   }
 
+  async function revokePackage(id) {
+    if (!window.confirm("Bu paylaşımın erişimi iptal edilsin mi?")) return;
+    const res = await fetch(`${AUDIT_API_BASE}/audit-packages/${id}/revoke`, { method: "POST", headers: headers() });
+    if (!res.ok) return setError("Paylaşım erişimi iptal edilemedi.");
+    setPackages((prev) => prev.map((pkg) => pkg.id === id ? { ...pkg, status: "REVOKED" } : pkg));
+  }
+
   async function createPackage() {
     try {
       setCreating(true);
@@ -187,6 +195,7 @@ export default function DenetimHazirla() {
           recipientName: recipientName.trim(),
           recipientType,
           recipientEmail: recipientEmail.trim(),
+          recipientPhone: recipientPhone.trim(),
           note: note.trim(),
           accessType,
           expiresAt: accessType === "TIMED" ? new Date(expiresAt).toISOString() : null,
@@ -218,7 +227,7 @@ export default function DenetimHazirla() {
         <div>
           <h1 className="text-2xl font-bold">Belge Paylaşımı</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Firmanıza ait İSG belgelerini kontrol edin, denetim dosyanızı oluşturun ve güvenli bağlantı ile paylaşın.
+            Firmanıza ait İSG belgelerini seçin, güvenli paylaşım paketinizi oluşturun ve bağlantı ile paylaşın.
           </p>
           <p className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
             <span className="font-semibold">Firma:</span> {company?.name || "-"}
@@ -244,8 +253,9 @@ export default function DenetimHazirla() {
         <p className="mb-4 mt-1 text-sm text-slate-500">Bağlantının gönderileceği kişiyi ve erişim kurallarını belirleyin.</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <label className="text-sm font-semibold text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Ad soyad" /></label>
-          <label className="text-sm font-semibold text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="OTHER">Diğer</option></select></label>
+          <label className="text-sm font-semibold text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="COMPANY_REPRESENTATIVE">Firma Yetkilisi</option><option value="OHS_PROFESSIONAL">İSG Profesyoneli</option><option value="OTHER">Diğer</option></select></label>
           <label className="text-sm font-semibold text-slate-700">E-posta adresi<input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="ornek@firma.com" /></label>
+          <label className="text-sm font-semibold text-slate-700">Telefon (isteğe bağlı)<input type="tel" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="05XX XXX XX XX" /></label>
           <label className="text-sm font-semibold text-slate-700">Erişim türü<select value={accessType} onChange={(e) => setAccessType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="TIMED">Süreli</option><option value="UNLIMITED">Süresiz</option></select></label>
           {accessType === "TIMED" && <label className="text-sm font-semibold text-slate-700">Son erişim zamanı<input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>}
           <label className="text-sm font-semibold text-slate-700">Erişim şifresi (isteğe bağlı)<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Şifresiz paylaşmak için boş bırakın" /></label>
@@ -331,19 +341,22 @@ export default function DenetimHazirla() {
       </div>
 
       <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-bold">Denetim Dosyaları</h2>
+        <h2 className="mb-3 text-lg font-bold">Paylaşım Geçmişi</h2>
         {packages.length === 0 ? (
-          <p className="text-sm text-slate-500">Bu firma için oluşturulmuş denetim dosyası bulunamadı.</p>
+          <p className="text-sm text-slate-500">Bu firma için oluşturulmuş paylaşım bulunamadı.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-3 py-3">Dosya No</th>
+                  <th className="px-3 py-3">Paylaşılan Kişi</th>
+                  <th className="px-3 py-3">Alıcı Türü</th>
                   <th className="px-3 py-3">Oluşturulma Tarihi</th>
                   <th className="px-3 py-3">Belge Sayısı</th>
                   <th className="px-3 py-3">Kategori Sayısı</th>
                   <th className="px-3 py-3">Durum</th>
+                  <th className="px-3 py-3">Son Erişim</th>
                   <th className="px-3 py-3 text-right">İşlemler</th>
                 </tr>
               </thead>
@@ -351,17 +364,23 @@ export default function DenetimHazirla() {
                 {packages.map((pkg) => (
                   <tr key={pkg.id} className="border-t border-slate-100">
                     <td className="px-3 py-3 font-semibold">{pkg.packageNumber}</td>
+                    <td className="px-3 py-3">{pkg.recipientName || "-"}</td>
+                    <td className="px-3 py-3">{{ INSPECTOR: "Müfettiş", EMPLOYER: "İşveren", HR: "İnsan Kaynakları", COMPANY_REPRESENTATIVE: "Firma Yetkilisi", OHS_PROFESSIONAL: "İSG Profesyoneli", OTHER: "Diğer" }[pkg.recipientType] || "-"}</td>
                     <td className="px-3 py-3">{pkg.createdAt ? new Date(pkg.createdAt).toLocaleString("tr-TR") : "-"}</td>
                     <td className="px-3 py-3">{pkg.documentCount}</td>
                     <td className="px-3 py-3">{pkg.categoryCount}</td>
                     <td className="px-3 py-3">{pkg.status === "ACTIVE" ? "Aktif" : pkg.status || "-"}</td>
+                    <td className="px-3 py-3">{pkg.lastAccessAt ? new Date(pkg.lastAccessAt).toLocaleString("tr-TR") : "Henüz açılmadı"}</td>
                     <td className="px-3 py-3 text-right">
                       <button
                         onClick={() => navigate(`${basePath(location.pathname)}/denetim/paket/${pkg.id}`, { state: { auditPackage: pkg } })}
                         className="rounded-md border border-slate-200 px-3 py-2 font-semibold hover:bg-slate-50"
                       >
-                        Görüntüle
+                        Detay
                       </button>
+                      <button title="Linki kopyala" onClick={() => navigator.clipboard.writeText(pkg.publicUrl)} className="ml-2 rounded-md border border-slate-200 p-2 hover:bg-slate-50"><Copy size={15} /></button>
+                      <button title="QR göster" onClick={() => navigate(`${basePath(location.pathname)}/denetim/paket/${pkg.id}`)} className="ml-2 rounded-md border border-slate-200 p-2 hover:bg-slate-50"><QrCode size={15} /></button>
+                      {pkg.status === "ACTIVE" && <button onClick={() => revokePackage(pkg.id)} className="ml-2 rounded-md border border-red-200 px-2 py-2 text-red-700 hover:bg-red-50">İptal</button>}
                     </td>
                   </tr>
                 ))}

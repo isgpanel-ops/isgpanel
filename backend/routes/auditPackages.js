@@ -247,7 +247,7 @@ function publicUrl(req, pkg) {
 
 async function nextPackageNumber() {
   const year = new Date().getFullYear();
-  const prefix = `DNT-${year}-`;
+  const prefix = `PAY-${year}-`;
   const latest = await AuditPackage.findOne({ packageNumber: new RegExp(`^${prefix}`) })
     .sort({ packageNumber: -1 })
     .select("packageNumber")
@@ -298,12 +298,16 @@ async function packagePayload(req, pkg, options = {}) {
       recipientName: pkg.recipientName,
       recipientType: pkg.recipientType,
       recipientEmail: pkg.recipientEmail,
+      recipientPhone: pkg.recipientPhone || "",
       note: pkg.note || "",
       accessType: pkg.accessType,
       requiresPassword: Boolean(pkg.passwordHash),
       allowDownload: pkg.allowDownload !== false,
       expiresAt: pkg.expiresAt || null,
       emailStatus: pkg.emailStatus || "NOT_SENT",
+      emailSentAt: pkg.emailSentAt || null,
+      lastAccessAt: pkg.lastAccessAt || null,
+      viewCount: pkg.viewCount || 0,
       documentCount: safeDocs.length,
       categoryCount: categories.length,
     },
@@ -365,10 +369,13 @@ router.get("/prepare", auth, async (req, res) => {
           recipientName: pkg.recipientName,
           recipientType: pkg.recipientType,
           recipientEmail: pkg.recipientEmail,
+          recipientPhone: pkg.recipientPhone || "",
           accessType: pkg.accessType,
           expiresAt: pkg.expiresAt,
           allowDownload: pkg.allowDownload,
           emailStatus: pkg.emailStatus,
+          lastAccessAt: pkg.lastAccessAt || null,
+          viewCount: pkg.viewCount || 0,
           documentCount: stat?.documentCount || 0,
           categoryCount: stat?.categories?.filter(Boolean).length || 0,
         };
@@ -385,10 +392,11 @@ router.post("/", auth, async (req, res) => {
     const companyId = String(req.body.companyId || "").trim();
     const companyName = String(req.body.companyName || "").trim();
     const recipientName = String(req.body.recipientName || "").trim();
-    const recipientType = ["INSPECTOR", "EMPLOYER", "HR", "OTHER"].includes(req.body.recipientType)
+    const recipientType = ["INSPECTOR", "EMPLOYER", "HR", "COMPANY_REPRESENTATIVE", "OHS_PROFESSIONAL", "OTHER"].includes(req.body.recipientType)
       ? req.body.recipientType
       : "OTHER";
     const recipientEmail = normalizeEmail(req.body.recipientEmail);
+    const recipientPhone = String(req.body.recipientPhone || "").trim();
     const note = String(req.body.note || "").trim();
     const accessType = req.body.accessType === "TIMED" ? "TIMED" : "UNLIMITED";
     const expiresAt = accessType === "TIMED" ? new Date(req.body.expiresAt) : null;
@@ -447,6 +455,7 @@ router.post("/", auth, async (req, res) => {
           recipientName,
           recipientType,
           recipientEmail,
+          recipientPhone,
           note,
           accessType,
           expiresAt,
@@ -508,11 +517,61 @@ router.get("/public/:publicToken", async (req, res) => {
     if (!passwordMatches(pkg, requestPassword(req))) {
       return res.status(401).json({ requiresPassword: true, message: "Paylaşım şifresi gereklidir." });
     }
+    await AuditPackage.updateOne({ _id: pkg._id }, { $set: { lastAccessAt: new Date() }, $inc: { viewCount: 1 } });
     res.json(await packagePayload(req, pkg));
   } catch (err) {
     console.error("audit public error:", err);
     res.status(500).json({ message: "Denetim dosyası görüntülenemedi." });
   }
+});
+
+router.post("/:id/documents", auth, async (req, res) => {
+  try {
+    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) });
+    const ids = [...new Set(Array.isArray(req.body.documentIds) ? req.body.documentIds.map(String) : [])].filter(mongoose.Types.ObjectId.isValid);
+    if (!pkg || pkg.status !== "ACTIVE") return res.status(404).json({ message: "Aktif paylaşım bulunamadı." });
+    const docs = await Document.find({ ...buildDocumentQuery(req, pkg.companyId, pkg.companyName), _id: { $in: ids } }).lean();
+    if (!docs.length) return res.status(400).json({ message: "Eklenecek belge bulunamadı." });
+    await AuditPackageDocument.insertMany(docs.map((doc) => ({ auditPackageId: pkg._id, documentId: doc._id, organizationId: pkg.organizationId, companyId: pkg.companyId, category: inferCategory(doc), documentVersion: doc.revision || doc.rev || "" })), { ordered: false }).catch(() => null);
+    const links = await AuditPackageDocument.find({ auditPackageId: pkg._id }).lean();
+    pkg.documentCount = links.length; pkg.categoryCount = new Set(links.map((item) => item.category)).size; await pkg.save();
+    res.json(await packagePayload(req, pkg, { includeQr: true }));
+  } catch (err) { res.status(500).json({ message: "Paylaşım güncellenemedi." }); }
+});
+
+router.post("/:id/revoke", auth, async (req, res) => {
+  const pkg = await AuditPackage.findOneAndUpdate({ _id: req.params.id, organizationId: primaryOrgId(req.user) }, { status: "REVOKED", revokedAt: new Date() }, { new: true });
+  if (!pkg) return res.status(404).json({ message: "Paylaşım bulunamadı." });
+  res.json({ ok: true });
+});
+
+router.post("/:id/reset-password", auth, async (req, res) => {
+  const password = String(req.body.password || "");
+  if (password.length < 6) return res.status(400).json({ message: "Şifre en az 6 karakter olmalıdır." });
+  const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) });
+  if (!pkg) return res.status(404).json({ message: "Paylaşım bulunamadı." });
+  Object.assign(pkg, makePasswordHash(password)); await pkg.save();
+  res.json({ ok: true });
+});
+
+router.post("/public/:publicToken/change-password", async (req, res) => {
+  const currentPassword = String(req.body.currentPassword || "");
+  const newPassword = String(req.body.newPassword || "");
+  const pkg = await AuditPackage.findOne({ publicToken: req.params.publicToken }).select("+passwordHash +passwordSalt");
+  if (!packageAvailable(pkg) || !passwordMatches(pkg, currentPassword)) return res.status(401).json({ message: "Mevcut şifre doğrulanamadı." });
+  if (newPassword.length < 6) return res.status(400).json({ message: "Yeni şifre en az 6 karakter olmalıdır." });
+  Object.assign(pkg, makePasswordHash(newPassword)); await pkg.save(); res.json({ ok: true });
+});
+
+router.get("/:id/new-documents", auth, async (req, res) => {
+  try {
+    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) }).lean();
+    if (!pkg) return res.status(404).json({ message: "Paylaşım bulunamadı." });
+    const linked = await AuditPackageDocument.find({ auditPackageId: pkg._id }).select("documentId").lean();
+    const linkedIds = linked.map((item) => item.documentId);
+    const docs = await Document.find({ ...buildDocumentQuery(req, pkg.companyId, pkg.companyName), _id: { $nin: linkedIds } }).sort({ createdAt: -1 }).lean();
+    res.json({ count: docs.length, categories: groupDocuments(docs, { includeEmpty: false }) });
+  } catch (err) { res.status(500).json({ message: "Yeni belgeler alınamadı." }); }
 });
 
 router.get("/public/:publicToken/documents/:documentId/file", async (req, res) => {
