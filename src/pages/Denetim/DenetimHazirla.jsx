@@ -404,15 +404,13 @@ export default function DenetimHazirla() {
               </button>
             </div>
             <div className="max-h-[65vh] overflow-auto p-4">
-              <table className="w-full min-w-[980px] text-left text-xs">
+              <table className="w-full min-w-[760px] text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     <th className="px-3 py-2"></th>
                     <th className="px-3 py-2">Belge adı</th>
                     <th className="px-3 py-2">Belge tarihi</th>
                     <th className="px-3 py-2">Hazırlayan</th>
-                    <th className="px-3 py-2">Revizyon</th>
-                    <th className="px-3 py-2">İmza durumu</th>
                     <th className="px-3 py-2">Durum</th>
                   </tr>
                 </thead>
@@ -425,9 +423,12 @@ export default function DenetimHazirla() {
                       <td className="px-3 py-2 font-medium">{doc.title}</td>
                       <td className="px-3 py-2">{doc.tarih ? new Date(doc.tarih).toLocaleDateString("tr-TR") : "-"}</td>
                       <td className="px-3 py-2">{doc.hazirlayan ? upperTR(doc.hazirlayan) : "-"}</td>
-                      <td className="px-3 py-2">{doc.revision || "-"}</td>
-                      <td className="px-3 py-2">{doc.signatureStatus || "-"}</td>
-                      <td className="px-3 py-2">{doc.status || "-"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${String(doc.status || "hazir").toLowerCase().includes("arsiv") ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}>
+                          <CheckCircle2 size={12} />
+                          {String(doc.status || "hazir").toLowerCase().includes("arsiv") ? "Arşiv" : "Hazır"}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
