@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { Readable } = require("stream");
 const mongoose = require("mongoose");
+const QRCode = require("qrcode");
 const Document = require("../models/Document");
 const AuditPackage = require("../models/AuditPackage");
 const AuditPackageDocument = require("../models/AuditPackageDocument");
@@ -262,7 +263,7 @@ function safeFilePath(doc) {
   return fs.existsSync(resolved) ? resolved : "";
 }
 
-async function packagePayload(req, pkg) {
+async function packagePayload(req, pkg, options = {}) {
   const links = await AuditPackageDocument.find({ auditPackageId: pkg._id }).lean();
   const documentIds = links.map((link) => link.documentId).filter(Boolean);
   const docs = await Document.find({ _id: { $in: documentIds } }).lean();
@@ -283,7 +284,7 @@ async function packagePayload(req, pkg) {
     categoryOverride,
   });
 
-  return {
+  const payload = {
     package: {
       id: String(pkg._id),
       companyId: pkg.companyId,
@@ -308,6 +309,16 @@ async function packagePayload(req, pkg) {
     },
     categories,
   };
+
+  if (options.includeQr) {
+    payload.package.qrCodeDataUrl = await QRCode.toDataURL(payload.package.publicUrl, {
+      width: 280,
+      margin: 1,
+      errorCorrectionLevel: "M",
+    });
+  }
+
+  return payload;
 }
 
 router.get("/prepare", auth, async (req, res) => {
@@ -478,7 +489,10 @@ router.post("/", auth, async (req, res) => {
     }
     await pkg.save();
 
-    res.status(201).json({ ...(await packagePayload(req, pkg)), skippedDuplicateCount: allowedDocs.length - packageDocs.length });
+    res.status(201).json({
+      ...(await packagePayload(req, pkg, { includeQr: true })),
+      skippedDuplicateCount: allowedDocs.length - packageDocs.length,
+    });
   } catch (err) {
     console.error("audit create error:", err);
     res.status(500).json({ message: "Denetim dosyası oluşturulamadı." });
@@ -513,14 +527,22 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
     if (!passwordMatches(pkg, requestPassword(req))) return res.status(401).end();
     if (req.query.download === "1" && !pkg.allowDownload) return res.status(403).end();
 
-    const link = await AuditPackageDocument.findOne({ auditPackageId: pkg._id, documentId }).lean();
+    const link = await AuditPackageDocument.findOne({
+      auditPackageId: pkg._id,
+      documentId,
+      organizationId: pkg.organizationId,
+      companyId: pkg.companyId,
+    }).lean();
     if (!link) return res.status(404).end();
 
     const doc = await Document.findById(documentId).lean();
     if (!doc || !sameCompany(doc, pkg)) return res.status(404).end();
 
     const localPath = safeFilePath(doc);
-    if (localPath) return res.sendFile(localPath);
+    if (localPath) {
+      if (req.query.download === "1") return res.download(localPath, doc.fileName || path.basename(localPath));
+      return res.sendFile(localPath);
+    }
 
     const remoteUrl = doc.fileUrl || doc.absoluteUrl || "";
     if (/^https?:\/\//i.test(remoteUrl)) {
@@ -531,7 +553,12 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
         const disposition = remoteResponse.headers.get("content-disposition");
         if (contentType) res.setHeader("Content-Type", contentType);
         if (contentLength) res.setHeader("Content-Length", contentLength);
-        if (disposition) res.setHeader("Content-Disposition", disposition);
+        if (req.query.download === "1") {
+          res.setHeader("Content-Disposition", `attachment; filename="${String(doc.fileName || "belge").replace(/[\"\\]/g, "_")}"`);
+        } else if (disposition) {
+          res.setHeader("Content-Disposition", disposition);
+        }
+        if (typeof remoteResponse.body.pipe === "function") return remoteResponse.body.pipe(res);
         return Readable.fromWeb(remoteResponse.body).pipe(res);
       }
     }
@@ -550,7 +577,7 @@ router.get("/:id", auth, async (req, res) => {
       .select("+passwordHash")
       .lean();
     if (!pkg) return res.status(404).json({ message: "Paket bulunamadı." });
-    res.json(await packagePayload(req, pkg));
+    res.json(await packagePayload(req, pkg, { includeQr: true }));
   } catch (err) {
     console.error("audit detail error:", err);
     res.status(500).json({ message: "Denetim dosyası alınamadı." });

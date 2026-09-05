@@ -17,6 +17,13 @@ function formatDate(value) {
 
 const recipientLabels = { INSPECTOR: "Müfettiş", EMPLOYER: "İşveren", HR: "İnsan Kaynakları", OTHER: "Diğer" };
 
+function basePath(pathname) {
+  if (pathname.startsWith("/ticari/admin")) return "/ticari/admin";
+  if (pathname.startsWith("/ticari/user")) return "/ticari/user";
+  if (pathname.startsWith("/ticari/belgeler")) return "/ticari/belgeler";
+  return "/panel";
+}
+
 export default function DenetimPaketiHazir() {
   const { packageId } = useParams();
   const location = useLocation();
@@ -26,22 +33,23 @@ export default function DenetimPaketiHazir() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (auditPackage || !packageId) return;
+    if (!packageId) return;
+    let cancelled = false;
     fetch(`${API_BASE}/api/audit-packages/${packageId}`, { headers: authHeaders() })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.message || "Belge paylaşımı getirilemedi.");
-        return data;
+        return data.package || data;
       })
-      .then(setAuditPackage)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [auditPackage, packageId]);
+      .then((data) => { if (!cancelled) setAuditPackage(data); })
+      .catch((err) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [packageId]);
 
-  const publicUrl = useMemo(() => auditPackage?.publicToken
-    ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : "", [auditPackage]);
-  const qrUrl = publicUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}` : "";
+  const publicUrl = useMemo(() => auditPackage?.publicUrl || (auditPackage?.publicToken
+    ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : ""), [auditPackage]);
+  const qrUrl = auditPackage?.qrCodeDataUrl || "";
   const mailSubject = `${auditPackage?.companyName || "Firma"} - İSG Belge Paylaşımı`;
   const mailBody = `${auditPackage?.companyName || "Firma"} için hazırlanan İSG belgelerine aşağıdaki güvenli bağlantıdan ulaşabilirsiniz.\n\nDosya No: ${auditPackage?.packageNumber || "-"}\n\n${publicUrl}`;
 
@@ -62,7 +70,7 @@ export default function DenetimPaketiHazir() {
           <h1 className="text-2xl font-bold text-slate-900">{auditPackage.companyName}</h1>
           <p className="mt-1 text-sm text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
         </div>
-        <Link to="/denetim/hazirla" className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
+        <Link to={`${basePath(location.pathname)}/denetim/hazirla`} className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
       </header>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
@@ -94,7 +102,7 @@ export default function DenetimPaketiHazir() {
 
         <aside className="rounded border border-slate-200 bg-white p-5 text-center shadow-sm">
           <div className="mb-3 flex items-center justify-center gap-2 font-bold text-slate-900"><QrCode size={18} /> QR Kod</div>
-          <img src={qrUrl} alt="Belge paylaşımı QR kodu" className="mx-auto h-60 w-60 border border-slate-200 p-2" />
+          {qrUrl ? <img src={qrUrl} alt="Belge paylaşımı QR kodu" className="mx-auto h-60 w-60 border border-slate-200 p-2" /> : <div className="mx-auto grid h-60 w-60 place-items-center border border-slate-200 text-sm text-slate-500">QR kod hazırlanamadı.</div>}
           <p className="mt-3 text-xs leading-5 text-slate-500">QR kod okutulduğunda yalnızca bu paylaşım paketine eklenen belgeler açılır.</p>
         </aside>
       </section>

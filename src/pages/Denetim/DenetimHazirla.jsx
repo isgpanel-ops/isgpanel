@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, ClipboardCheck, Eye, FileCheck, Search, ShieldCheck, X } from "lucide-react";
 import { API_BASE } from "../../config/api";
+import { useFirmalar } from "../../context/FirmaContext";
 
 function authToken() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
@@ -33,7 +34,16 @@ function normalizeCompany(company) {
 
 function storedCompany() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
-  const keys = [`isgpanel:${activeEmail}:selectedFirm`, "selectedFirm", "selectedFirma", "currentFirm", "firma"];
+  const keys = [
+    "isgpanel:selectedFirm",
+    `isgpanel:${activeEmail}:selectedFirm`,
+    `isgpanel:${activeEmail}:selectedFirma`,
+    "selectedFirm",
+    "selectedFirma",
+    "currentFirm",
+    "currentFirma",
+    "firma",
+  ];
   for (const store of [localStorage, sessionStorage]) {
     for (const key of keys) {
       const found = normalizeCompany(parseStored(store.getItem(key)));
@@ -63,7 +73,8 @@ function localDateTimeValue(date) {
 export default function DenetimHazirla() {
   const location = useLocation();
   const navigate = useNavigate();
-  const company = normalizeCompany(location.state?.company) || storedCompany();
+  const { selectedFirm } = useFirmalar();
+  const company = normalizeCompany(selectedFirm) || normalizeCompany(location.state?.company) || storedCompany();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
@@ -169,7 +180,7 @@ export default function DenetimHazirla() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Denetim dosyası oluşturulamadı.");
-      navigate(`${basePath(location.pathname)}/denetim/paket/${data.id}`, { state: { auditPackage: data } });
+      navigate(`${basePath(location.pathname)}/denetim/paket/${data.package?.id}`, { state: { auditPackage: data.package } });
     } catch (err) {
       setError(err.message || "Denetim dosyası oluşturulamadı.");
       setConfirmOpen(false);
@@ -325,10 +336,10 @@ export default function DenetimHazirla() {
                 {packages.map((pkg) => (
                   <tr key={pkg.id} className="border-t border-slate-100">
                     <td className="px-3 py-3 font-semibold">{pkg.packageNumber}</td>
-                    <td className="px-3 py-3">{pkg.createdAtFormatted}</td>
+                    <td className="px-3 py-3">{pkg.createdAt ? new Date(pkg.createdAt).toLocaleString("tr-TR") : "-"}</td>
                     <td className="px-3 py-3">{pkg.documentCount}</td>
                     <td className="px-3 py-3">{pkg.categoryCount}</td>
-                    <td className="px-3 py-3">{pkg.statusLabel}</td>
+                    <td className="px-3 py-3">{pkg.status === "ACTIVE" ? "Aktif" : pkg.status || "-"}</td>
                     <td className="px-3 py-3 text-right">
                       <button
                         onClick={() => navigate(`${basePath(location.pathname)}/denetim/paket/${pkg.id}`, { state: { auditPackage: pkg } })}
