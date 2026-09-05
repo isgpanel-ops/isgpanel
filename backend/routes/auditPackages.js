@@ -203,6 +203,7 @@ function serializeDocument(doc, category, publicToken = null) {
     category,
     belgeTuru: doc.belgeTuru || "",
     tarih: doc.tarih || doc.dateISO || doc.createdAt || null,
+    hazirlayan: doc.hazirlayan || doc.hazirlayanAdSoyad || doc.preparedBy || doc.createdByName || doc.createdBy?.name || doc.createdBy?.adSoyad || "",
     revision: doc.revision || doc.rev || doc.data?.revision || "",
     status: doc.status || "",
     signatureStatus: signatureStatus(doc),

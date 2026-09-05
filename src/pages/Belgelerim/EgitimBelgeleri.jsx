@@ -483,7 +483,7 @@ const getDocYear = (doc) => {
   return Number(iso.slice(0, 4));
 };
 
-const getPreparedBy = (doc) =>
+const getPreparedBy = (doc) => String(
   doc?.hazirlayan ||
   doc?.hazirlayanAdSoyad ||
   doc?.hazirlayanKisi ||
@@ -507,7 +507,8 @@ const getPreparedBy = (doc) =>
   doc?.payload?.preparedBy ||
   doc?.meta?.hazirlayan ||
   doc?.meta?.preparedBy ||
-  "";
+  ""
+).toLocaleUpperCase("tr-TR");
 
 const STOP_WORDS = [
   "eğitim",

@@ -4,6 +4,9 @@ import { CheckCircle2, Copy, ExternalLink, Mail } from "lucide-react";
 import { API_BASE } from "../../config/api";
 
 const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+const panelButton = "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a2b45]";
+const ghostButton = `${panelButton} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`;
+const primaryButton = `${panelButton} bg-[#2563eb] text-white hover:bg-[#1d4ed8]`;
 
 function authHeaders() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
@@ -82,25 +85,25 @@ export default function DenetimPaketiHazir() {
     } catch (err) { setError(err.message); } finally { setAddingNewDocuments(false); }
   }
 
-  if (loading) return <div className="p-6 text-sm text-slate-600">Belge paylaşımı yükleniyor...</div>;
-  if (error || !auditPackage) return <div className="p-6"><div className="rounded border border-red-200 bg-red-50 p-4 text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
+  if (loading) return <div className="p-3 text-xs text-slate-600 sm:p-4 md:p-6">Belge paylaşımı yükleniyor...</div>;
+  if (error || !auditPackage) return <div className="p-3 sm:p-4 md:p-6"><div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
 
   return (
-    <main className="mx-auto w-full max-w-6xl p-6">
-      <header className="mb-6 flex items-start justify-between gap-4">
+    <main className="p-3 sm:p-4 md:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 size={16} /> Belge Paylaşımı Hazır</div>
-          <h1 className="text-2xl font-bold text-slate-900">{auditPackage.companyName}</h1>
-          <p className="mt-1 text-sm text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
-          {newDocumentCount > 0 && <div className="mt-3 flex items-center justify-between gap-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"><span>Bu paylaşım oluşturulduktan sonra {newDocumentCount} yeni belge eklendi.</span><button onClick={addAllNewDocuments} disabled={addingNewDocuments} className="rounded border border-amber-300 bg-white px-3 py-1 font-semibold">{addingNewDocuments ? "Ekleniyor..." : "Yeni Belgeleri İncele ve Ekle"}</button></div>}
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><CheckCircle2 size={14} /> Belge Paylaşımı Hazır</div>
+          <h1 className="text-lg font-bold text-[#042f4b] sm:text-xl">{auditPackage.companyName}</h1>
+          <p className="mt-1 text-xs text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
+          {newDocumentCount > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"><span>Bu paylaşım oluşturulduktan sonra {newDocumentCount} yeni belge eklendi.</span><button onClick={addAllNewDocuments} disabled={addingNewDocuments} className={`${ghostButton} border-amber-300`}>{addingNewDocuments ? "Ekleniyor..." : "Yeni Belgeleri İncele ve Ekle"}</button></div>}
         </div>
-        <Link to={`${basePath(location.pathname)}/belge-paylasimi`} className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Yeni Paylaşım</Link>
+        <Link to={`${basePath(location.pathname)}/belge-paylasimi`} className={primaryButton}>Yeni Paylaşım</Link>
       </header>
 
       <section>
-        <div className="rounded border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-bold text-slate-900">Paylaşım Bilgileri</h2>
-          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-bold text-[#042f4b]">Paylaşım Bilgileri</h2>
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <Info label="Dosya No" value={auditPackage.packageNumber} />
             <Info label="Oluşturulma" value={formatDate(auditPackage.createdAt)} />
             <Info label="Alıcı" value={auditPackage.recipientName} />
@@ -113,14 +116,14 @@ export default function DenetimPaketiHazir() {
             <Info label="E-posta Durumu" value={auditPackage.emailSentAt ? `Gönderildi (${formatDate(auditPackage.emailSentAt)})` : "Gönderilemedi veya bekliyor"} />
           </dl>
 
-          <div className="mt-6">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">Güvenli paylaşım bağlantısı</label>
-            <div className="flex gap-2"><input readOnly value={publicUrl} className="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2 text-sm" /><button onClick={copyLink} className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white"><Copy size={16} /> {copied ? "Kopyalandı" : "Linki Kopyala"}</button></div>
+          <div className="mt-5">
+            <label className="mb-1 block text-xs font-medium text-slate-700">Güvenli paylaşım bağlantısı</label>
+            <div className="flex gap-2"><input readOnly value={publicUrl} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs" /><button onClick={copyLink} className={primaryButton}><Copy size={14} /> {copied ? "Kopyalandı" : "Linki Kopyala"}</button></div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <a href={`mailto:${encodeURIComponent(auditPackage.recipientEmail || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`} className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"><Mail size={16} /> E-posta ile Gönder</a>
-            <a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"><ExternalLink size={16} /> Paylaşımı Aç</a>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a href={`mailto:${encodeURIComponent(auditPackage.recipientEmail || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`} className={ghostButton}><Mail size={14} /> E-posta ile Gönder</a>
+            <a href={publicUrl} target="_blank" rel="noreferrer" className={ghostButton}><ExternalLink size={14} /> Paylaşımı Aç</a>
           </div>
         </div>
 
@@ -130,5 +133,5 @@ export default function DenetimPaketiHazir() {
 }
 
 function Info({ label, value }) {
-  return <div><dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-slate-900">{value || "-"}</dd></div>;
+  return <div><dt className="text-[11px] font-medium uppercase text-slate-500">{label}</dt><dd className="mt-1 break-words text-xs font-semibold text-slate-900">{value || "-"}</dd></div>;
 }

@@ -102,13 +102,9 @@ const getDocYear = (doc) => {
   return Number(iso.slice(0, 4));
 };
 
-const getPreparedBy = (doc) =>
-  doc?.hazirlayan ||
-  doc?.olusturan ||
-  doc?.preparedBy ||
-  doc?.createdBy ||
-  doc?.userName ||
-  "";
+const getPreparedBy = (doc) => String(
+  doc?.hazirlayan || doc?.olusturan || doc?.preparedBy || doc?.createdBy || doc?.userName || ""
+).toLocaleUpperCase("tr-TR");
 
 const getDocDurum = (doc) => {
   const durum = String(doc?.durum || "").trim();

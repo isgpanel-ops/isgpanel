@@ -73,7 +73,7 @@ function getDocYear(doc) {
 }
 
 function getPreparedBy(doc) {
-  return (
+  const preparedBy = (
     doc?.hazirlayan ||
     doc?.hazirlayanAdSoyad ||
     doc?.preparedBy ||
@@ -85,6 +85,7 @@ function getPreparedBy(doc) {
     doc?.createdBy?.adSoyad ||
     "-"
   );
+  return String(preparedBy || "-").toLocaleUpperCase("tr-TR");
 }
 
 function getTypeLabel(doc) {

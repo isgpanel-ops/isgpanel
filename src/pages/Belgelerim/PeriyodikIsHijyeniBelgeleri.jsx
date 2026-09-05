@@ -73,7 +73,7 @@ function getDocYear(doc) {
 }
 
 function getPreparedBy(doc) {
-  return doc?.hazirlayan || doc?.createdBy || doc?.olusturan || "-";
+  return String(doc?.hazirlayan || doc?.createdBy || doc?.olusturan || "-").toLocaleUpperCase("tr-TR");
 }
 
 
