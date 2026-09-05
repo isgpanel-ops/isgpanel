@@ -3,6 +3,8 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { CheckCircle2, Copy, ExternalLink, Mail, QrCode } from "lucide-react";
 import { API_BASE } from "../../config/api";
 
+const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+
 function authHeaders() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
   const token = localStorage.getItem("token") || sessionStorage.getItem("token") ||
@@ -35,7 +37,7 @@ export default function DenetimPaketiHazir() {
   useEffect(() => {
     if (!packageId) return;
     let cancelled = false;
-    fetch(`${API_BASE}/api/audit-packages/${packageId}`, { headers: authHeaders() })
+    fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}`, { headers: authHeaders() })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.message || "Belge paylaşımı getirilemedi.");

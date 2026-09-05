@@ -4,6 +4,8 @@ import { CheckCircle2, ClipboardCheck, Eye, FileCheck, Search, ShieldCheck, X } 
 import { API_BASE } from "../../config/api";
 import { useFirmalar } from "../../context/FirmaContext";
 
+const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+
 function authToken() {
   const activeEmail = localStorage.getItem("__isg_active_email_global") || "";
   return (
@@ -119,7 +121,7 @@ export default function DenetimHazirla() {
       try {
         setLoading(true);
         const params = new URLSearchParams({ companyId: company.id, companyName: company.name || "" });
-        const res = await fetch(`${API_BASE}/api/audit-packages/prepare?${params}`, { headers: headers() });
+        const res = await fetch(`${AUDIT_API_BASE}/audit-packages/prepare?${params}`, { headers: headers() });
         const data = await readApiJson(res, "Belgeler alınamadı.");
         if (ignore) return;
         setCategories(data.categories || []);
@@ -175,7 +177,7 @@ export default function DenetimHazirla() {
   async function createPackage() {
     try {
       setCreating(true);
-      const res = await fetch(`${API_BASE}/api/audit-packages`, {
+      const res = await fetch(`${AUDIT_API_BASE}/audit-packages`, {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({

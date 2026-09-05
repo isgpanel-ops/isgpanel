@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { AlertTriangle, Download, Eye, FileText, FolderOpen, Lock, ShieldCheck, X } from "lucide-react";
 import { API_BASE } from "../../config/api";
 
+const AUDIT_API_BASE = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+
 const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -30,7 +32,7 @@ export default function DenetimGoruntule() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${API_BASE}/api/audit-packages/public/${encodeURIComponent(publicToken)}`, {
+      const response = await fetch(`${AUDIT_API_BASE}/audit-packages/public/${encodeURIComponent(publicToken)}`, {
         headers: candidatePassword ? { "x-audit-password": candidatePassword } : {},
       });
       const data = await response.json().catch(() => ({}));
@@ -65,7 +67,7 @@ export default function DenetimGoruntule() {
     if (password) params.set("password", password);
     if (download) params.set("download", "1");
     const query = params.toString();
-    return `${API_BASE}/api/audit-packages/public/${encodeURIComponent(publicToken)}/documents/${encodeURIComponent(documentId(doc))}/file${query ? `?${query}` : ""}`;
+    return `${AUDIT_API_BASE}/audit-packages/public/${encodeURIComponent(publicToken)}/documents/${encodeURIComponent(documentId(doc))}/file${query ? `?${query}` : ""}`;
   };
 
   if (loading) return <PublicState title="Denetim dosyası hazırlanıyor..." />;
