@@ -58,6 +58,21 @@ function headers() {
   return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
 }
 
+async function readApiJson(response, fallbackMessage) {
+  const raw = await response.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    if (response.status === 404) {
+      throw new Error("Belge Paylaşımı servisi canlı sunucuda henüz güncel değil. Lütfen backend yayınının tamamlanmasını bekleyiniz.");
+    }
+    throw new Error(fallbackMessage);
+  }
+  if (!response.ok) throw new Error(data?.message || fallbackMessage);
+  return data;
+}
+
 function basePath(pathname) {
   if (pathname.startsWith("/ticari/admin")) return "/ticari/admin";
   if (pathname.startsWith("/ticari/user")) return "/ticari/user";
@@ -105,8 +120,7 @@ export default function DenetimHazirla() {
         setLoading(true);
         const params = new URLSearchParams({ companyId: company.id, companyName: company.name || "" });
         const res = await fetch(`${API_BASE}/api/audit-packages/prepare?${params}`, { headers: headers() });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || "Belgeler alınamadı.");
+        const data = await readApiJson(res, "Belgeler alınamadı.");
         if (ignore) return;
         setCategories(data.categories || []);
         setPackages(data.packages || []);
@@ -178,8 +192,7 @@ export default function DenetimHazirla() {
           allowDownload,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Denetim dosyası oluşturulamadı.");
+      const data = await readApiJson(res, "Belge paylaşımı oluşturulamadı.");
       navigate(`${basePath(location.pathname)}/denetim/paket/${data.package?.id}`, { state: { auditPackage: data.package } });
     } catch (err) {
       setError(err.message || "Denetim dosyası oluşturulamadı.");
