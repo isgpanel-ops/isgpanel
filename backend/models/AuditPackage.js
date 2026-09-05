@@ -4,6 +4,10 @@ const AuditPackageSchema = new mongoose.Schema(
   {
     organizationId: { type: String, required: true, index: true },
     organizationSlug: { type: String, default: "isg-panel", index: true },
+    // Paylaşım oluşturulduğundaki OSGB kimliği saklanır; public sayfa sonradan
+    // kullanıcı hesabına erişmeden aynı marka ile açılır.
+    organizationName: { type: String, default: "" },
+    organizationLogoUrl: { type: String, default: "" },
     companyId: { type: String, required: true, index: true },
     companyName: { type: String, default: "" },
     packageNumber: { type: String, required: true, unique: true, index: true },

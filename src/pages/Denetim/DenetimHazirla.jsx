@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, QrCode, Search, ShieldCheck, X } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, Search, ShieldCheck, X } from "lucide-react";
 import { API_BASE } from "../../config/api";
 import { useFirmalar } from "../../context/FirmaContext";
 
@@ -175,10 +175,10 @@ export default function DenetimHazirla() {
     });
   }
 
-  async function revokePackage(id) {
-    if (!window.confirm("Bu paylaşımın erişimi iptal edilsin mi?")) return;
-    const res = await fetch(`${AUDIT_API_BASE}/audit-packages/${id}/revoke`, { method: "POST", headers: headers() });
-    if (!res.ok) return setError("Paylaşım erişimi iptal edilemedi.");
+  async function deletePackage(id) {
+    if (!window.confirm("Bu paylaşım ve bağlantısı kalıcı olarak silinsin mi?")) return;
+    const res = await fetch(`${AUDIT_API_BASE}/audit-packages/${id}`, { method: "DELETE", headers: headers() });
+    if (!res.ok) return setError("Paylaşım silinemedi.");
     setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
   }
 
@@ -303,7 +303,7 @@ export default function DenetimHazirla() {
             const allSelected = cat.count > 0 && selectedCount === cat.count;
             const someSelected = selectedCount > 0 && selectedCount < cat.count;
             return (
-              <div key={cat.name} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_120px_150px_130px] md:items-center">
+              <div key={cat.name} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_92px_112px_118px] md:items-center">
                 <label className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -316,18 +316,18 @@ export default function DenetimHazirla() {
                     className="mt-1 h-4 w-4"
                   />
                   <span>
-                    <span className="block font-semibold">{cat.name}</span>
+                    <span className="block text-sm font-semibold">{cat.name}</span>
                     <span className="text-xs text-slate-500">{cat.count} belge</span>
                   </span>
                 </label>
-                <span className="text-sm font-semibold">{selectedCount} seçili</span>
+                <span className="text-xs font-semibold">{selectedCount} seçili</span>
                 <span className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold ${cat.count ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"}`}>
                   {cat.count ? "Hazır" : "Belge bulunamadı"}
                 </span>
                 <button
                   disabled={cat.count === 0}
                   onClick={() => setDetailCategory(cat)}
-                  className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className="inline-flex w-fit items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
                 >
                   <Eye size={16} />
                   Detayları Gör
@@ -377,8 +377,7 @@ export default function DenetimHazirla() {
                         Detay
                       </button>
                       <button title="Linki kopyala" onClick={() => navigator.clipboard.writeText(pkg.publicUrl)} className="ml-2 rounded-md border border-slate-200 p-2 hover:bg-slate-50"><Copy size={15} /></button>
-                      <button title="QR göster" onClick={() => navigate(`${basePath(location.pathname)}/denetim/paket/${pkg.id}`)} className="ml-2 rounded-md border border-slate-200 p-2 hover:bg-slate-50"><QrCode size={15} /></button>
-                      {pkg.status === "ACTIVE" && <button onClick={() => revokePackage(pkg.id)} className="ml-2 rounded-md border border-red-200 px-2 py-2 text-red-700 hover:bg-red-50">İptal</button>}
+                      <button title="Sil" onClick={() => deletePackage(pkg.id)} className="ml-2 rounded-md border border-red-200 px-2 py-2 text-red-700 hover:bg-red-50">Sil</button>
                     </td>
                   </tr>
                 ))}

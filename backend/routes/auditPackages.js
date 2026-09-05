@@ -6,6 +6,7 @@ const { Readable } = require("stream");
 const mongoose = require("mongoose");
 const QRCode = require("qrcode");
 const Document = require("../models/Document");
+const KurumsalKimlik = require("../models/KurumsalKimlik");
 const AuditPackage = require("../models/AuditPackage");
 const AuditPackageDocument = require("../models/AuditPackageDocument");
 const auth = require("../middleware/auth");
@@ -49,19 +50,12 @@ function requestPassword(req) {
 
 const CATEGORIES = [
   "Risk Değerlendirmesi",
-  "Acil Durum",
-  "Eğitimler",
-  "Atamalar",
+  "Acil Durum Planı",
   "Yıllık Planlar",
-  "Yıllık Değerlendirme",
-  "Kurul / Toplantılar",
-  "KKD",
-  "Genel Talimatlar",
-  "Periyodik Kontroller",
-  "İş Hijyeni",
-  "Sağlık Belgeleri",
-  "DÖF",
-  "Diğer Belgeler",
+  "Eğitim & Sertifikalar",
+  "Talimatlar & KKD",
+  "Defter & Kurul",
+  "Periyodik & İş Hijyeni Raporları",
 ];
 
 function escapeRegExp(value = "") {
@@ -102,10 +96,18 @@ function primaryOrgId(user = {}) {
   return orgCandidates(user)[0] || "default";
 }
 
-function organizationSlug(user = {}) {
-  const raw = user.organizationName || user.orgName || user.osgbName || user.firmaAdi || "isg-panel";
+function slugify(raw = "") {
   const slug = normalizeText(raw).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "isg-panel";
+}
+
+async function organizationBrand(user = {}) {
+  const fallbackName = user.organizationName || user.orgName || user.osgbName || user.firmaAdi || "İSG Panel";
+  const identity = await KurumsalKimlik.findOne({ organizationId: primaryOrgId(user) })
+    .select("firmaAdi logoUrl")
+    .lean();
+  const name = String(identity?.firmaAdi || fallbackName || "İSG Panel").trim();
+  return { name, logoUrl: String(identity?.logoUrl || "").trim(), slug: slugify(name) };
 }
 
 function companyConditions(companyId, companyName) {
@@ -163,19 +165,16 @@ function inferCategory(doc) {
 
   const text = normalizeText(textOf(doc));
   if (text.includes("risk")) return "Risk Değerlendirmesi";
-  if (text.includes("acil")) return "Acil Durum";
-  if (text.includes("egitim") || text.includes("sertifika")) return "Eğitimler";
-  if (text.includes("atama") || text.includes("gorev") || text.includes("katip")) return "Atamalar";
+  if (text.includes("acil")) return "Acil Durum Planı";
+  if (text.includes("egitim") || text.includes("sertifika")) return "Eğitim & Sertifikalar";
+  if (text.includes("atama") || text.includes("gorev") || text.includes("katip")) return "Defter & Kurul";
   if (text.includes("yillik") && text.includes("plan")) return "Yıllık Planlar";
-  if (text.includes("yillik") && text.includes("degerlendirme")) return "Yıllık Değerlendirme";
-  if (text.includes("kurul") || text.includes("toplanti") || text.includes("defter")) return "Kurul / Toplantılar";
-  if (text.includes("kkd")) return "KKD";
-  if (text.includes("talimat")) return "Genel Talimatlar";
-  if (text.includes("periyodik") || text.includes("kontrol")) return "Periyodik Kontroller";
-  if (text.includes("hijyen")) return "İş Hijyeni";
-  if (text.includes("saglik") || text.includes("muayene") || text.includes("hekim")) return "Sağlık Belgeleri";
-  if (text.includes("dof")) return "DÖF";
-  return "Diğer Belgeler";
+  if (text.includes("yillik") && text.includes("degerlendirme")) return "Yıllık Planlar";
+  if (text.includes("kurul") || text.includes("toplanti") || text.includes("defter")) return "Defter & Kurul";
+  if (text.includes("kkd") || text.includes("talimat")) return "Talimatlar & KKD";
+  if (text.includes("periyodik") || text.includes("kontrol") || text.includes("hijyen") || text.includes("saglik") || text.includes("muayene") || text.includes("hekim")) return "Periyodik & İş Hijyeni Raporları";
+  // DÖF ve diğer destekleyici belgeler denetimde en yakın genel dosya alanında kalır.
+  return "Talimatlar & KKD";
 }
 
 function signatureStatus(doc) {
@@ -203,7 +202,7 @@ function serializeDocument(doc, category, publicToken = null) {
     status: doc.status || "",
     signatureStatus: signatureStatus(doc),
     createdAt: doc.createdAt,
-    hasFile: Boolean(doc.storagePath || doc.fileUrl || doc.absoluteUrl),
+    hasFile: Boolean(doc.storagePath || doc.fileUrl || doc.absoluteUrl || doc.data?.fileUrl || doc.data?.absoluteUrl),
     fileEndpoint: publicToken ? `/api/audit-packages/public/${publicToken}/documents/${id}/file` : "",
   };
 }
@@ -263,9 +262,12 @@ async function nextPackageNumber() {
 }
 
 function safeFilePath(doc) {
-  const raw = doc.storagePath || doc.absoluteUrl || doc.fileUrl || "";
+  const raw = doc.storagePath || doc.fileUrl || doc.absoluteUrl || doc.data?.fileUrl || doc.data?.absoluteUrl || "";
   if (!raw || /^https?:\/\//i.test(raw)) return "";
-  const resolved = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  const normalized = String(raw).replace(/\\/g, "/");
+  const resolved = normalized.startsWith("/uploads/")
+    ? path.join(__dirname, "..", normalized.replace(/^\/+/, ""))
+    : path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
   return fs.existsSync(resolved) ? resolved : "";
 }
 
@@ -280,7 +282,8 @@ async function packagePayload(req, pkg, options = {}) {
   links.forEach((link) => {
     const doc = byId.get(String(link.documentId));
     if (!doc || !sameCompany(doc, pkg)) return;
-    categoryOverride.set(String(doc._id), link.category || inferCategory(doc));
+    // Eski paketlerdeki detay kategorilerini de yeni, sade paylaşım sekmelerine taşır.
+    categoryOverride.set(String(doc._id), inferCategory({ ...doc, category: link.category || doc.category }));
     safeDocs.push(doc);
   });
 
@@ -295,6 +298,8 @@ async function packagePayload(req, pkg, options = {}) {
       id: String(pkg._id),
       companyId: pkg.companyId,
       companyName: pkg.companyName,
+      organizationName: pkg.organizationName || "İSG Panel",
+      organizationLogoUrl: pkg.organizationLogoUrl || "",
       packageNumber: pkg.packageNumber,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
@@ -339,9 +344,16 @@ router.get("/prepare", auth, async (req, res) => {
 
     const docs = await Document.find(buildDocumentQuery(req, companyId, companyName)).sort({ createdAt: -1 }).lean();
     const organizationId = primaryOrgId(req.user);
+    const brand = await organizationBrand(req.user);
+    // İlk sürümde oluşmuş isg-panel bağlantılarını kurumsal kimlik adına taşır.
+    await AuditPackage.updateMany(
+      { organizationId, $or: [{ organizationSlug: "isg-panel" }, { organizationSlug: "" }, { organizationSlug: { $exists: false } }] },
+      { $set: { organizationSlug: brand.slug, organizationName: brand.name, organizationLogoUrl: brand.logoUrl } }
+    );
     const packages = await AuditPackage.find({
       organizationId,
       $or: companyConditions(companyId, companyName),
+      status: "ACTIVE",
     })
       .sort({ createdAt: -1 })
       .limit(20)
@@ -446,12 +458,15 @@ router.post("/", auth, async (req, res) => {
     }
 
     const passwordFields = makePasswordHash(password);
+    const brand = await organizationBrand(req.user);
     let pkg = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         pkg = await AuditPackage.create({
           organizationId,
-          organizationSlug: organizationSlug(req.user),
+          organizationSlug: brand.slug,
+          organizationName: brand.name,
+          organizationLogoUrl: brand.logoUrl,
           companyId: companyId || String(packageDocs[0].firmaId || packageDocs[0].companyId || ""),
           companyName: companyName || packageDocs[0].firmaAdi || packageDocs[0].companyName || "",
           packageNumber: await nextPackageNumber(),
@@ -552,6 +567,20 @@ router.post("/:id/revoke", auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: "Paylaşım bulunamadı." });
+    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) }).lean();
+    if (!pkg) return res.status(404).json({ message: "Paylaşım bulunamadı." });
+    await AuditPackageDocument.deleteMany({ auditPackageId: pkg._id });
+    await AuditPackage.deleteOne({ _id: pkg._id, organizationId: primaryOrgId(req.user) });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("audit delete error:", err);
+    res.status(500).json({ message: "Paylaşım silinemedi." });
+  }
+});
+
 router.post("/:id/reset-password", auth, async (req, res) => {
   const password = String(req.body.password || "");
   if (password.length < 6) return res.status(400).json({ message: "Şifre en az 6 karakter olmalıdır." });
@@ -610,7 +639,7 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
       return res.sendFile(localPath);
     }
 
-    const remoteUrl = doc.fileUrl || doc.absoluteUrl || "";
+    const remoteUrl = doc.fileUrl || doc.absoluteUrl || doc.data?.fileUrl || doc.data?.absoluteUrl || "";
     if (/^https?:\/\//i.test(remoteUrl)) {
       const remoteResponse = await fetch(remoteUrl, { redirect: "follow" });
       if (remoteResponse.ok && remoteResponse.body) {
