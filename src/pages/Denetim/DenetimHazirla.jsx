@@ -104,7 +104,6 @@ export default function DenetimHazirla() {
   const [recipientName, setRecipientName] = useState("");
   const [recipientType, setRecipientType] = useState("INSPECTOR");
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientPhone, setRecipientPhone] = useState("");
   const [note, setNote] = useState("");
   const [accessType, setAccessType] = useState("TIMED");
   const [expiresAt, setExpiresAt] = useState(() => localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)));
@@ -179,7 +178,7 @@ export default function DenetimHazirla() {
     if (!window.confirm("Bu paylaşımın erişimi iptal edilsin mi?")) return;
     const res = await fetch(`${AUDIT_API_BASE}/audit-packages/${id}/revoke`, { method: "POST", headers: headers() });
     if (!res.ok) return setError("Paylaşım erişimi iptal edilemedi.");
-    setPackages((prev) => prev.map((pkg) => pkg.id === id ? { ...pkg, status: "REVOKED" } : pkg));
+    setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
   }
 
   async function createPackage() {
@@ -195,7 +194,6 @@ export default function DenetimHazirla() {
           recipientName: recipientName.trim(),
           recipientType,
           recipientEmail: recipientEmail.trim(),
-          recipientPhone: recipientPhone.trim(),
           note: note.trim(),
           accessType,
           expiresAt: accessType === "TIMED" ? new Date(expiresAt).toISOString() : null,
@@ -255,7 +253,6 @@ export default function DenetimHazirla() {
           <label className="text-sm font-semibold text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Ad soyad" /></label>
           <label className="text-sm font-semibold text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="COMPANY_REPRESENTATIVE">Firma Yetkilisi</option><option value="OHS_PROFESSIONAL">İSG Profesyoneli</option><option value="OTHER">Diğer</option></select></label>
           <label className="text-sm font-semibold text-slate-700">E-posta adresi<input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="ornek@firma.com" /></label>
-          <label className="text-sm font-semibold text-slate-700">Telefon (isteğe bağlı)<input type="tel" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="05XX XXX XX XX" /></label>
           <label className="text-sm font-semibold text-slate-700">Erişim türü<select value={accessType} onChange={(e) => setAccessType(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal"><option value="TIMED">Süreli</option><option value="UNLIMITED">Süresiz</option></select></label>
           {accessType === "TIMED" && <label className="text-sm font-semibold text-slate-700">Son erişim zamanı<input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" /></label>}
           <label className="text-sm font-semibold text-slate-700">Erişim şifresi (isteğe bağlı)<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-normal" placeholder="Şifresiz paylaşmak için boş bırakın" /></label>
