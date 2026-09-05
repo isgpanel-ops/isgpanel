@@ -221,10 +221,10 @@ export default function DenetimHazirla() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6 text-[#042f4b]">
-      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div className="p-3 text-[#042f4b] sm:p-4 md:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Belge Paylaşımı</h1>
+          <h1 className="text-lg font-bold sm:text-xl">Belge Paylaşımı</h1>
           <p className="mt-1 text-sm text-slate-600">
             Firmanıza ait İSG belgelerini seçin, güvenli paylaşım paketinizi oluşturun ve bağlantı ile paylaşın.
           </p>
@@ -236,7 +236,7 @@ export default function DenetimHazirla() {
           type="button"
           disabled={!canCreate}
           onClick={() => setConfirmOpen(true)}
-          className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-sm ${
+          className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold shadow-sm ${
             !canCreate ? "cursor-not-allowed bg-slate-200 text-slate-500" : "bg-blue-600 text-white hover:bg-blue-700"
           }`}
         >

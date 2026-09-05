@@ -104,10 +104,11 @@ function slugify(raw = "") {
 async function organizationBrand(user = {}) {
   const fallbackName = user.organizationName || user.orgName || user.osgbName || user.firmaAdi || "İSG Panel";
   const identity = await KurumsalKimlik.findOne({ organizationId: primaryOrgId(user) })
-    .select("firmaAdi logoUrl")
+    .select("firmaAdi logo logoUrl")
     .lean();
   const name = String(identity?.firmaAdi || fallbackName || "İSG Panel").trim();
-  return { name, logoUrl: String(identity?.logoUrl || "").trim(), slug: slugify(name) };
+  // Eski kurumsal kimlik kayıtlarında logo yalnızca base64 "logo" alanında olabilir.
+  return { name, logoUrl: String(identity?.logoUrl || identity?.logo || "").trim(), slug: slugify(name) };
 }
 
 function companyConditions(companyId, companyName) {
@@ -166,10 +167,11 @@ function inferCategory(doc) {
   const text = normalizeText(textOf(doc));
   if (text.includes("risk")) return "Risk Değerlendirmesi";
   if (text.includes("acil")) return "Acil Durum Planı";
-  if (text.includes("egitim") || text.includes("sertifika")) return "Eğitim & Sertifikalar";
-  if (text.includes("atama") || text.includes("gorev") || text.includes("katip")) return "Defter & Kurul";
+  // "Yıllık Eğitim Planı" eğitim kelimesini taşısa da Yıllık Planlar sekmesindedir.
   if (text.includes("yillik") && text.includes("plan")) return "Yıllık Planlar";
   if (text.includes("yillik") && text.includes("degerlendirme")) return "Yıllık Planlar";
+  if (text.includes("egitim") || text.includes("sertifika")) return "Eğitim & Sertifikalar";
+  if (text.includes("atama") || text.includes("gorev") || text.includes("katip")) return "Defter & Kurul";
   if (text.includes("kurul") || text.includes("toplanti") || text.includes("defter")) return "Defter & Kurul";
   if (text.includes("kkd") || text.includes("talimat")) return "Talimatlar & KKD";
   if (text.includes("periyodik") || text.includes("kontrol") || text.includes("hijyen") || text.includes("saglik") || text.includes("muayene") || text.includes("hekim")) return "Periyodik & İş Hijyeni Raporları";
@@ -347,7 +349,7 @@ router.get("/prepare", auth, async (req, res) => {
     const brand = await organizationBrand(req.user);
     // İlk sürümde oluşmuş isg-panel bağlantılarını kurumsal kimlik adına taşır.
     await AuditPackage.updateMany(
-      { organizationId, $or: [{ organizationSlug: "isg-panel" }, { organizationSlug: "" }, { organizationSlug: { $exists: false } }] },
+      { organizationId },
       { $set: { organizationSlug: brand.slug, organizationName: brand.name, organizationLogoUrl: brand.logoUrl } }
     );
     const packages = await AuditPackage.find({
