@@ -36,9 +36,7 @@ export default function DenetimPaketiHazir() {
   const [loading, setLoading] = useState(!location.state?.auditPackage);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [newDocumentCount, setNewDocumentCount] = useState(null);
-  const [newDocuments, setNewDocuments] = useState([]);
-  const [addingNewDocuments, setAddingNewDocuments] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     if (!packageId) return;
@@ -55,18 +53,8 @@ export default function DenetimPaketiHazir() {
     return () => { cancelled = true; };
   }, [packageId]);
 
-  useEffect(() => {
-    if (!packageId) return;
-    fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}/new-documents`, { headers: authHeaders() })
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => { setNewDocumentCount(data?.count ?? null); setNewDocuments(data?.categories?.flatMap((item) => item.documents || []) || []); })
-      .catch(() => setNewDocumentCount(null));
-  }, [packageId]);
-
   const publicUrl = useMemo(() => auditPackage?.publicUrl || (auditPackage?.publicToken
     ? `${window.location.origin}/denetim/goruntule/${auditPackage.publicToken}` : ""), [auditPackage]);
-  const mailSubject = `${auditPackage?.companyName || "Firma"} - İSG Belge Paylaşımı`;
-  const mailBody = `${auditPackage?.companyName || "Firma"} için hazırlanan İSG belgelerine aşağıdaki güvenli bağlantıdan ulaşabilirsiniz.\n\nDosya No: ${auditPackage?.packageNumber || "-"}\n\n${publicUrl}`;
 
   async function copyLink() {
     await navigator.clipboard.writeText(publicUrl);
@@ -74,19 +62,19 @@ export default function DenetimPaketiHazir() {
     setTimeout(() => setCopied(false), 2200);
   }
 
-  async function addAllNewDocuments() {
-    if (!newDocuments.length) return;
-    setAddingNewDocuments(true);
+  async function sendEmail() {
+    if (!packageId) return;
     try {
-      const response = await fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}/documents`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ documentIds: newDocuments.map((doc) => doc.id) }) });
+      setSendingEmail(true); setError("");
+      const response = await fetch(`${AUDIT_API_BASE}/audit-packages/${packageId}/send-email`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" } });
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || "Yeni belgeler eklenemedi.");
-      setAuditPackage(data.package); setNewDocuments([]); setNewDocumentCount(0);
-    } catch (err) { setError(err.message); } finally { setAddingNewDocuments(false); }
+      if (!response.ok) throw new Error(data?.message || "E-posta gönderilemedi.");
+      setAuditPackage(data.package || data);
+    } catch (err) { setError(err.message); } finally { setSendingEmail(false); }
   }
 
   if (loading) return <div className="p-3 text-xs text-slate-600 sm:p-4 md:p-6">Belge paylaşımı yükleniyor...</div>;
-  if (error || !auditPackage) return <div className="p-3 sm:p-4 md:p-6"><div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
+  if (!auditPackage) return <div className="p-3 sm:p-4 md:p-6"><div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{error || "Belge paylaşımı bulunamadı."}</div></div>;
 
   return (
     <main className="p-3 sm:p-4 md:p-6">
@@ -95,12 +83,13 @@ export default function DenetimPaketiHazir() {
           <div className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700"><CheckCircle2 size={14} /> Belge Paylaşımı Hazır</div>
           <h1 className="text-lg font-bold text-[#042f4b] sm:text-xl">{auditPackage.companyName}</h1>
           <p className="mt-1 text-xs text-slate-500">Seçilen belgeler sabit bir paket olarak güvenli bağlantıya bağlandı.</p>
-          {newDocumentCount > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"><span>Bu paylaşım oluşturulduktan sonra {newDocumentCount} yeni belge eklendi.</span><button onClick={addAllNewDocuments} disabled={addingNewDocuments} className={`${ghostButton} border-amber-300`}>{addingNewDocuments ? "Ekleniyor..." : "Yeni Belgeleri İncele ve Ekle"}</button></div>}
+          <p className="mt-2 text-xs text-slate-500">Yeni eklenen firma belgeleri, bu bağlantının içeriğine otomatik olarak eklenir.</p>
         </div>
         <Link to={`${basePath(location.pathname)}/belge-paylasimi`} className={primaryButton}>Yeni Paylaşım</Link>
       </header>
 
       <section>
+        {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>}
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 text-base font-bold text-[#042f4b]">Paylaşım Bilgileri</h2>
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -122,7 +111,7 @@ export default function DenetimPaketiHazir() {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={`mailto:${encodeURIComponent(auditPackage.recipientEmail || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`} className={ghostButton}><Mail size={14} /> E-posta ile Gönder</a>
+            <button type="button" onClick={sendEmail} disabled={sendingEmail} className={ghostButton}><Mail size={14} /> {sendingEmail ? "Gönderiliyor..." : "E-posta ile Gönder"}</button>
             <a href={publicUrl} target="_blank" rel="noreferrer" className={ghostButton}><ExternalLink size={14} /> Paylaşımı Aç</a>
           </div>
         </div>

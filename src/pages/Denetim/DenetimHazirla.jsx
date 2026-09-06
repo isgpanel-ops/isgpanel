@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Copy, Eye, FileCheck, Search, ShieldCheck, Trash2, X, Mail } from "lucide-react";
 import { API_BASE } from "../../config/api";
 import { useFirmalar } from "../../context/FirmaContext";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -95,8 +95,9 @@ function localDateTimeValue(date) {
 export default function DenetimHazirla() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { selectedFirm } = useFirmalar();
+  const { selectedFirm, firmalar, setSelectedFirm } = useFirmalar();
   const company = normalizeCompany(selectedFirm) || normalizeCompany(location.state?.company) || storedCompany();
+  const isCommercialAdmin = location.pathname.startsWith("/ticari/admin");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
@@ -147,7 +148,7 @@ export default function DenetimHazirla() {
     return () => {
       ignore = true;
     };
-  }, [company?.id]);
+  }, [company?.id, company?.name]);
 
   const docsById = useMemo(() => {
     const map = new Map();
@@ -251,9 +252,12 @@ export default function DenetimHazirla() {
 
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
+      {isCommercialAdmin && <label className="mb-4 block max-w-md text-xs font-medium text-slate-700">Firma seç<select value={company?.id || ""} onChange={(event) => { const firm = (firmalar || []).find((item) => String(item.id || item._id || item.firmaId || item.companyId) === event.target.value); if (firm) setSelectedFirm(firm); }} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs"><option value="">Firma seçiniz</option>{(firmalar || []).map((firm) => { const normal = normalizeCompany(firm); return normal ? <option key={normal.id} value={normal.id}>{normal.name}</option> : null; })}</select></label>}
+
       <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-bold">Paylaşım Bilgileri</h2>
         <p className="mb-3 mt-1 text-xs text-slate-500">Bağlantının gönderileceği kişiyi ve erişim kurallarını belirleyin.</p>
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800"><Mail size={14} className="mt-0.5 shrink-0"/>Belge paylaşımı yapabilmek için Kullanıcı veya Yönetici menüsündeki <strong>Entegrasyonlar</strong> bölümünden e-posta hesabınızı bağlayınız.</div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <label className="text-xs font-medium text-slate-700">Alıcı adı<input value={recipientName} onChange={(e) => setRecipientName(upperTR(e.target.value))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal" placeholder="AD SOYAD" /></label>
           <label className="text-xs font-medium text-slate-700">Alıcı türü<select value={recipientType} onChange={(e) => setRecipientType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-normal"><option value="INSPECTOR">Müfettiş</option><option value="EMPLOYER">İşveren</option><option value="HR">İnsan Kaynakları</option><option value="COMPANY_REPRESENTATIVE">Firma Yetkilisi</option><option value="OHS_PROFESSIONAL">İSG Profesyoneli</option><option value="OTHER">Diğer</option></select></label>

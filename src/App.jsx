@@ -34,6 +34,7 @@ import DenetimGoruntule from "./pages/Denetim/DenetimGoruntule";
 import KisiselBilgiler from "./pages/KisiselBilgiler";
 import KurumsalKimlik from "./pages/KurumsalKimlik";
 import GuvenlikGiris from "./pages/GuvenlikGiris";
+import MailEntegrasyonlari from "./pages/MailEntegrasyonlari";
 import AbonelikBilgileri from "./pages/AbonelikBilgileri";
 
 import ForgotPassword from "./pages/ForgotPassword";
@@ -250,6 +251,7 @@ function App() {
             <Route path="kisisel-bilgiler" element={<KisiselBilgiler />} />
             <Route path="kurumsal-kimlik" element={<KurumsalKimlik />} />
             <Route path="guvenlik-giris" element={<GuvenlikGiris />} />
+            <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
             <Route
               path="paket-abonelik"
               element={
@@ -286,6 +288,7 @@ function App() {
             <Route path="kullanicilar" element={<TicariKullaniciYonetimi />} />
             <Route path="kurumsal-kimlik" element={<TicariKurumsalKimlik />} />
             <Route path="guvenlik" element={<TicariGuvenlikGiris />} />
+            <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
             <Route path="abonelik" element={<TicariAbonelikBilgileri />} />
           </Route>
 
@@ -301,6 +304,7 @@ function App() {
             <Route index element={<TicariBelgeler />} />
             <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
+            <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
           </Route>
 
           {/* 🔵 TİCARİ USER */}
@@ -317,6 +321,7 @@ function App() {
             <Route path="belgelerim" element={<Belgelerim />} />
             <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
+            <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
           </Route>
 
 {/* 🩺 İŞYERİ HEKİMİ PANELİ */}

@@ -613,6 +613,10 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
                       Güvenlik ve Giriş
                     </li>
 
+                    <li onClick={() => { navigate("/panel/entegrasyonlar"); setMenuOpen(false); }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                      Entegrasyonlar
+                    </li>
+
                     {(() => {
                       const expiredFlag = String(localStorage.getItem("isSubscriptionExpired") || "").toLowerCase();
                       const isExpired = expiredFlag === "true";

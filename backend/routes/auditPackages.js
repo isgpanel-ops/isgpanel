@@ -10,7 +10,7 @@ const KurumsalKimlik = require("../models/KurumsalKimlik");
 const AuditPackage = require("../models/AuditPackage");
 const AuditPackageDocument = require("../models/AuditPackageDocument");
 const auth = require("../middleware/auth");
-const { sendMail } = require("../utils/mailer");
+const { sendIntegratedMail, integrationForUser } = require("../utils/integratedMailer");
 
 const router = express.Router();
 
@@ -271,10 +271,40 @@ function safeFilePath(doc) {
   const raw = doc.storagePath || doc.fileUrl || doc.absoluteUrl || doc.data?.fileUrl || doc.data?.absoluteUrl || "";
   if (!raw || /^https?:\/\//i.test(raw)) return "";
   const normalized = String(raw).replace(/\\/g, "/");
-  const resolved = normalized.startsWith("/uploads/")
+  const resolved = normalized.startsWith("/uploads/") || normalized.startsWith("/archive-storage/")
     ? path.join(__dirname, "..", normalized.replace(/^\/+/, ""))
     : path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
   return fs.existsSync(resolved) ? resolved : "";
+}
+
+function fileDownloadName(doc, localPath = "") {
+  const source = String(doc.fileName || localPath || doc.fileUrl || "");
+  const extension = path.extname(source) || ".pdf";
+  const title = String(doc.title || doc.belgeTuru || "belge")
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .trim()
+    .slice(0, 160) || "belge";
+  return title.toLocaleLowerCase("tr-TR").endsWith(extension.toLocaleLowerCase("tr-TR")) ? title : `${title}${extension}`;
+}
+
+function emailMarkup(pkg, url, password = "") {
+  const expiry = pkg.accessType === "TIMED" && pkg.expiresAt ? `<p style="margin:0 0 12px">Erişim bitişi: <strong>${new Date(pkg.expiresAt).toLocaleString("tr-TR")}</strong></p>` : "";
+  const passwordBlock = password ? `<div style="margin:18px 0;padding:14px;border-radius:8px;background:#eff6ff;color:#0f172a">Bu paylaşım şifre ile korunmaktadır. Erişim şifresi: <strong>${String(password).replace(/[<>&]/g, "")}</strong></div>` : "";
+  return `<div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5;max-width:620px"><div style="background:#042f4b;color:white;padding:20px 24px;font-weight:700">İSG Panel | Belge Paylaşımı</div><div style="padding:24px;border:1px solid #e2e8f0"><p>Sayın <strong>${pkg.recipientName}</strong>,</p><p><strong>${pkg.companyName}</strong> firmasına ait İSG belgeleri sizinle güvenli olarak paylaşılmıştır.</p><p>Dosya No: <strong>${pkg.packageNumber}</strong></p>${expiry}${passwordBlock}<p style="margin:24px 0"><a href="${url}" style="display:inline-block;background:#2563eb;color:white;padding:11px 18px;border-radius:6px;text-decoration:none;font-weight:600">Belgeleri Görüntüle</a></p><p style="font-size:12px;color:#64748b">Bu bağlantı yalnızca sizin için oluşturulmuştur. Lütfen üçüncü kişilerle paylaşmayınız.</p></div></div>`;
+}
+
+async function syncPackageDocuments(req, pkg) {
+  if (!pkg || pkg.status !== "ACTIVE") return pkg;
+  const links = await AuditPackageDocument.find({ auditPackageId: pkg._id }).select("documentId").lean();
+  const linkedIds = links.map((item) => item.documentId);
+  const newDocs = await Document.find({ ...buildDocumentQuery(req, pkg.companyId, pkg.companyName), _id: { $nin: linkedIds } }).lean();
+  if (newDocs.length) {
+    await AuditPackageDocument.insertMany(newDocs.map((doc) => ({ auditPackageId: pkg._id, documentId: doc._id, organizationId: pkg.organizationId, companyId: pkg.companyId, category: inferCategory(doc), documentVersion: doc.revision || doc.rev || doc.data?.revision || "" })), { ordered: false }).catch(() => null);
+  }
+  const allLinks = await AuditPackageDocument.find({ auditPackageId: pkg._id }).lean();
+  const update = { documentCount: allLinks.length, categoryCount: new Set(allLinks.map((item) => item.category).filter(Boolean)).size };
+  await AuditPackage.updateOne({ _id: pkg._id }, { $set: update });
+  return { ...pkg, ...update };
 }
 
 async function packagePayload(req, pkg, options = {}) {
@@ -365,7 +395,8 @@ router.get("/prepare", auth, async (req, res) => {
       .limit(20)
       .lean();
 
-    const packageIds = packages.map((pkg) => pkg._id);
+    const syncedPackages = await Promise.all(packages.map((pkg) => syncPackageDocuments(req, pkg)));
+    const packageIds = syncedPackages.map((pkg) => pkg._id);
     const links = packageIds.length
       ? await AuditPackageDocument.aggregate([
           { $match: { auditPackageId: { $in: packageIds } } },
@@ -381,7 +412,7 @@ router.get("/prepare", auth, async (req, res) => {
       },
       totalDocuments: docs.length,
       categories: groupDocuments(docs),
-      packages: packages.map((pkg) => {
+      packages: syncedPackages.map((pkg) => {
         const stat = stats.get(String(pkg._id));
         return {
           id: String(pkg._id),
@@ -463,6 +494,8 @@ router.post("/", auth, async (req, res) => {
       return res.status(409).json({ message: "Seçilen belgeler bu alıcıyla bugün zaten paylaşılmıştır." });
     }
 
+    const integration = await integrationForUser(req.user);
+    if (!integration) return res.status(400).json({ code: "MAIL_INTEGRATION_REQUIRED", message: "Belge paylaşımı için önce Kullanıcı/Yönetici menüsündeki Entegrasyonlar bölümünden e-posta hesabınızı bağlayınız." });
     const passwordFields = makePasswordHash(password);
     const brand = await organizationBrand(req.user);
     let pkg = null;
@@ -512,12 +545,7 @@ router.post("/", auth, async (req, res) => {
 
     const url = publicUrl(req, pkg);
     try {
-      await sendMail({
-        to: recipientEmail,
-        subject: `${pkg.companyName} - İSG Belge Paylaşımı`,
-        text: `${recipientName},\n\n${pkg.companyName} firmasına ait belgeler sizinle paylaşılmıştır.\nDosya No: ${pkg.packageNumber}\n${url}`,
-        html: `<p>Sayın ${recipientName},</p><p><strong>${pkg.companyName}</strong> firmasına ait belgeler sizinle paylaşılmıştır.</p><p>Dosya No: <strong>${pkg.packageNumber}</strong></p><p><a href="${url}">Belgeleri görüntüle</a></p>`,
-      });
+      await sendIntegratedMail({ to: recipientEmail, user: req.user, subject: `${pkg.companyName} - İSG Belge Paylaşımı`, text: `${recipientName},\n\n${pkg.companyName} firmasına ait belgeler sizinle paylaşılmıştır.\nDosya No: ${pkg.packageNumber}\n${password ? `Erişim şifresi: ${password}\n` : ""}${url}`, html: emailMarkup(pkg, url, password) });
       pkg.emailStatus = "SENT";
       pkg.emailSentAt = new Date();
     } catch (mailErr) {
@@ -546,7 +574,8 @@ router.get("/public/:publicToken", async (req, res) => {
       return res.status(401).json({ requiresPassword: true, message: "Paylaşım şifresi gereklidir." });
     }
     await AuditPackage.updateOne({ _id: pkg._id }, { $set: { lastAccessAt: new Date() }, $inc: { viewCount: 1 } });
-    res.json(await packagePayload(req, pkg));
+    const syncedPackage = await syncPackageDocuments({ user: { organizationId: pkg.organizationId } }, pkg);
+    res.json(await packagePayload(req, syncedPackage));
   } catch (err) {
     console.error("audit public error:", err);
     res.status(500).json({ message: "Denetim dosyası görüntülenemedi." });
@@ -565,6 +594,18 @@ router.post("/:id/documents", auth, async (req, res) => {
     pkg.documentCount = links.length; pkg.categoryCount = new Set(links.map((item) => item.category)).size; await pkg.save();
     res.json(await packagePayload(req, pkg, { includeQr: true }));
   } catch (err) { res.status(500).json({ message: "Paylaşım güncellenemedi." }); }
+});
+
+router.post("/:id/send-email", auth, async (req, res) => {
+  try {
+    const pkg = await AuditPackage.findOne({ _id: req.params.id, organizationId: primaryOrgId(req.user) });
+    if (!pkg || pkg.status !== "ACTIVE") return res.status(404).json({ message: "Aktif paylaşım bulunamadı." });
+    await sendIntegratedMail({ user: req.user, to: pkg.recipientEmail, subject: `${pkg.companyName} - İSG Belge Paylaşımı`, text: `${pkg.recipientName},\n\n${pkg.companyName} firmasına ait belgeler için bağlantı:\n${publicUrl(req, pkg)}${pkg.passwordHash ? "\n\nBu paylaşım şifre korumalıdır. Şifreyi paylaşımı oluşturan kişiden alınız." : ""}`, html: emailMarkup(pkg, publicUrl(req, pkg)) });
+    pkg.emailStatus = "SENT"; pkg.emailSentAt = new Date(); await pkg.save();
+    res.json(await packagePayload(req, pkg));
+  } catch (err) {
+    res.status(400).json({ message: err.message || "E-posta gönderilemedi." });
+  }
 });
 
 router.post("/:id/revoke", auth, async (req, res) => {
@@ -641,7 +682,7 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
 
     const localPath = safeFilePath(doc);
     if (localPath) {
-      if (req.query.download === "1") return res.download(localPath, doc.fileName || path.basename(localPath));
+      if (req.query.download === "1") return res.download(localPath, fileDownloadName(doc, localPath));
       return res.sendFile(localPath);
     }
 
@@ -655,7 +696,7 @@ router.get("/public/:publicToken/documents/:documentId/file", async (req, res) =
         if (contentType) res.setHeader("Content-Type", contentType);
         if (contentLength) res.setHeader("Content-Length", contentLength);
         if (req.query.download === "1") {
-          res.setHeader("Content-Disposition", `attachment; filename="${String(doc.fileName || "belge").replace(/[\"\\]/g, "_")}"`);
+          res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(fileDownloadName(doc))}`);
         } else if (disposition) {
           res.setHeader("Content-Disposition", disposition);
         }
@@ -678,7 +719,7 @@ router.get("/:id", auth, async (req, res) => {
       .select("+passwordHash")
       .lean();
     if (!pkg) return res.status(404).json({ message: "Paket bulunamadı." });
-    res.json(await packagePayload(req, pkg, { includeQr: true }));
+    res.json(await packagePayload(req, await syncPackageDocuments(req, pkg), { includeQr: true }));
   } catch (err) {
     console.error("audit detail error:", err);
     res.status(500).json({ message: "Denetim dosyası alınamadı." });

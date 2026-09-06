@@ -32,7 +32,7 @@ module.exports = async function auth(req, res, next) {
 
     if (resolvedUserId) {
       dbUser = await User.findById(resolvedUserId)
-        .select("_id organization role userType status email")
+        .select("_id organization role userType status email name")
         .lean();
     }
 
@@ -44,7 +44,7 @@ module.exports = async function auth(req, res, next) {
 
       if (email) {
         dbUser = await User.findOne({ email })
-          .select("_id organization role userType status email")
+          .select("_id organization role userType status email name")
           .lean();
 
         if (dbUser?._id) {
@@ -75,6 +75,8 @@ module.exports = async function auth(req, res, next) {
       organizationUuid: tokenOrg ? String(tokenOrg) : null,
 
       userType: dbUser?.userType || decoded.userType || null,
+      email: dbUser?.email || decoded.email || "",
+      name: dbUser?.name || decoded.name || decoded.adSoyad || "",
 
       status: String(dbUser?.status || decoded.status || "")
         .trim()
