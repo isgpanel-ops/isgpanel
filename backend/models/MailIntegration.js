@@ -4,12 +4,14 @@ const MailIntegrationSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
     provider: { type: String, enum: ["gmail", "zoho", "microsoft", "outlook", "custom"], default: "custom" },
+    authType: { type: String, enum: ["oauth", "smtp"], default: "smtp" },
     email: { type: String, required: true, trim: true, lowercase: true },
     displayName: { type: String, default: "", trim: true },
     host: { type: String, required: true, trim: true },
     port: { type: Number, required: true },
     secure: { type: Boolean, default: true },
     encryptedPassword: { type: String, required: true, select: false },
+    encryptedRefreshToken: { type: String, default: "", select: false },
     verifiedAt: { type: Date, default: null },
   },
   { timestamps: true }

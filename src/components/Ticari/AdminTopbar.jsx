@@ -428,6 +428,7 @@ export default function AdminTopbar({ setMobileOpen }) {
                 >
                   Entegrasyonlar
                 </button>
+                <button type="button" onClick={() => { setMenuOpen(false); navigate("/ticari/admin/isg-fatura-entegrasyonu"); }} className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 text-gray-700">İSG Fatura Entegrasyonu</button>
 
                 <button
                   type="button"
@@ -631,6 +632,7 @@ export default function AdminTopbar({ setMobileOpen }) {
             >
               Entegrasyonlar
             </li>
+            <li onClick={() => { navigate("/ticari/admin/isg-fatura-entegrasyonu"); setMenuOpen(false); }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">İSG Fatura Entegrasyonu</li>
 
             <li
               onClick={goSubscriptionPage}

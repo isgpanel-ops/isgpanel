@@ -32,11 +32,18 @@ async function sendIntegratedMail({ user, to, subject, html, text }) {
     error.code = "MAIL_INTEGRATION_REQUIRED";
     throw error;
   }
+  const oauthConfig = {
+    gmail: { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET },
+    microsoft: { clientId: process.env.MICROSOFT_CLIENT_ID, clientSecret: process.env.MICROSOFT_CLIENT_SECRET },
+    zoho: { clientId: process.env.ZOHO_CLIENT_ID, clientSecret: process.env.ZOHO_CLIENT_SECRET },
+  }[integration.provider];
   const transporter = nodemailer.createTransport({
     host: integration.host,
     port: integration.port,
     secure: integration.secure,
-    auth: { user: integration.email, pass: decrypt(integration.encryptedPassword) },
+    auth: integration.authType === "oauth"
+      ? { type: "OAuth2", user: integration.email, clientId: oauthConfig?.clientId, clientSecret: oauthConfig?.clientSecret, refreshToken: decrypt(integration.encryptedRefreshToken) }
+      : { user: integration.email, pass: decrypt(integration.encryptedPassword) },
   });
   const fromName = String(integration.displayName || user?.name || integration.email).replace(/["<>]/g, "");
   return transporter.sendMail({ from: `"${fromName}" <${integration.email}>`, to, subject, html, text });
