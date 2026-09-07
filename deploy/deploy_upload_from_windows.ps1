@@ -33,7 +33,7 @@ tar `
   --exclude=".env" `
   --exclude="backend/.env" `
   -czf $BundlePath `
-  package.json package-lock.json index.html vite.config.js tailwind.config.js postcss.config.js jsconfig.json components.json src public backend isg_prosedur_template
+  package.json package-lock.json index.html vite.config.js tailwind.config.js postcss.config.js jsconfig.json components.json src public backend deploy isg_prosedur_template
 
 Pop-Location
 
