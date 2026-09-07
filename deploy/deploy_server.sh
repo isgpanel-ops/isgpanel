@@ -15,9 +15,12 @@ if [ -d "$PROJECT_DIR/.git" ]; then
   if [ -f "$DEPLOY_KEY" ]; then
     export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
   fi
-  echo "==> Kod guncelleniyor"
+  echo "==> Kod guncelleniyor (main)"
   git checkout -- deploy/deploy_server.sh || true
-  git pull --ff-only
+  git fetch origin main
+  git checkout main
+  git pull --ff-only origin main
+  echo "==> Canli commit: $(git rev-parse --short HEAD)"
 else
   echo "==> Git reposu yok, mevcut dosyalar uzerinden build alinacak"
 fi
