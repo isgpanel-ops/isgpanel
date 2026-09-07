@@ -27,7 +27,7 @@ router.post("/oauth/:provider/start", auth, async (req, res) => {
   const provider = oauthProviders[req.params.provider];
   if (!provider) return res.status(400).json({ message: "Bu sağlayıcı desteklenmiyor." });
   const clientId = process.env[provider.clientId];
-  if (!clientId || !process.env[provider.clientSecret]) return res.status(503).json({ message: "Bu sağlayıcı için OAuth yapılandırması henüz tamamlanmadı." });
+  if (!clientId || !process.env[provider.clientSecret]) return res.status(503).json({ code: "OAUTH_NOT_CONFIGURED", message: "Bu sağlayıcı için OAuth yapılandırması henüz tamamlanmadı." });
   const params = new URLSearchParams({ client_id: clientId, redirect_uri: callbackUrl(req, req.params.provider), response_type: "code", scope: provider.scope, access_type: "offline", prompt: "consent", state: stateFor(String(req.user._id), req.params.provider) });
   res.json({ url: `${provider.authUrl}?${params}` });
 });
