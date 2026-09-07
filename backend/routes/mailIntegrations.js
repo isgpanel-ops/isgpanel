@@ -13,7 +13,7 @@ const PROVIDERS = {
 };
 const publicData = (item) => item && ({ provider: item.provider, email: item.email, displayName: item.displayName, host: item.host, port: item.port, secure: item.secure, verifiedAt: item.verifiedAt, updatedAt: item.updatedAt });
 const oauthProviders = {
-  gmail: { authUrl: "https://accounts.google.com/o/oauth2/v2/auth", tokenUrl: "https://oauth2.googleapis.com/token", profileUrl: "https://www.googleapis.com/oauth2/v3/userinfo", clientId: "GOOGLE_CLIENT_ID", clientSecret: "GOOGLE_CLIENT_SECRET", scope: "https://mail.google.com/ openid email profile", smtp: PROVIDERS.gmail },
+  gmail: { authUrl: "https://accounts.google.com/o/oauth2/v2/auth", tokenUrl: "https://oauth2.googleapis.com/token", profileUrl: "https://www.googleapis.com/oauth2/v3/userinfo", clientId: "GOOGLE_CLIENT_ID", clientSecret: "GOOGLE_CLIENT_SECRET", scope: "https://www.googleapis.com/auth/gmail.send openid email profile", smtp: PROVIDERS.gmail },
   microsoft: { authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token", profileUrl: "https://graph.microsoft.com/v1.0/me", clientId: "MICROSOFT_CLIENT_ID", clientSecret: "MICROSOFT_CLIENT_SECRET", scope: "offline_access https://outlook.office.com/SMTP.Send User.Read", smtp: PROVIDERS.microsoft },
   zoho: { authUrl: "https://accounts.zoho.com/oauth/v2/auth", tokenUrl: "https://accounts.zoho.com/oauth/v2/token", profileUrl: "https://mail.zoho.com/api/accounts", clientId: "ZOHO_CLIENT_ID", clientSecret: "ZOHO_CLIENT_SECRET", scope: "ZohoMail.accounts.READ,ZohoMail.messages.CREATE", smtp: PROVIDERS.zoho },
 };

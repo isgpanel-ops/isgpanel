@@ -25,6 +25,56 @@ function integrationForUser(user) {
   return MailIntegration.findOne({ userId: String(user?._id || user?.id || "") }).select("+encryptedPassword +encryptedRefreshToken");
 }
 
+function mimeHeader(value) {
+  return `=?UTF-8?B?${Buffer.from(String(value || ""), "utf8").toString("base64")}?=`;
+}
+
+function createGmailRawMessage({ from, to, subject, text, html }) {
+  const boundary = `isgpanel-${crypto.randomBytes(12).toString("hex")}`;
+  const plain = Buffer.from(String(text || ""), "utf8").toString("base64");
+  const rich = Buffer.from(String(html || text || ""), "utf8").toString("base64");
+  return [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${mimeHeader(subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary=\"${boundary}\"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    plain,
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    rich,
+    `--${boundary}--`,
+  ].join("\r\n");
+}
+
+async function sendGmailApiMail({ integration, oauthConfig, to, subject, html, text, from }) {
+  const refreshToken = decrypt(integration.encryptedRefreshToken);
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: oauthConfig.clientId, client_secret: oauthConfig.clientSecret, refresh_token: refreshToken, grant_type: "refresh_token" }),
+  });
+  const tokens = await tokenResponse.json();
+  if (!tokenResponse.ok || !tokens.access_token) throw new Error("Google e-posta erişim izni yenilenemedi.");
+
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${tokens.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ raw: Buffer.from(createGmailRawMessage({ from, to, subject, text, html })).toString("base64url") }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error?.message || "Google üzerinden e-posta gönderilemedi.");
+  }
+}
+
 async function sendIntegratedMail({ user, to, subject, html, text }) {
   const integration = await integrationForUser(user);
   if (!integration) {
@@ -37,6 +87,11 @@ async function sendIntegratedMail({ user, to, subject, html, text }) {
     microsoft: { clientId: process.env.MICROSOFT_CLIENT_ID, clientSecret: process.env.MICROSOFT_CLIENT_SECRET },
     zoho: { clientId: process.env.ZOHO_CLIENT_ID, clientSecret: process.env.ZOHO_CLIENT_SECRET },
   }[integration.provider];
+  const fromName = String(integration.displayName || user?.name || integration.email).replace(/["<>]/g, "");
+  const from = `"${fromName}" <${integration.email}>`;
+  if (integration.authType === "oauth" && integration.provider === "gmail") {
+    return sendGmailApiMail({ integration, oauthConfig, to, subject, html, text, from });
+  }
   const transporter = nodemailer.createTransport({
     host: integration.host,
     port: integration.port,
@@ -45,8 +100,7 @@ async function sendIntegratedMail({ user, to, subject, html, text }) {
       ? { type: "OAuth2", user: integration.email, clientId: oauthConfig?.clientId, clientSecret: oauthConfig?.clientSecret, refreshToken: decrypt(integration.encryptedRefreshToken) }
       : { user: integration.email, pass: decrypt(integration.encryptedPassword) },
   });
-  const fromName = String(integration.displayName || user?.name || integration.email).replace(/["<>]/g, "");
-  return transporter.sendMail({ from: `"${fromName}" <${integration.email}>`, to, subject, html, text });
+  return transporter.sendMail({ from, to, subject, html, text });
 }
 
 module.exports = { encrypt, sendIntegratedMail, integrationForUser };
