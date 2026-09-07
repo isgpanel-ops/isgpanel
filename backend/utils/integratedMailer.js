@@ -22,7 +22,7 @@ function decrypt(value) {
 }
 
 function integrationForUser(user) {
-  return MailIntegration.findOne({ userId: String(user?._id || user?.id || "") }).select("+encryptedPassword");
+  return MailIntegration.findOne({ userId: String(user?._id || user?.id || "") }).select("+encryptedPassword +encryptedRefreshToken");
 }
 
 async function sendIntegratedMail({ user, to, subject, html, text }) {
