@@ -36,7 +36,9 @@ npm run build
 
 echo "==> Backend dependency kontrolu"
 cd "$BACKEND_DIR"
-npm ci
+# Sunucu internete kapalıysa Puppeteer'in Chromium indirmesi deploy'u durdurmamalı.
+# Mevcut sistem Chromium/Chrome kurulumunu runtime'da kullanır.
+PUPPETEER_SKIP_DOWNLOAD=1 npm ci
 
 if [ -f "$BACKEND_DIR/scripts/run-migrations.js" ]; then
   if [ -n "${DATABASE_URL:-}" ]; then
