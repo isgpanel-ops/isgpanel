@@ -11,7 +11,9 @@ BACKEND_PM2_NAME="server"
 
 cd "$PROJECT_DIR"
 
-if [ -d "$PROJECT_DIR/.git" ]; then
+if [ "${SKIP_GIT_PULL:-0}" = "1" ]; then
+  echo "==> GitHub atlandi; yuklenen yerel paket derlenecek"
+elif [ -d "$PROJECT_DIR/.git" ]; then
   if [ -f "$DEPLOY_KEY" ]; then
     export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
   fi

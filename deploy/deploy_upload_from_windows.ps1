@@ -45,7 +45,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Sunucuda paket aciliyor..." -ForegroundColor Cyan
-ssh $target "cd '$RemoteProjectPath' && tar -xzf '$RemoteBundlePath' && bash '$RemoteDeployScript'"
+ssh $target "cd '$RemoteProjectPath' && tar -xzf '$RemoteBundlePath' && SKIP_GIT_PULL=1 bash '$RemoteDeployScript'"
 if ($LASTEXITCODE -ne 0) {
   Write-Host "Deploy basarisiz oldu." -ForegroundColor Red
   exit $LASTEXITCODE
