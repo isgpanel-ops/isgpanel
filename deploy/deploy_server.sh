@@ -71,6 +71,12 @@ if [ -z "$PDF_BROWSER" ]; then
         rm -f /etc/resolv.conf
       fi
       printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+
+      # Bu sunucuda systemd-resolved servisi yok. NSS `resolve` kullanmayı
+      # sürdürürse resolv.conf doğru olsa bile alan adları çözülemez.
+      if [ -f /etc/nsswitch.conf ]; then
+        sed -i -E '/^hosts:/c\hosts: files dns' /etc/nsswitch.conf
+      fi
     fi
   fi
 
