@@ -2,6 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const PdfJob = require("../models/PdfJob");
+const { attachFirmaImzalari } = require("../utils/attachFirmaImzalari");
 
 // pdf generators (backend/pdf klasörü)
 const acilDurumPlani = require("../pdf/acildurumplani");
@@ -101,10 +102,12 @@ const generator = PDF_MAP[type];
         return res.status(404).json({ message: "Geçersiz pdf tipi" });
       }
 
-      const payload =
+      let payload =
   body?.data && typeof body.data === "object"
     ? { ...body.data }
     : { ...body };
+
+      payload = await attachFirmaImzalari(payload, req.user);
 
       payload.verificationCode =
   payload.verificationCode ||

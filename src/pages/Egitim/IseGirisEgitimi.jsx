@@ -10,6 +10,7 @@ import React, {
 import { SectionTitle, CardBox, PrimaryButton, Modal } from "../../components/ui";
 import { FirmaContext } from "../../context/FirmaContext";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import { emptyFirmaImzalari, normalizeFirmaImzalari, pdfImzalari } from "../../utils/firmaImzalari";
 
 /* =========================
    ✅ GLOBAL STANDARD
@@ -586,6 +587,7 @@ export default function IseGirisEgitimi() {
     isyeriHekimiAdi: "",
     isverenAdi: "",
   });
+  const [firmaImzalari, setFirmaImzalari] = useState(emptyFirmaImzalari);
 
  const [serverKurumsal, setServerKurumsal] = useState({
   logoUrl: "",
@@ -855,6 +857,37 @@ imzalar: {
       return "";
     }
   };
+
+  useEffect(() => {
+    const currentFirmId = selectedFirm?._id || selectedFirm?.id;
+    if (!currentFirmId) {
+      setFirmaImzalari(emptyFirmaImzalari());
+      return;
+    }
+
+    let active = true;
+    const loadFirmaImzalari = async () => {
+      try {
+        const token = getBearerToken(user);
+        const response = await fetch(`${API_BASE}/firma/${currentFirmId}/imzalar`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) throw new Error("Firma imzaları alınamadı");
+        const data = await response.json();
+        if (active) setFirmaImzalari(normalizeFirmaImzalari(data));
+      } catch {
+        try {
+          const cached = JSON.parse(localStorage.getItem(`firma_imzalar_${currentFirmId}`) || "{}");
+          if (active) setFirmaImzalari(normalizeFirmaImzalari(cached));
+        } catch {
+          if (active) setFirmaImzalari(emptyFirmaImzalari());
+        }
+      }
+    };
+
+    loadFirmaImzalari();
+    return () => { active = false; };
+  }, [API_BASE, selectedFirm?._id, selectedFirm?.id, user]);
 
   useEffect(() => {
     if (!selectedFirm?.id) return;
@@ -2171,11 +2204,11 @@ const selectedRows = Array.isArray(rowsOverride) ? rowsOverride : seciliKayitlar
 
     kurumsal,
 
-    imzalar: {
+    imzalar: pdfImzalari(firmaImzalari, {
       isgUzmaniAdi: imzalar.isgUzmaniAdi || kisiler?.uzman || "",
       isyeriHekimiAdi: imzalar.isyeriHekimiAdi || kisiler?.hekim || "",
       isverenAdi: imzalar.isverenAdi || kisiler?.isveren || "",
-    },
+    }),
 
     kisiler: {
       ...kisiler,

@@ -60,6 +60,7 @@ const authMiddleware = require("./middleware/auth");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User");
 const PdfJob = require("./models/PdfJob");
+const { attachFirmaImzalari } = require("./utils/attachFirmaImzalari");
 const crypto = require("crypto");
 const YillikDegerlendirmeForm = require("./models/YillikDegerlendirmeForm");
 const YillikCalismaPlaniForm = require("./models/YillikCalismaPlaniForm");
@@ -394,6 +395,17 @@ async function injectKurumsalLogo(req, res, next) {
   }
 }
 
+async function injectFirmaImzalari(req, res, next) {
+  try {
+    if (req.user && req.body && typeof req.body === "object") {
+      req.body = await attachFirmaImzalari(req.body, req.user);
+    }
+  } catch (e) {
+    console.error("injectFirmaImzalari hata:", e);
+  }
+  return next();
+}
+
 /* =========================
    ✅ DEMO USER DETECTION MIDDLEWARE
    ========================= */
@@ -417,7 +429,7 @@ function injectDemoFlag(req, res, next) {
 
 
 /* 👉 TÜM PDF İSTEKLERİNE UYGULA */
-const pdfMiddleware = [optionalAuth, injectKurumsalLogo, injectDemoFlag];
+const pdfMiddleware = [optionalAuth, injectKurumsalLogo, injectFirmaImzalari, injectDemoFlag];
 
 
 
