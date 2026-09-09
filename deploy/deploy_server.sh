@@ -40,6 +40,53 @@ cd "$BACKEND_DIR"
 # Mevcut sistem Chromium/Chrome kurulumunu runtime'da kullanır.
 PUPPETEER_SKIP_DOWNLOAD=1 npm ci
 
+# Chrome paketi, Windows'ta deploy paketine eklenir. Sunucunun DNS veya apt
+# deposuna erişmesine gerek kalmadan eski PDF şablonlarıyla üretim yapılır.
+PDF_BROWSER=""
+for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    PDF_BROWSER="$(command -v "$candidate")"
+    break
+  fi
+done
+
+if [ -z "$PDF_BROWSER" ]; then
+  LOCAL_CHROME_DEB="$PROJECT_DIR/deploy/vendor/google-chrome-stable_current_amd64.deb"
+  if [ ! -s "$LOCAL_CHROME_DEB" ]; then
+    echo "Yerel Chrome paketi bulunamadı: $LOCAL_CHROME_DEB"
+    exit 1
+  fi
+
+  echo "==> Yerel Google Chrome paketi kuruluyor"
+  dpkg -i "$LOCAL_CHROME_DEB" || true
+fi
+
+for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    PDF_BROWSER="$(command -v "$candidate")"
+    break
+  fi
+done
+
+if [ -z "$PDF_BROWSER" ]; then
+  echo "Yerel Chrome paketi kurulamadı; eksik sistem paketi olabilir."
+  exit 1
+fi
+
+if ! "$PDF_BROWSER" --version; then
+  echo "Google Chrome başlatılamadı; eksik sistem paketi olabilir."
+  exit 1
+fi
+
+echo "==> PDF tarayıcısı: $PDF_BROWSER"
+if [ -f "$BACKEND_DIR/.env" ]; then
+  if grep -q '^PUPPETEER_EXECUTABLE_PATH=' "$BACKEND_DIR/.env"; then
+    sed -i "s|^PUPPETEER_EXECUTABLE_PATH=.*|PUPPETEER_EXECUTABLE_PATH=$PDF_BROWSER|" "$BACKEND_DIR/.env"
+  else
+    printf '\nPUPPETEER_EXECUTABLE_PATH=%s\n' "$PDF_BROWSER" >> "$BACKEND_DIR/.env"
+  fi
+fi
+
 if [ -f "$BACKEND_DIR/scripts/run-migrations.js" ]; then
   if [ -n "${DATABASE_URL:-}" ]; then
     echo "==> Migration"
