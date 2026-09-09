@@ -1,12 +1,12 @@
 import { ClipboardPlus, Stethoscope } from "lucide-react";
 import { useFirmalar } from "../../context/FirmaContext";
 
-export default function HekimModulAlani({ title }) {
+export default function HekimModulAlani({ title, embedded = false }) {
   const { selectedFirm } = useFirmalar();
   const Icon = title === "Ek-2" ? ClipboardPlus : Stethoscope;
 
   return (
-    <div className="p-3 sm:p-4 md:p-6">
+    <div className={embedded ? "" : "p-3 sm:p-4 md:p-6"}>
       <div className="mb-5 flex items-center gap-3">
         <Icon className="h-6 w-6 text-[#042f4b]" />
         <div>

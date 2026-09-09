@@ -73,7 +73,7 @@ const [formData, setFormData] = useState({
   if (uppercaseFields.includes(name)) value = value.toLocaleUpperCase("tr-TR");
 
   if (name === "sertifikaNo" && value) {
-    const oldPrefix = isIsyeriHekimi ? /^İH-/ : /^İGU-/;
+    const oldPrefix = /^(?:İH|İGU)\s*-\s*/i;
     if (!value.startsWith(SERTIFIKA_ONEKI)) value = SERTIFIKA_ONEKI + value.replace(oldPrefix, "");
   }
 
@@ -448,14 +448,30 @@ const [formData, setFormData] = useState({
           <label className="block text-sm font-medium text-gray-700">
             Sertifika No / Belge No
           </label>
-          <input
-            type="text"
-            name="sertifikaNo"
-            value={formData.sertifikaNo}
-            onChange={handleChange}
-            placeholder={isIsyeriHekimi ? "örn. İH-12345" : "örn. İGU-12345"}
-            className={inputBase}
-          />
+          {isIsyeriHekimi ? (
+            <div className="mt-1 flex">
+              <span className="inline-flex items-center border border-r-0 rounded-l bg-gray-100 px-3 text-sm text-gray-700">
+                İH -
+              </span>
+              <input
+                type="text"
+                name="sertifikaNo"
+                value={String(formData.sertifikaNo || "").replace(/^(?:İH|İGU)\s*-\s*/i, "")}
+                onChange={handleChange}
+                placeholder="Belge numarası"
+                className="w-full border rounded-r px-3 py-2 text-sm focus:ring-2 focus:ring-[#042f4b]"
+              />
+            </div>
+          ) : (
+            <input
+              type="text"
+              name="sertifikaNo"
+              value={formData.sertifikaNo}
+              onChange={handleChange}
+              placeholder="örn. İGU-12345"
+              className={inputBase}
+            />
+          )}
         </div>
 
         {/* Kaydet */}

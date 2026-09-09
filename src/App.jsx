@@ -56,6 +56,7 @@ import TicariUserPanel from "./pages/Ticari/TicariUserPanel";
 import UserFirmalarim from "./pages/Ticari/UserFirmalarim";
 import TicariKullaniciYonetimi from "./pages/Ticari/TicariKullaniciYonetimi";
 import HekimModulAlani from "./pages/Hekim/HekimModulAlani";
+import HekimBelgelerim from "./pages/Hekim/HekimBelgelerim";
 // ✅ Ticari: Kurumsal Kimlik / Güvenlik / Abonelik
 import TicariKurumsalKimlik from "./pages/Ticari/TicariKurumsalKimlik";
 import TicariGuvenlikGiris from "./pages/Ticari/TicariGuvenlikGiris";
@@ -334,7 +335,7 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="belgelerim" element={<Belgelerim />} />
+            <Route path="belgelerim" element={<HekimBelgelerim />} />
             <Route path="belge-paylasimi" element={<DenetimHazirla />} />
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="firmalar" element={<Firmalar />} />
