@@ -40,6 +40,52 @@ cd "$BACKEND_DIR"
 # Mevcut sistem Chromium/Chrome kurulumunu runtime'da kullanır.
 PUPPETEER_SKIP_DOWNLOAD=1 npm ci
 
+echo "==> PDF tarayıcısı kontrol ediliyor"
+PDF_BROWSER=""
+for candidate in chromium chromium-browser google-chrome google-chrome-stable; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    PDF_BROWSER="$(command -v "$candidate")"
+    break
+  fi
+done
+
+if [ -z "$PDF_BROWSER" ]; then
+  echo "==> Chromium kuruluyor"
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "PDF için Chromium bulunamadı ve bu sunucuda apt-get yok."
+    exit 1
+  fi
+
+  apt-get update
+  if apt-cache show chromium >/dev/null 2>&1; then
+    apt-get install -y chromium
+  else
+    apt-get install -y chromium-browser
+  fi
+
+  for candidate in chromium chromium-browser google-chrome google-chrome-stable; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      PDF_BROWSER="$(command -v "$candidate")"
+      break
+    fi
+  done
+fi
+
+if [ -z "$PDF_BROWSER" ]; then
+  echo "Chromium kurulamadı; PDF üretimi başlatılamaz."
+  exit 1
+fi
+
+echo "==> PDF tarayıcısı: $PDF_BROWSER"
+export PUPPETEER_EXECUTABLE_PATH="$PDF_BROWSER"
+if [ -f "$BACKEND_DIR/.env" ]; then
+  if grep -q '^PUPPETEER_EXECUTABLE_PATH=' "$BACKEND_DIR/.env"; then
+    sed -i "s|^PUPPETEER_EXECUTABLE_PATH=.*|PUPPETEER_EXECUTABLE_PATH=$PDF_BROWSER|" "$BACKEND_DIR/.env"
+  else
+    printf '\nPUPPETEER_EXECUTABLE_PATH=%s\n' "$PDF_BROWSER" >> "$BACKEND_DIR/.env"
+  fi
+fi
+
 if [ -f "$BACKEND_DIR/scripts/run-migrations.js" ]; then
   if [ -n "${DATABASE_URL:-}" ]; then
     echo "==> Migration"
