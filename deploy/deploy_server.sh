@@ -56,11 +56,32 @@ if [ -z "$PDF_BROWSER" ]; then
     exit 1
   fi
 
-  apt-get update
-  if apt-cache show chromium >/dev/null 2>&1; then
-    apt-get install -y chromium
-  else
-    apt-get install -y chromium-browser
+  if ! getent hosts mirror.hetzner.com >/dev/null 2>&1; then
+    echo "==> Sunucu DNS ayarı düzeltiliyor"
+    DNS_INTERFACE="$(ip route | awk '/default/ {print $5; exit}')"
+    if command -v resolvectl >/dev/null 2>&1 && [ -n "$DNS_INTERFACE" ]; then
+      resolvectl dns "$DNS_INTERFACE" 1.1.1.1 8.8.8.8 || true
+      resolvectl domain "$DNS_INTERFACE" "~." || true
+    fi
+    if ! getent hosts mirror.hetzner.com >/dev/null 2>&1; then
+      printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+    fi
+  fi
+
+  apt-get update || true
+
+  install_pdf_browser() {
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$1"
+  }
+
+  install_pdf_browser chromium || install_pdf_browser chromium-browser || true
+
+  if ! command -v chromium >/dev/null 2>&1 && \
+     ! command -v chromium-browser >/dev/null 2>&1 && \
+     ! command -v google-chrome >/dev/null 2>&1 && \
+     ! command -v google-chrome-stable >/dev/null 2>&1 && \
+     command -v snap >/dev/null 2>&1; then
+    snap install chromium || true
   fi
 
   for candidate in chromium chromium-browser google-chrome google-chrome-stable; do
@@ -69,6 +90,10 @@ if [ -z "$PDF_BROWSER" ]; then
       break
     fi
   done
+
+  if [ -z "$PDF_BROWSER" ] && [ -x /snap/bin/chromium ]; then
+    PDF_BROWSER="/snap/bin/chromium"
+  fi
 fi
 
 if [ -z "$PDF_BROWSER" ]; then
