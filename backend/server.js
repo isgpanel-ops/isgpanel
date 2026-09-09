@@ -116,6 +116,7 @@ const egitimRoutes = require("./routes/egitim");
 const riskDraftRoutes = require("./routes/riskDraft");
 const yuksekteCalismaKatilimcilarRoutes = require("./routes/yuksekteCalismaKatilimcilar");
 const dofRoutes = require("./routes/dof");
+const hekimEk2Routes = require("./routes/hekimEk2");
 
 
 /* MODELS (senin dosyandaki gibi kalsın) */
@@ -864,6 +865,7 @@ app.use("/api/kurumsal-kimlik", kurumsalKimlikRoutes);
 app.use("/api/support", supportRoutes(pgPool));
 
 app.use("/api", egitimRoutes);
+app.use("/api/hekim/ek2", hekimEk2Routes);
 app.use("/api", riskDraftRoutes);
 app.use("/api", yuksekteCalismaKatilimcilarRoutes);
 app.use("/api/dof", authMiddleware, dofRoutes);
