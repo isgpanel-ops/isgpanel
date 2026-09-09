@@ -616,117 +616,6 @@ drawStampBlock(firstPage, boldFont, hekimCenterX, 210, hekimStamp);
   return Buffer.from(out);
 }
 
-function isBrowserUnavailableError(error) {
-  const message = String(error?.message || error || "").toLowerCase();
-  return (
-    message.includes("could not find expected browser") ||
-    message.includes("failed to launch the browser") ||
-    message.includes("chromium revision") ||
-    message.includes("executable doesn't exist") ||
-    message.includes("did not find any executable")
-  );
-}
-
-function drawFittedText(page, font, value, x, y, maxWidth, size = 9) {
-  const text = safe(value).trim() || "-";
-  let fitted = text;
-
-  while (fitted.length > 1 && font.widthOfTextAtSize(fitted, size) > maxWidth) {
-    fitted = `${fitted.slice(0, -2).trim()}...`;
-  }
-
-  page.drawText(fitted, { x, y, size, font, color: rgb(0.06, 0.12, 0.2) });
-}
-
-async function drawFallbackSignature(page, pdfDoc, dataUrl, x, y, width, height) {
-  const image = await embedImageFromDataUrl(pdfDoc, dataUrl);
-  if (!image) return;
-
-  const scale = Math.min(width / image.width, height / image.height);
-  const imageWidth = image.width * scale;
-  const imageHeight = image.height * scale;
-  page.drawImage(image, {
-    x: x + (width - imageWidth) / 2,
-    y: y + (height - imageHeight) / 2,
-    width: imageWidth,
-    height: imageHeight,
-  });
-}
-
-async function createPdfLibFallback(payload = {}) {
-  const pdfDoc = await PDFDocument.create();
-  pdfDoc.registerFontkit(fontkit);
-  const font = await embedBoldFont(pdfDoc, fontkit);
-  const page = pdfDoc.addPage([595.28, 841.89]);
-  const navy = rgb(0.04, 0.19, 0.31);
-  const line = rgb(0.65, 0.7, 0.76);
-  const firmaAdi = safe(payload?.firma?.firmaAdi || payload?.kurumsal?.firmaAdi);
-  const egitim = payload?.egitim || {};
-  const rows = Array.isArray(payload?.katilimcilar) ? payload.katilimcilar : [];
-  const verification = await buildVerificationData(payload);
-  const { uzmanImza, hekimImza } = await resolveRoleSignatures(payload);
-  const uzmanStamp = buildUzmanStampData(payload);
-  const hekimStamp = buildHekimStampData(payload);
-
-  page.drawRectangle({ x: 32, y: 778, width: 531, height: 36, color: navy });
-  drawCenteredText(page, font, "İŞE GİRİŞ EĞİTİMİ KATILIM FORMU", 297.5, 791, 14, rgb(1, 1, 1));
-  drawFittedText(page, font, firmaAdi, 42, 753, 510, 10);
-  page.drawLine({ start: { x: 32, y: 745 }, end: { x: 563, y: 745 }, thickness: 1, color: line });
-
-  const details = [
-    `Genel konular: ${safe(egitim.genelSaat || "-")} saat`,
-    `Teknik konular: ${safe(egitim.teknikSaat || "-")} saat`,
-    `Sağlık konuları: ${safe(egitim.saglikSaat || "-")} saat`,
-    `İşe özel riskler: ${safe(egitim.iseOzelRisklerSaat || "-")} saat`,
-  ];
-  details.forEach((detail, index) => drawFittedText(page, font, detail, 42 + (index % 2) * 264, 722 - Math.floor(index / 2) * 18, 245, 8));
-
-  const columns = [
-    [32, 28, "No"], [60, 95, "T.C. Kimlik No"], [155, 150, "Ad Soyad"],
-    [305, 100, "Görevi"], [405, 82, "İşe Giriş"], [487, 76, "İmzalar"],
-  ];
-  const tableTop = 672;
-  const rowHeight = 58;
-  page.drawRectangle({ x: 32, y: tableTop - 23, width: 531, height: 23, color: rgb(0.9, 0.93, 0.96) });
-  columns.forEach(([x, width, label]) => {
-    page.drawRectangle({ x, y: tableTop - 23, width, height: 23, borderWidth: 0.5, borderColor: line });
-    drawCenteredText(page, font, label, x + width / 2, tableTop - 15, 7, navy);
-  });
-
-  const visibleRows = rows.length ? rows.slice(0, 8) : [{}];
-  for (let index = 0; index < visibleRows.length; index += 1) {
-    const row = visibleRows[index] || {};
-    const y = tableTop - 23 - (index + 1) * rowHeight;
-    columns.forEach(([x, width]) => page.drawRectangle({ x, y, width, height: rowHeight, borderWidth: 0.5, borderColor: line }));
-    drawCenteredText(page, font, String(row.no || index + 1), 46, y + 27, 8, navy);
-    drawFittedText(page, font, row.tc, 64, y + 31, 87, 7);
-    drawFittedText(page, font, row.adSoyad, 159, y + 31, 142, 8);
-    drawFittedText(page, font, row.gorev, 309, y + 31, 92, 7);
-    drawFittedText(page, font, formatDateTR(row.iseGirisTarihiTR || row.iseGirisTarihi), 409, y + 31, 74, 7);
-    await drawFallbackSignature(page, pdfDoc, getPersonelSignatureDataUrlByKey(row, "genel"), 491, y + 30, 31, 23);
-    await drawFallbackSignature(page, pdfDoc, getPersonelSignatureDataUrlByKey(row, "saglik"), 528, y + 30, 31, 23);
-  }
-
-  const signatureTop = Math.max(135, tableTop - 23 - visibleRows.length * rowHeight - 120);
-  page.drawText("Eğitimi Verenler", { x: 42, y: signatureTop + 85, size: 10, font, color: navy });
-  page.drawLine({ start: { x: 42, y: signatureTop + 80 }, end: { x: 553, y: signatureTop + 80 }, thickness: 1, color: line });
-  const signatureBlocks = [
-    { x: 62, label: uzmanStamp.title, name: uzmanStamp.name, cert: uzmanStamp.certNo, image: uzmanImza },
-    { x: 325, label: hekimStamp.title, name: hekimStamp.name, cert: hekimStamp.certNo, image: hekimImza },
-  ];
-  for (const block of signatureBlocks) {
-    drawCenteredText(page, font, block.label, block.x + 100, signatureTop + 62, 8, navy);
-    drawCenteredText(page, font, block.name, block.x + 100, signatureTop + 49, 8, navy);
-    drawCenteredText(page, font, block.cert, block.x + 100, signatureTop + 37, 7, navy);
-    await drawFallbackSignature(page, pdfDoc, block.image, block.x + 25, signatureTop, 150, 32);
-    page.drawLine({ start: { x: block.x + 18, y: signatureTop - 3 }, end: { x: block.x + 182, y: signatureTop - 3 }, thickness: 0.5, color: line });
-  }
-
-  page.drawText(`Doğrulama kodu: ${verification.verificationCode}`, { x: 42, y: 42, size: 7, font, color: rgb(0.3, 0.35, 0.4) });
-  page.drawText("Bu belge İSG Panel üzerinden oluşturulmuştur.", { x: 312, y: 42, size: 7, font, color: rgb(0.3, 0.35, 0.4) });
-  return Buffer.from(await pdfDoc.save());
-}
-
 function injectSignatureCss(html) {
   const extraCss = `
     <style>
@@ -804,19 +693,11 @@ function injectSignatureCss(html) {
 }
 
 async function createPdfBuffer(payload) {
-  const templatePath = [
-    "/var/www/isg_prosedur_template/templates/egitim/egitimKatilimFormu.html",
-    path.join(
-      findProjectRoot(),
-      "isg_prosedur_template",
-      "templates",
-      "egitim",
-      "egitimKatilimFormu.html"
-    ),
-  ].find((candidate) => fs.existsSync(candidate));
+  const templatePath =
+    "/var/www/isg_prosedur_template/templates/egitim/egitimKatilimFormu.html";
 
-  if (!templatePath) {
-    throw new Error("Eğitim katılım formu şablonu bulunamadı.");
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template bulunamadı: ${templatePath}`);
   }
 
   let html = fs.readFileSync(templatePath, "utf8");
@@ -912,31 +793,22 @@ const personelFoto =
   html = html.split("%%KATILIMCI_ROWS%%").join(buildRows(rows));
   html = injectSignatureCss(html);
 
-  try {
-    const rawPdfBuffer = await pdf.generatePdf(
-      { content: html },
-      {
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "10mm",
-          bottom: "10mm",
-          left: "10mm",
-          right: "10mm",
-        },
-      }
-    );
+  const rawPdfBuffer = await pdf.generatePdf(
+    { content: html },
+    {
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "10mm",
+        bottom: "10mm",
+        left: "10mm",
+        right: "10mm",
+      },
+    }
+  );
 
-    return await placeRoleSignaturesOnPdf(rawPdfBuffer, payload);
-  } catch (error) {
-    if (!isBrowserUnavailableError(error)) throw error;
-
-    console.warn(
-      "İşe giriş katılım formu tarayıcısız PDF üreticisiyle hazırlanıyor:",
-      error.message
-    );
-    return await createPdfLibFallback(payload);
-  }
+  const signedPdfBuffer = await placeRoleSignaturesOnPdf(rawPdfBuffer, payload);
+  return signedPdfBuffer;
 }
 
 async function createEgitimKatilimFormuPdf(payload) {

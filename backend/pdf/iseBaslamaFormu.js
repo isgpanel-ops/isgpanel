@@ -6,7 +6,6 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 
 const OUT_DIR = path.join(__dirname, "..", "temp_pdfs");
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -424,15 +423,21 @@ const verification =
 
   html = replaceAllMap(html, map);
 
-  try {
-    return await pdf.generatePdf(
-      { content: html },
-      { format: "A4", printBackground: true, margin: { top: "8mm", bottom: "8mm", left: "8mm", right: "8mm" } }
-    );
-  } catch (error) {
-    if (!isBrowserUnavailableError(error)) throw error;
-    return createTrainingFallbackPdf(payload, { title: "İŞE BAŞLAMA FORMU" });
-  }
+  const rawPdfBuffer = await pdf.generatePdf(
+    { content: html },
+    {
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "8mm",
+        bottom: "8mm",
+        left: "8mm",
+        right: "8mm",
+      },
+    }
+  );
+
+  return rawPdfBuffer;
 }
 
 async function createIseBaslamaFormuPdf(payload) {

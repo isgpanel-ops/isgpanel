@@ -5,7 +5,6 @@ const axios = require("axios");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { embedBoldFont } = require("../utils/pdfFonts");
-const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 
 const safe = (v) => (v ?? "").toString();
 
@@ -799,24 +798,13 @@ async function createSertifikaPdf(payload, req = null) {
     margin: { top: "8mm", right: "8mm", bottom: "8mm", left: "8mm" },
   };
 
-  let pdfBuffer;
-  let usedFallback = false;
-  try {
-    pdfBuffer = await pdf.generatePdf({ content: html }, options);
-  } catch (error) {
-    if (!isBrowserUnavailableError(error)) throw error;
-    usedFallback = true;
-    pdfBuffer = await createTrainingFallbackPdf(payload, {
-      title: "YÜKSEKTE ÇALIŞMA EĞİTİM SERTİFİKASI",
-      landscape: true,
-    });
-  }
+  const pdfBuffer = await pdf.generatePdf({ content: html }, options);
 
   const fileName = `sertifika_${Date.now()}.pdf`;
   const outPath = path.join(OUT_DIR, fileName);
   fs.writeFileSync(outPath, pdfBuffer);
 
-  if (!usedFallback) await placeSertifikaSignatures(outPath, payload, req);
+  await placeSertifikaSignatures(outPath, payload, req);
 
   return outPath;
 }

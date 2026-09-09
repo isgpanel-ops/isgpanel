@@ -398,7 +398,13 @@ async function injectKurumsalLogo(req, res, next) {
 async function injectFirmaImzalari(req, res, next) {
   try {
     if (req.user && req.body && typeof req.body === "object") {
-      req.body = await attachFirmaImzalari(req.body, req.user);
+      // Kuyruklu PDF istekleri belge verisini `data` altında taşır; doğrudan
+      // PDF istekleri ise gövdenin kendisini kullanır.
+      if (req.body.data && typeof req.body.data === "object") {
+        req.body.data = await attachFirmaImzalari(req.body.data, req.user);
+      } else {
+        req.body = await attachFirmaImzalari(req.body, req.user);
+      }
     }
   } catch (e) {
     console.error("injectFirmaImzalari hata:", e);
@@ -1711,6 +1717,7 @@ app.post(
   "/api/pdf/isegiris",
   authMiddleware,
   injectKurumsalLogo,
+  injectFirmaImzalari,
   injectDemoFlag,
   async (req, res) => {
   try {
@@ -1788,6 +1795,7 @@ app.post(
   "/api/pdf/destek-acil",
   authMiddleware,
   injectKurumsalLogo,
+  injectFirmaImzalari,
   injectDemoFlag,
   async (req, res) => {
     try {
