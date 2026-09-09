@@ -29,7 +29,7 @@ const { createNotification } =
   ]) || {};
 
 const upTR = (str = "") => String(str || "").toLocaleUpperCase("tr-TR");
-const activeUserRoles = ["ticari_user"];
+const activeUserRoles = ["ticari_user", "isyeri_hekimi"];
 
 router.get("/:orgId/users", async (req, res) => {
   try {

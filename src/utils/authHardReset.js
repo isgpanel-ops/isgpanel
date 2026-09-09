@@ -85,7 +85,7 @@ export function hardResetForAuth(email, token, user, redirectTo = "/panel") {
     const activeSub = hasActiveSubscription(user);
     const userRole = (user?.role || "").toLowerCase().trim();
     const isTicariRole =
-      userRole === "ticari_user" || userRole === "ticari_admin";
+      userRole === "ticari_user" || userRole === "ticari_admin" || userRole === "isyeri_hekimi";
 
     const normalizedUser = {
       ...user,

@@ -109,7 +109,7 @@ export default function KurumsalKimlik() {
     return (me?.role || localUser?.role || "").toString().toLowerCase();
   }, [me?.role, localUser?.role]);
 
-  const isReadOnly = roleLower === "ticari_user";
+  const isReadOnly = ["ticari_user", "isyeri_hekimi"].includes(roleLower);
 
   const uppercaseFields = ["firmaAdi", "adres"];
   const inputBase =

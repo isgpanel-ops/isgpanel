@@ -81,7 +81,7 @@ async function auth(req, res, next) {
 
 const roleOf = (u) => String(u?.role || "").toLowerCase().trim();
 const isAdmin = (u) => roleOf(u) === "ticari_admin";
-const isTicariUser = (u) => roleOf(u) === "ticari_user";
+const isTicariUser = (u) => ["ticari_user", "isyeri_hekimi"].includes(roleOf(u));
 const isBireysel = (u) => {
   const role = roleOf(u);
   return role === "bireysel" || role === "uzman";

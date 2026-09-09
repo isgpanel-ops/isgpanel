@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Firma = require("../models/Firma");
 const FirmUser = require("../models/FirmUser");
+const User = require("../models/User");
 
 // ✅ Anlık bildirim helper'ları (mevcut kalsın)
 const {
@@ -23,6 +24,7 @@ const {
 const roleOf = (u) => String(u?.role || "").toLowerCase().trim();
 const isTicariAdmin = (u) => roleOf(u) === "ticari_admin";
 const isTicariUser = (u) => roleOf(u) === "ticari_user";
+const isAssignedProfessional = (u) => ["ticari_user", "isyeri_hekimi"].includes(roleOf(u));
 
 // ✅ createNotification'ı burada direkt bulalım (scheduler helper'a bağlı kalmayalım)
 function safeRequire(paths) {
@@ -90,7 +92,7 @@ router.get("/", auth, requireOrg, async (req, res) => {
       return res.json({ firms });
     }
 
-    if (isTicariUser(req.user)) {
+    if (isAssignedProfessional(req.user)) {
       const links = await FirmUser.find({
         organization: req.orgId,
         userId: req.user._id || req.user.id,
@@ -184,6 +186,21 @@ router.post("/:id/assign", auth, requireOrg, async (req, res) => {
     const firm = await Firma.findOne({ _id: firmId, organization: req.orgId }).lean();
     if (!firm) return res.status(404).json({ message: "Firma bulunamadı" });
 
+    const targetUser = await User.findOne({
+      _id: targetUserId,
+      organization: req.orgId,
+    })
+      .select("role")
+      .lean();
+
+    if (!targetUser || !isAssignedProfessional(targetUser)) {
+      return res.status(400).json({ message: "Atanacak kullanıcı uzman veya işyeri hekimi olmalıdır" });
+    }
+
+    const gorevTuru = roleOf(targetUser) === "isyeri_hekimi"
+      ? "isyeri_hekimi"
+      : "is_guvenligi_uzmani";
+
     // link oluştur/aktif et
     await FirmUser.updateOne(
       {
@@ -191,7 +208,7 @@ router.post("/:id/assign", auth, requireOrg, async (req, res) => {
         firmId,
         userId: targetUserId,
       },
-      { $set: { isActive: true, assignedBy: req.user._id || req.user.id } },
+      { $set: { isActive: true, assignedBy: req.user._id || req.user.id, gorevTuru } },
       { upsert: true }
     );
 

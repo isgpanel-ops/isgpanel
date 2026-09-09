@@ -547,7 +547,7 @@ export default function Firmalar() {
   const role = (userLS?.role || "").toString().toLowerCase().trim();
 
   // ticari_user: ASLA silme yok
-  const isTicariUser = role === "ticari_user" || !!ticariUserLS;
+  const isTicariUser = ["ticari_user", "isyeri_hekimi"].includes(role) || !!ticariUserLS;
 
   // bireysel uzman: tam yetkili (silme dahil)
   const isBireysel = role === "bireysel" || !!bireyselUserLS;

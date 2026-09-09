@@ -226,7 +226,7 @@ export function FirmaProvider({ children }) {
       const role = (lu?.role || "").toString().toLowerCase();
 
       // ✅ DÜZELTİLDİ: ticari_user firmalarını /api/firms üzerinden almalı
-      const endpoint = role === "ticari_user" ? "/firms" : "/firma";
+      const endpoint = ["ticari_user", "isyeri_hekimi"].includes(role) ? "/firms" : "/firma";
 
       const res = await axios.get(`${API_BASE}${endpoint}`, {
         headers: { Authorization: `Bearer ${t}` },

@@ -35,7 +35,7 @@ function getRoleLabel(role, userObj = null) {
   }
 
   if (role === "isyeri_hekimi") {
-    return "İşyeri Hekimi (Yakında)";
+    return "İşyeri Hekimi";
   }
 
   if (role === "diger_saglik_personeli") {
@@ -653,7 +653,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     onChange={(e) => setNewUserRole(e.target.value)}
   >
     <option value="ticari_user">İş Güvenliği Uzmanı</option>
-    <option value="isyeri_hekimi" disabled>İşyeri Hekimi (Yakında)</option>
+    <option value="isyeri_hekimi">İşyeri Hekimi</option>
   </select>
 </div>
 
@@ -835,7 +835,7 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
   >
     <option value="ticari_user">İş Güvenliği Uzmanı</option>
-    <option value="isyeri_hekimi" disabled>İşyeri Hekimi (Yakında)</option>
+    <option value="isyeri_hekimi">İşyeri Hekimi</option>
   </select>
 </div>
 

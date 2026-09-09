@@ -13,6 +13,8 @@ import {
   ClipboardList,
   FlaskConical,
   Share2,
+  Stethoscope,
+  HeartPulse,
 } from "lucide-react";
 
 /* 🔐 JWT payload decode */
@@ -49,7 +51,10 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }) {
     role === "TICARI_KULLANICI" ||
     role === "COMMERCIAL_USER" ||
     role === "CORPORATE_USER" ||
-    role === "FIRM_USER";
+    role === "FIRM_USER" ||
+    role === "ISYERI_HEKIMI";
+
+  const isIsyeriHekimi = role === "ISYERI_HEKIMI";
 
   const readLockFlags = () => ({
   expired: String(localStorage.getItem("isSubscriptionExpired") || "").toLowerCase() === "true",
@@ -79,7 +84,7 @@ const isPaymentPending =
   !isTicariKullanici &&
   lockFlags.paymentPending;
 
-  const navItems = [
+  const uzmanNavItems = [
     { name: "Ana Sayfa", path: "/panel", icon: Home },
 
     {
@@ -143,9 +148,20 @@ const isPaymentPending =
     },
   ];
 
+  const hekimNavItems = [
+    { name: "Ana Sayfa", path: "/isyeri-hekimi", icon: Home },
+    { name: "Belgelerim", path: "/isyeri-hekimi/belgelerim", icon: FolderOpen },
+    { name: "Belge Paylaşımı", path: "/isyeri-hekimi/belge-paylasimi", icon: Share2 },
+    { name: "Firmalarım", path: "/isyeri-hekimi/firmalar", icon: Building2 },
+    { name: "Ek-2", path: "/isyeri-hekimi/ek-2", icon: Stethoscope },
+    { name: "Tetkikler", path: "/isyeri-hekimi/tetkikler", icon: HeartPulse },
+  ];
+
+  const navItems = isIsyeriHekimi ? hekimNavItems : uzmanNavItems;
+
   const paymentNavItem = {
     name: "Abonelik / Ödeme",
-    path: "/panel/paket-abonelik",
+    path: isIsyeriHekimi ? "/isyeri-hekimi/paket-abonelik" : "/panel/paket-abonelik",
     icon: CreditCard,
   };
 
@@ -153,16 +169,16 @@ const isPaymentPending =
 
   if (isLimited) {
     filteredNavItems = navItems.filter(
-      (i) => i.path === "/panel"
+      (i) => i.path === (isIsyeriHekimi ? "/isyeri-hekimi" : "/panel")
     );
   } else if (isExpired) {
     filteredNavItems = [
-      ...navItems.filter((i) => i.path === "/panel"),
+      ...navItems.filter((i) => i.path === (isIsyeriHekimi ? "/isyeri-hekimi" : "/panel")),
       paymentNavItem,
     ];
   } else if (isPaymentPending) {
     filteredNavItems = [
-      ...navItems.filter((i) => i.path === "/panel"),
+      ...navItems.filter((i) => i.path === (isIsyeriHekimi ? "/isyeri-hekimi" : "/panel")),
       paymentNavItem,
     ];
   }
@@ -188,7 +204,7 @@ const isPaymentPending =
             <li key={item.name}>
               <NavLink
                 to={item.path}
-                end={item.path === "/panel"}
+                end={item.path === "/panel" || item.path === "/isyeri-hekimi"}
                 onClick={() =>
                   setMobileOpen && setMobileOpen(false)
                 }

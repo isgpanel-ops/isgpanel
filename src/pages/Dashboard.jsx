@@ -108,6 +108,14 @@ const getFirmaSonEgitimInfo = (firma) => {
 
 const Dashboard = () => {
   const { user, firmalar: ctxFirmalar } = useContext(FirmaContext);
+  const isIsyeriHekimi = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("user") || "null");
+      return String(stored?.role || user?.role || "").toLowerCase() === "isyeri_hekimi";
+    } catch {
+      return String(user?.role || "").toLowerCase() === "isyeri_hekimi";
+    }
+  })();
 
   const [firmalar, setFirmalar] = useState([]);
   const [detail, setDetail] = useState(null);
@@ -269,7 +277,7 @@ const Dashboard = () => {
       >
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold leading-tight">
-            Bireysel Kullanıcı Paneline Hoşgeldiniz, {userName} 👋
+            {isIsyeriHekimi ? "İşyeri Hekimi Paneline Hoş Geldiniz" : "Bireysel Kullanıcı Paneline Hoşgeldiniz"}, {userName} 👋
           </h1>
           <p className="text-xs sm:text-sm opacity-90 mt-1">
             Tüm İSG süreçleriniz, firma yönetimi tek panelde.

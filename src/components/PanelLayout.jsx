@@ -76,12 +76,16 @@ export default function PanelLayout() {
 
   const roleRaw = String(payload?.role || payload?.userRole || "").toUpperCase();
 
+  const isIsyeriHekimi = roleRaw === "ISYERI_HEKIMI";
+  const panelBasePath = isIsyeriHekimi ? "/isyeri-hekimi" : "/panel";
+
   const isTicariKullanici =
     roleRaw === "TICARI_USER" ||
     roleRaw === "TICARI_KULLANICI" ||
     roleRaw === "COMMERCIAL_USER" ||
     roleRaw === "CORPORATE_USER" ||
-    roleRaw === "FIRM_USER";
+    roleRaw === "FIRM_USER" ||
+    isIsyeriHekimi;
 
   useEffect(() => {
     const t = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -92,11 +96,11 @@ export default function PanelLayout() {
       "https://api.isgpanel.tr";
 
     const ALLOWED_WHEN_LOCKED = new Set([
-      "/panel",
-      "/panel/paket-abonelik",
-      "/panel/kisisel-bilgiler",
-      "/panel/kurumsal-kimlik",
-      "/panel/guvenlik-giris",
+      panelBasePath,
+      `${panelBasePath}/paket-abonelik`,
+      `${panelBasePath}/kisisel-bilgiler`,
+      `${panelBasePath}/kurumsal-kimlik`,
+      `${panelBasePath}/guvenlik-giris`,
     ]);
 
     const isExpiredByEnd = (endISO) => {
@@ -200,29 +204,29 @@ export default function PanelLayout() {
 window.dispatchEvent(new Event("subscription:lock-changed"));     
 
         if (["blokeli", "pasif", "askida"].includes(status)) {
-          if (location.pathname !== "/panel") {
-            navigate("/panel", { replace: true });
+          if (location.pathname !== panelBasePath) {
+            navigate(panelBasePath, { replace: true });
           }
           return;
         }
 
         if (isPaymentPending) {
           const p = location.pathname || "/panel";
-          if (p.startsWith("/panel") && !ALLOWED_WHEN_LOCKED.has(p)) {
-            navigate("/panel/paket-abonelik", { replace: true });
+          if (p.startsWith(panelBasePath) && !ALLOWED_WHEN_LOCKED.has(p)) {
+            navigate(`${panelBasePath}/paket-abonelik`, { replace: true });
             return;
           }
         }
 
         if (isExpired) {
           const p = location.pathname || "/panel";
-          if (p.startsWith("/panel") && !ALLOWED_WHEN_LOCKED.has(p)) {
-            navigate("/panel/paket-abonelik", { replace: true });
+          if (p.startsWith(panelBasePath) && !ALLOWED_WHEN_LOCKED.has(p)) {
+            navigate(`${panelBasePath}/paket-abonelik`, { replace: true });
           }
         }
       } catch {}
     })();
-  }, [navigate, location.pathname, isTicariKullanici]);
+  }, [navigate, location.pathname, isTicariKullanici, panelBasePath]);
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -585,7 +589,7 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
                   <ul className="text-sm text-gray-700">
                     <li
                       onClick={() => {
-                        navigate("/panel/kisisel-bilgiler");
+                        navigate(`${panelBasePath}/kisisel-bilgiler`);
                         setMenuOpen(false);
                       }}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -595,7 +599,7 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
 
                     <li
                       onClick={() => {
-                        navigate("/panel/kurumsal-kimlik");
+                        navigate(`${panelBasePath}/kurumsal-kimlik`);
                         setMenuOpen(false);
                       }}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -605,7 +609,7 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
 
                     <li
                       onClick={() => {
-                        navigate("/panel/guvenlik-giris");
+                        navigate(`${panelBasePath}/guvenlik-giris`);
                         setMenuOpen(false);
                       }}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -613,7 +617,7 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
                       Güvenlik ve Giriş
                     </li>
 
-                    <li onClick={() => { navigate("/panel/entegrasyonlar"); setMenuOpen(false); }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                    <li onClick={() => { navigate(`${panelBasePath}/entegrasyonlar`); setMenuOpen(false); }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
                       Entegrasyonlar
                     </li>
 
@@ -627,7 +631,7 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
                         <li
                           onClick={() => {
                             if (lockedByTicari) return;
-                            navigate("/panel/paket-abonelik");
+                            navigate(`${panelBasePath}/paket-abonelik`);
                             setMenuOpen(false);
                           }}
                           className={`px-4 py-2 hover:bg-gray-100 ${

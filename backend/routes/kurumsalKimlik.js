@@ -61,7 +61,7 @@ const upload = multer({
 router.post("/logo", auth, upload.single("logo"), async (req, res) => {
   try {
     const role = String(req.user?.role || "").toLowerCase();
-    if (role === "ticari_user") {
+    if (["ticari_user", "isyeri_hekimi"].includes(role)) {
       return res.status(403).json({ message: "ticari_user logo yükleyemez" });
     }
 
@@ -117,7 +117,7 @@ router.get("/", auth, async (req, res) => {
 router.put("/", auth, async (req, res) => {
   try {
     const role = String(req.user?.role || "").toLowerCase();
-    if (role === "ticari_user") {
+    if (["ticari_user", "isyeri_hekimi"].includes(role)) {
       return res.status(403).json({ message: "ticari_user kurumsal kimlik güncelleyemez" });
     }
 

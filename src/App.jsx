@@ -55,7 +55,7 @@ import IsgFaturaEntegrasyon from "./pages/Ticari/IsgFaturaEntegrasyon";
 import TicariUserPanel from "./pages/Ticari/TicariUserPanel";
 import UserFirmalarim from "./pages/Ticari/UserFirmalarim";
 import TicariKullaniciYonetimi from "./pages/Ticari/TicariKullaniciYonetimi";
-import IsyeriHekimiPaneli from "./pages/Hekim/IsyeriHekimiPaneli";
+import HekimModulAlani from "./pages/Hekim/HekimModulAlani";
 // ✅ Ticari: Kurumsal Kimlik / Güvenlik / Abonelik
 import TicariKurumsalKimlik from "./pages/Ticari/TicariKurumsalKimlik";
 import TicariGuvenlikGiris from "./pages/Ticari/TicariGuvenlikGiris";
@@ -324,15 +324,28 @@ function App() {
             <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
           </Route>
 
-{/* 🩺 İŞYERİ HEKİMİ PANELİ */}
-<Route
-  path="/isyeri-hekimi"
-  element={
-    <RequireAuth>
-      <IsyeriHekimiPaneli />
-    </RequireAuth>
-  }
-/>
+          {/* 🩺 İŞYERİ HEKİMİ: ticari kullanıcı ile aynı panel kabuğu */}
+          <Route
+            path="/isyeri-hekimi"
+            element={
+              <RequireAuth>
+                <PanelLayout />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="belgelerim" element={<Belgelerim />} />
+            <Route path="belge-paylasimi" element={<DenetimHazirla />} />
+            <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
+            <Route path="firmalar" element={<Firmalar />} />
+            <Route path="ek-2" element={<HekimModulAlani title="Ek-2" />} />
+            <Route path="tetkikler" element={<HekimModulAlani title="Tetkikler" />} />
+            <Route path="kisisel-bilgiler" element={<KisiselBilgiler />} />
+            <Route path="kurumsal-kimlik" element={<KurumsalKimlik />} />
+            <Route path="guvenlik-giris" element={<GuvenlikGiris />} />
+            <Route path="entegrasyonlar" element={<MailEntegrasyonlari />} />
+            <Route path="paket-abonelik" element={<Navigate to="/isyeri-hekimi" replace />} />
+          </Route>
 
           {/* 🔴 SUPER ADMIN */}
           <Route

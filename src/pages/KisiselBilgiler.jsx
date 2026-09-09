@@ -34,8 +34,9 @@ function getToken() {
 export default function KisiselBilgiler() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const SABIT_MESLEK = "İŞ GÜVENLİĞİ UZMANI";
+  const [isIsyeriHekimi, setIsyeriHekimi] = useState(false);
+  const SABIT_MESLEK = isIsyeriHekimi ? "İŞYERİ HEKİMİ" : "İŞ GÜVENLİĞİ UZMANI";
+  const SERTIFIKA_ONEKI = isIsyeriHekimi ? "İH-" : "İGU-";
 
 const [formData, setFormData] = useState({
   adSoyad: "",
@@ -52,7 +53,10 @@ const [formData, setFormData] = useState({
 });
 
   const [me, setMe] = useState(null);
-  const isAssignedTicariUser = useMemo(() => me?.role === "ticari_user", [me]);
+  const isAssignedTicariUser = useMemo(() => {
+    const role = String(me?.user?.role || me?.role || "").toLowerCase();
+    return ["ticari_user", "isyeri_hekimi"].includes(role);
+  }, [me]);
 
   // ✅ Ad Soyad & Email bu ekranda kilitli (resimdeki davranış)
   const isAdSoyadLocked = true;
@@ -69,7 +73,8 @@ const [formData, setFormData] = useState({
   if (uppercaseFields.includes(name)) value = value.toLocaleUpperCase("tr-TR");
 
   if (name === "sertifikaNo" && value) {
-    if (!value.startsWith("İGU-")) value = "İGU-" + value.replace(/^İGU-/, "");
+    const oldPrefix = isIsyeriHekimi ? /^İH-/ : /^İGU-/;
+    if (!value.startsWith(SERTIFIKA_ONEKI)) value = SERTIFIKA_ONEKI + value.replace(oldPrefix, "");
   }
 
   setFormData((p) => ({ ...p, [name]: value }));
@@ -100,6 +105,10 @@ const [formData, setFormData] = useState({
 
         const meJson = await meRes.json();
         setMe(meJson);
+        const role = String(meJson?.user?.role || meJson?.role || "").toLowerCase();
+        const isHekim = role === "isyeri_hekimi";
+        const meslek = isHekim ? "İŞYERİ HEKİMİ" : "İŞ GÜVENLİĞİ UZMANI";
+        setIsyeriHekimi(isHekim);
 
         const upperName = (meJson?.name || "").toLocaleUpperCase("tr-TR");
 
@@ -130,8 +139,8 @@ const [formData, setFormData] = useState({
   adres: personal?.adres || "",
   sehir: personal?.sehir || "",
   ilce: personal?.ilce || "",
-  meslek: SABIT_MESLEK,
-  sertifikaSinifi: personal?.sertifikaSinifi || "",
+  meslek,
+  sertifikaSinifi: isHekim ? "" : personal?.sertifikaSinifi || "",
   sertifikaNo: personal?.sertifikaNo || "",
 }));
 
@@ -145,8 +154,8 @@ const [formData, setFormData] = useState({
   adres: personal?.adres || "",
   sehir: personal?.sehir || "",
   ilce: personal?.ilce || "",
-  meslek: SABIT_MESLEK,
-  sertifikaSinifi: personal?.sertifikaSinifi || "",
+  meslek,
+  sertifikaSinifi: isHekim ? "" : personal?.sertifikaSinifi || "",
   sertifikaNo: personal?.sertifikaNo || "",
 }));
         } else {
@@ -182,7 +191,7 @@ const [formData, setFormData] = useState({
   sehir: formData.sehir,
   ilce: formData.ilce,
   meslek: SABIT_MESLEK,
-  sertifikaSinifi: formData.sertifikaSinifi,
+  sertifikaSinifi: isIsyeriHekimi ? "" : formData.sertifikaSinifi,
   sertifikaNo: formData.sertifikaNo,
 };
 
@@ -218,7 +227,7 @@ const [formData, setFormData] = useState({
   sehir: personal.sehir ?? formData.sehir,
   ilce: personal.ilce ?? formData.ilce,
   meslek: SABIT_MESLEK,
-  sertifikaSinifi: personal.sertifikaSinifi ?? formData.sertifikaSinifi,
+  sertifikaSinifi: isIsyeriHekimi ? "" : personal.sertifikaSinifi ?? formData.sertifikaSinifi,
   sertifikaNo: personal.sertifikaNo ?? formData.sertifikaNo,
 }));
 
@@ -419,7 +428,7 @@ const [formData, setFormData] = useState({
 </div>
 
         {/* Sertifika Sınıfı */}
-        <div>
+        {!isIsyeriHekimi && <div>
           <label className="block text-sm font-medium text-gray-700">Sertifika Sınıfı</label>
           <select
             name="sertifikaSinifi"
@@ -432,7 +441,7 @@ const [formData, setFormData] = useState({
             <option value="B">B</option>
             <option value="C">C</option>
           </select>
-        </div>
+        </div>}
 
         {/* Sertifika No / Belge No */}
         <div>
@@ -444,7 +453,7 @@ const [formData, setFormData] = useState({
             name="sertifikaNo"
             value={formData.sertifikaNo}
             onChange={handleChange}
-            placeholder="örn. İGU-12345"
+            placeholder={isIsyeriHekimi ? "örn. İH-12345" : "örn. İGU-12345"}
             className={inputBase}
           />
         </div>
