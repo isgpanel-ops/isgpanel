@@ -387,11 +387,10 @@ async function renderPdfBuffer(payload) {
 async function kkdTeslimTutanagiPdf(req, res) {
   try {
     const payload = req.body || {};
-    const firmaAdi = payload?.firma?.firmaAdi || "firma";
     const adSoyad = payload?.personel?.adSoyad || "personel";
 
     const pdfBuffer = await renderPdfBuffer(payload);
-    const filename = `${firmaAdi}_${adSoyad}_kkd_teslim_tutanagi.pdf`;
+    const filename = `${adSoyad}_kkd_teslim_tutanagi.pdf`;
 
     if (payload?.persist === true) {
       const saved = writePersistedPdf(req, pdfBuffer, filename);

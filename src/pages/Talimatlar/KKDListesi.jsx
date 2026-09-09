@@ -774,13 +774,12 @@ setPreviewOpen(false);
       const blob = await postBlob(API.kkdPdf, payload, token);
       const blobUrl = window.URL.createObjectURL(blob);
 
-      const firmaAdi = safeFileName(selectedFirm?.firmaAdi || "Firma");
       const adSoyad = safeFileName(first?.adSoyad || "PERSONEL");
 
       clearInterval(progressTimer);
 setPreviewProgress(100);
 
-setPreviewFileName(`${firmaAdi}_${adSoyad}_kkd_teslim_tutanagi.pdf`);
+setPreviewFileName(`${adSoyad}_kkd_teslim_tutanagi.pdf`);
 setPreviewPdfUrl(blobUrl);
 
 setTimeout(() => {
