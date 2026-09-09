@@ -1,5 +1,5 @@
 import { useState } from "react";
-import HekimModulAlani from "./HekimModulAlani";
+import { useFirmalar } from "../../context/FirmaContext";
 
 const tabs = [
   { id: "ek-2", label: "Ek-2", title: "Ek-2" },
@@ -7,6 +7,7 @@ const tabs = [
 ];
 
 export default function HekimBelgelerim() {
+  const { selectedFirm } = useFirmalar();
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem("hekim_belgelerim_active_tab");
     return tabs.some((tab) => tab.id === stored) ? stored : "ek-2";
@@ -44,7 +45,17 @@ export default function HekimBelgelerim() {
         </div>
       </div>
 
-      <HekimModulAlani title={active.title} embedded />
+      <section className="rounded-md bg-white p-5 shadow-md">
+        <h2 className="text-base font-semibold text-[#042f4b]">
+          {active.title} Belgeleri
+        </h2>
+        <p className="mt-1 text-xs text-gray-500">
+          {selectedFirm?.firmaAdi
+            ? `${selectedFirm.firmaAdi} için kayıtlı belgeler bu alanda görüntülenecek.`
+            : "Belgeleri görmek için lütfen sağ üstten bir firma seçiniz."}
+        </p>
+        <div className="mt-4 border-t border-gray-200" />
+      </section>
     </div>
   );
 }
