@@ -65,6 +65,11 @@ if [ -z "$PDF_BROWSER" ]; then
     fi
     if ! getent hosts mirror.hetzner.com >/dev/null 2>&1; then
       mkdir -p /etc
+      # Bazı Ubuntu sunucularında /etc/resolv.conf, çalışmayan systemd-resolved
+      # hedefine bağlanmış olabiliyor. Bu durumda gerçek resolver dosyası oluşturulur.
+      if [ -L /etc/resolv.conf ] && [ ! -e /etc/resolv.conf ]; then
+        rm -f /etc/resolv.conf
+      fi
       printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
     fi
   fi
@@ -88,6 +93,26 @@ if [ -z "$PDF_BROWSER" ]; then
      ! command -v google-chrome-stable >/dev/null 2>&1 && \
      command -v snap >/dev/null 2>&1; then
     snap install chromium || true
+  fi
+
+  if ! command -v chromium >/dev/null 2>&1 && \
+     ! command -v chromium-browser >/dev/null 2>&1 && \
+     ! command -v google-chrome >/dev/null 2>&1 && \
+     ! command -v google-chrome-stable >/dev/null 2>&1; then
+    echo "==> Google Chrome paketi kuruluyor"
+    CHROME_DEB="/tmp/google-chrome-stable_current_amd64.deb"
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL -o "$CHROME_DEB" \
+        "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" || true
+    elif command -v wget >/dev/null 2>&1; then
+      wget -q -O "$CHROME_DEB" \
+        "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" || true
+    fi
+
+    if [ -s "$CHROME_DEB" ]; then
+      DEBIAN_FRONTEND=noninteractive apt-get install -y "$CHROME_DEB" || true
+      rm -f "$CHROME_DEB"
+    fi
   fi
 
   for candidate in chromium chromium-browser google-chrome google-chrome-stable; do
