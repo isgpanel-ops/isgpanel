@@ -64,11 +64,17 @@ if [ -z "$PDF_BROWSER" ]; then
       resolvectl domain "$DNS_INTERFACE" "~." || true
     fi
     if ! getent hosts mirror.hetzner.com >/dev/null 2>&1; then
+      mkdir -p /etc
       printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
     fi
   fi
 
-  apt-get update || true
+  if ! getent hosts mirror.hetzner.com >/dev/null 2>&1; then
+    echo "Sunucu DNS'i çözülemedi; Chromium kurulumu güvenle başlatılamaz."
+    exit 1
+  fi
+
+  apt-get update
 
   install_pdf_browser() {
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$1"
