@@ -4,6 +4,7 @@ const path = require("path");
 const pdf = require("html-pdf-node");
 const axios = require("axios");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 
 // OUT: backend/temp_pdfs
 const OUT_DIR = path.join(__dirname, "..", "temp_pdfs");
@@ -638,13 +639,23 @@ async function createCalisanTemsilcisiEgitimKatilimFormuPdf(payload) {
     margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
   };
 
-  const pdfBuffer = await pdf.generatePdf({ content: html }, options);
+  let pdfBuffer;
+  let usedFallback = false;
+  try {
+    pdfBuffer = await pdf.generatePdf({ content: html }, options);
+  } catch (error) {
+    if (!isBrowserUnavailableError(error)) throw error;
+    usedFallback = true;
+    pdfBuffer = await createTrainingFallbackPdf(payload, {
+      title: "ÇALIŞAN TEMSİLCİSİ EĞİTİM KATILIM FORMU",
+    });
+  }
 
   const fileName = `calisan_temsilcisi_egitim_katilim_${Date.now()}.pdf`;
   const outPath = path.join(OUT_DIR, fileName);
   fs.writeFileSync(outPath, pdfBuffer);
 
-  await placeKatilimSignatures(outPath, payload);
+  if (!usedFallback) await placeKatilimSignatures(outPath, payload);
 
   return outPath;
 }

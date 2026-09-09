@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const pdf = require("html-pdf-node");
 const axios = require("axios");
+const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 
 function esc(str = "") {
   return String(str)
@@ -645,7 +646,15 @@ async function createDestekAcilEgitimKatilimFormuPdf(payload = {}) {
     printBackground: true,
     margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
   };
-const pdfBuffer = await pdf.generatePdf({ content: html }, options);
+let pdfBuffer;
+try {
+  pdfBuffer = await pdf.generatePdf({ content: html }, options);
+} catch (error) {
+  if (!isBrowserUnavailableError(error)) throw error;
+  pdfBuffer = await createTrainingFallbackPdf(payload, {
+    title: "DESTEK ELEMANI EĞİTİM KATILIM FORMU",
+  });
+}
 
 const outputDir = path.join(path.resolve(__dirname, "..", ".."), "output");
 if (!fs.existsSync(outputDir)) {

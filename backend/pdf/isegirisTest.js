@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const pdf = require("html-pdf-node");
 const axios = require("axios");
+const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 
 const OUT_DIR = path.join(__dirname, "..", "temp_pdfs");
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -511,19 +512,15 @@ const cevaplar = getCevaplar(personel, payload);
     </html>
   `;
 
-  return await pdf.generatePdf(
-    { content: finalHtml },
-    {
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "10mm",
-        bottom: "10mm",
-        left: "10mm",
-        right: "10mm",
-      },
-    }
-  );
+  try {
+    return await pdf.generatePdf(
+      { content: finalHtml },
+      { format: "A4", printBackground: true, margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" } }
+    );
+  } catch (error) {
+    if (!isBrowserUnavailableError(error)) throw error;
+    return createTrainingFallbackPdf(payload, { title: "İŞE GİRİŞ EĞİTİM TESTİ" });
+  }
 }
 
 async function createIsegirisTestPdf(payload) {

@@ -9,6 +9,7 @@ const QRCode = require("qrcode");
 const crypto = require("crypto");
 const PdfJob = require("../models/PdfJob");
 const { embedBoldFont } = require("../utils/pdfFonts");
+const { isBrowserUnavailableError, createTrainingFallbackPdf } = require("../utils/trainingPdfFallback");
 const safe = (v) => (v ?? "").toString();
 
 const TRANSPARENT_1PX =
@@ -928,9 +929,13 @@ async function createPdfBuffer(payload, req) {
     margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
   };
 
-  const rawPdfBuffer = await pdf.generatePdf({ content: html }, options);
-  const signedPdfBuffer = await placeRoleSignaturesOnPdf(rawPdfBuffer, payload, req);
-  return signedPdfBuffer;
+  try {
+    const rawPdfBuffer = await pdf.generatePdf({ content: html }, options);
+    return await placeRoleSignaturesOnPdf(rawPdfBuffer, payload, req);
+  } catch (error) {
+    if (!isBrowserUnavailableError(error)) throw error;
+    return createTrainingFallbackPdf(payload, { title: "YÜKSEKTE ÇALIŞMA EĞİTİM KATILIM FORMU" });
+  }
 }
 
 async function createYuksekteKatilimPdf(req, res) {
