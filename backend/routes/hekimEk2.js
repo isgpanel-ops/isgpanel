@@ -83,7 +83,7 @@ router.put("/firms/:firmaId/persons/:tcKimlik/:section", auth, requireHekimFirma
   try {
     const tcKimlik = cleanTc(req.params.tcKimlik);
     const section = String(req.params.section || "");
-    const allowed = ["kisiselBilgiler", "saglikBilgileri", "muayene", "sonuc"];
+    const allowed = ["kisiselBilgiler", "saglikBilgileri", "muayene", "sonuc", "tetkikler", "imzalar"];
     if (!tcKimlik || !allowed.includes(section)) return res.status(400).json({ message: "Geçersiz kayıt alanı." });
 
     const source = await IseGirisEgitimiKayit.findOne({ firmaId: req.ek2FirmaId }).lean();

@@ -341,7 +341,7 @@ function App() {
             <Route path="denetim/paket/:id" element={<DenetimPaketiHazir />} />
             <Route path="firmalar" element={<Firmalar />} />
             <Route path="ek-2" element={<Ek2SaglikMuayenesi />} />
-            <Route path="tetkikler" element={<HekimModulAlani title="Tetkikler" />} />
+            <Route path="tetkikler" element={<Ek2SaglikMuayenesi mode="tetkikler" />} />
             <Route path="kisisel-bilgiler" element={<KisiselBilgiler />} />
             <Route path="kurumsal-kimlik" element={<KurumsalKimlik />} />
             <Route path="guvenlik-giris" element={<GuvenlikGiris />} />
