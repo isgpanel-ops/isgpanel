@@ -34,6 +34,7 @@ const badgeHazard = (t) => {
 const firmIdOf = (f) => String(f?._id || f?.id || "");
 const sgkOf = (f) => f?.sgkNo || f?.sgkSicilNo || "-";
 const userLabel = (u) => (u?.name || u?.adSoyad || u?.fullName || u?.email || "").toString();
+const assigneeLabel = (u) => `${upTR(userLabel(u))} (${u?.role === "isyeri_hekimi" ? "HEKİM" : "UZMAN"})`;
 
 export default function AdminAtamaBekleyen() {
   // ============ AUTH / ORG ============ //
@@ -410,7 +411,12 @@ export default function AdminAtamaBekleyen() {
         {/* TABLE */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
           <div className="max-h-[60vh] overflow-auto">
-            <table className="min-w-full text-xs">
+            <table className="w-full min-w-[1050px] table-fixed text-xs">
+              <colgroup>
+                <col className="w-10" /><col className="w-12" /><col className="w-[30%]" />
+                <col className="w-[17%]" /><col className="w-28" /><col className="w-[12%]" />
+                <col className="w-[12%]" /><col className="w-28" /><col className="w-32" />
+              </colgroup>
               <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60">
                 <tr className="text-slate-600">
                   <th className="py-1.5 px-2 text-center border-b w-8">
@@ -611,7 +617,7 @@ export default function AdminAtamaBekleyen() {
               <option value="">Seçiniz</option>
               {kullanicilar.map((k) => (
                 <option key={k._id || k.id} value={k._id || k.id}>
-                  {upTR(userLabel(k))}
+                  {assigneeLabel(k)}
                 </option>
               ))}
             </select>
@@ -647,7 +653,7 @@ export default function AdminAtamaBekleyen() {
               <option value="">Seçiniz</option>
               {kullanicilar.map((k) => (
                 <option key={k._id || k.id} value={k._id || k.id}>
-                  {upTR(userLabel(k))}
+                  {assigneeLabel(k)}
                 </option>
               ))}
             </select>

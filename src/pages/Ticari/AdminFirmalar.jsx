@@ -429,6 +429,9 @@ const userLabel = (u) =>
     u?.email ||
     "").toString();
 
+const assigneeLabel = (u) =>
+  `${upTR(userLabel(u))} (${u?.role === "isyeri_hekimi" ? "HEKİM" : "UZMAN"})`;
+
 export default function AdminFirmalar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1211,7 +1214,12 @@ export default function AdminFirmalar() {
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
           <div className="max-h-[60vh] overflow-auto">
-            <table className="min-w-full text-xs">
+            <table className="w-full min-w-[1180px] table-fixed text-xs">
+              <colgroup>
+                <col className="w-10" /><col className="w-12" /><col className="w-[31%]" />
+                <col className="w-[15%]" /><col className="w-28" /><col className="w-[12%]" />
+                <col className="w-[12%]" /><col className="w-24" /><col className="w-32" />
+              </colgroup>
               <thead className="sticky top-0 bg-slate-50 z-10">
                 <tr className="text-slate-600">
                   <th className="py-1.5 px-2 text-center border-b w-8">
@@ -1301,14 +1309,6 @@ export default function AdminFirmalar() {
                       </td>
 
                       <td className="py-1.5 px-3">
-                        {hekimEtiket ? (
-                          <span className="px-2 py-1 rounded-full bg-sky-50 text-sky-700 text-[10px] border border-sky-200">{hekimEtiket}</span>
-                        ) : (
-                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] border border-amber-200">ATANMAMIŞ</span>
-                        )}
-                      </td>
-
-                      <td className="py-1.5 px-3">
                         <span className="text-[11px] tracking-wide">
                           {f.sgkNo || f.sgkSicilNo || "-"}
                         </span>
@@ -1333,6 +1333,14 @@ export default function AdminFirmalar() {
                           <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] border border-amber-200">
                             ATANMAMIŞ
                           </span>
+                        )}
+                      </td>
+
+                      <td className="py-1.5 px-3">
+                        {hekimEtiket ? (
+                          <span className="inline-block max-w-full truncate px-2 py-1 rounded-full bg-sky-50 text-sky-700 text-[10px] border border-sky-200">{hekimEtiket}</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] border border-amber-200">ATANMAMIŞ</span>
                         )}
                       </td>
 
@@ -1379,7 +1387,7 @@ export default function AdminFirmalar() {
                 {paged.length === 0 && !firmsLoading && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="py-6 text-center text-slate-500 text-xs"
                     >
                       Kayıt bulunamadı.
@@ -1643,7 +1651,7 @@ export default function AdminFirmalar() {
               <option value="">Seçiniz</option>
               {kullanicilar.map((k) => (
                 <option key={k._id || k.id} value={k._id || k.id}>
-                  {upTR(userLabel(k))}
+                  {assigneeLabel(k)}
                 </option>
               ))}
             </select>
@@ -1688,7 +1696,7 @@ export default function AdminFirmalar() {
               <option value="">Seçiniz</option>
               {kullanicilar.map((k) => (
                 <option key={k._id || k.id} value={k._id || k.id}>
-                  {upTR(userLabel(k))}
+                  {assigneeLabel(k)}
                 </option>
               ))}
             </select>
