@@ -43,9 +43,15 @@ function uzmanLinkFilter(extra = {}) {
   };
 }
 
-async function validUzmanMap(activeLinks) {
+function roleLinkFilter(role, extra = {}) {
+  return role === "isyeri_hekimi"
+    ? { ...extra, gorevTuru: "isyeri_hekimi" }
+    : uzmanLinkFilter(extra);
+}
+
+async function validUserMap(activeLinks, role) {
   const userIds = [...new Set((activeLinks || []).map((x) => String(x.userId)).filter(Boolean))];
-  const users = await User.find({ _id: { $in: userIds }, role: "ticari_user" })
+  const users = await User.find({ _id: { $in: userIds }, role })
     .select("name email")
     .lean();
   return new Map(users.map((u) => [String(u._id), u]));
@@ -71,8 +77,9 @@ router.post("/admin/assign-firms", auth, async (req, res) => {
     if (String(getOrgId(target)) !== String(orgId)) {
       return res.status(403).json({ message: "Kullanıcı bu organizasyona ait değil" });
     }
-    if (roleOf(target) !== "ticari_user") {
-      return res.status(400).json({ message: "Sadece iş güvenliği uzmanı atanabilir" });
+    const targetRole = roleOf(target);
+    if (!["ticari_user", "isyeri_hekimi"].includes(targetRole)) {
+      return res.status(400).json({ message: "Sadece iş güvenliği uzmanı veya işyeri hekimi atanabilir" });
     }
 
     const firms = await Firma.find({ _id: { $in: firmIds }, organization: orgId }).lean();
@@ -82,7 +89,7 @@ router.post("/admin/assign-firms", auth, async (req, res) => {
 
     for (const fid of firmIds) {
       await FirmUser.updateMany(
-        uzmanLinkFilter({ organization: orgId, firmId: fid, isActive: true }),
+        roleLinkFilter(targetRole, { organization: orgId, firmId: fid, isActive: true }),
         { $set: { isActive: false } }
       );
 
@@ -93,7 +100,7 @@ router.post("/admin/assign-firms", auth, async (req, res) => {
             organization: orgId,
             firmId: fid,
             userId,
-            gorevTuru: "is_guvenligi_uzmani",
+            gorevTuru: targetRole === "isyeri_hekimi" ? "isyeri_hekimi" : "is_guvenligi_uzmani",
             isActive: true,
             assignedBy: admin._id,
           },
@@ -170,30 +177,33 @@ router.get("/admin/firms-with-assignees", auth, async (req, res) => {
     const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
     const firmIds = firms.map((f) => f._id);
 
-    const activeLinks = await FirmUser.find(
-      uzmanLinkFilter({
-        organization: orgId,
-        firmId: { $in: firmIds },
-        isActive: true,
-      })
-    ).lean();
-
-    const userMap = await validUzmanMap(activeLinks);
-    const firmToUser = new Map();
+    const activeLinks = await FirmUser.find({ organization: orgId, firmId: { $in: firmIds }, isActive: true }).lean();
+    const [uzmanMap, hekimMap] = await Promise.all([
+      validUserMap(activeLinks.filter((x) => x.gorevTuru !== "isyeri_hekimi"), "ticari_user"),
+      validUserMap(activeLinks.filter((x) => x.gorevTuru === "isyeri_hekimi"), "isyeri_hekimi"),
+    ]);
+    const uzmanByFirm = new Map();
+    const hekimByFirm = new Map();
     activeLinks.forEach((link) => {
-      const user = userMap.get(String(link.userId));
-      if (user) firmToUser.set(String(link.firmId), user);
+      const map = link.gorevTuru === "isyeri_hekimi" ? hekimMap : uzmanMap;
+      const user = map.get(String(link.userId));
+      if (user) (link.gorevTuru === "isyeri_hekimi" ? hekimByFirm : uzmanByFirm).set(String(link.firmId), user);
     });
 
     return res.json(
       firms.map((f) => {
-        const assignee = firmToUser.get(String(f._id)) || null;
+        const uzman = uzmanByFirm.get(String(f._id)) || null;
+        const hekim = hekimByFirm.get(String(f._id)) || null;
         return {
           ...f,
           id: f._id,
           sgkSicilNo: f.sgkSicilNo || f.sgkNo || "",
-          atanmisKullanici: assignee ? String(assignee._id) : "",
-          atanmisKullaniciAdi: assignee ? assignee.name : "",
+          atanmisKullanici: uzman ? String(uzman._id) : "",
+          atanmisKullaniciAdi: uzman ? uzman.name : "",
+          atanmisUzman: uzman ? String(uzman._id) : "",
+          atanmisUzmanAdi: uzman ? uzman.name : "",
+          atanmisHekim: hekim ? String(hekim._id) : "",
+          atanmisHekimAdi: hekim ? hekim.name : "",
         };
       })
     );
@@ -212,29 +222,28 @@ router.get("/admin/unassigned-firms", auth, async (req, res) => {
     const firms = await Firma.find({ organization: orgId }).sort({ firmaAdi: 1 }).lean();
     const firmIds = firms.map((f) => f._id);
 
-    const activeLinks = await FirmUser.find(
-      uzmanLinkFilter({
-        organization: orgId,
-        firmId: { $in: firmIds },
-        isActive: true,
-      })
-    )
+    const activeLinks = await FirmUser.find({ organization: orgId, firmId: { $in: firmIds }, isActive: true })
       .select("firmId userId")
       .lean();
 
-    const userMap = await validUzmanMap(activeLinks);
-    const assignedSet = new Set(
-      activeLinks
-        .filter((link) => userMap.has(String(link.userId)))
-        .map((link) => String(link.firmId))
-    );
-    const unassigned = firms.filter((f) => !assignedSet.has(String(f._id)));
+    const [uzmanMap, hekimMap] = await Promise.all([
+      validUserMap(activeLinks.filter((x) => x.gorevTuru !== "isyeri_hekimi"), "ticari_user"),
+      validUserMap(activeLinks.filter((x) => x.gorevTuru === "isyeri_hekimi"), "isyeri_hekimi"),
+    ]);
+    const uzmanByFirm = new Map(); const hekimByFirm = new Map();
+    activeLinks.forEach((link) => {
+      const user = (link.gorevTuru === "isyeri_hekimi" ? hekimMap : uzmanMap).get(String(link.userId));
+      if (user) (link.gorevTuru === "isyeri_hekimi" ? hekimByFirm : uzmanByFirm).set(String(link.firmId), user);
+    });
+    const unassigned = firms.filter((f) => !uzmanByFirm.has(String(f._id)) || !hekimByFirm.has(String(f._id)));
 
     return res.json(
       unassigned.map((f) => ({
         ...f,
         id: f._id,
         sgkSicilNo: f.sgkSicilNo || f.sgkNo || "",
+        atanmisUzmanAdi: uzmanByFirm.get(String(f._id))?.name || "",
+        atanmisHekimAdi: hekimByFirm.get(String(f._id))?.name || "",
       }))
     );
   } catch (e) {

@@ -8,6 +8,10 @@ import { useFirmalar } from "../context/FirmaContext";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import SubscriptionBanner from "./SubscriptionBanner";
 
+const API_BASE =
+  (import.meta?.env?.VITE_API_URL || "").trim().replace(/\/$/, "") ||
+  "https://api.isgpanel.tr";
+
 /* ✅ JWT payload decode (role okumak için) */
 const parseJwt = (token) => {
   try {
@@ -73,6 +77,7 @@ export default function PanelLayout() {
   const token =
     localStorage.getItem("token") || sessionStorage.getItem("token");
   const payload = parseJwt(token);
+  const adminView = payload?.impersonation || null;
 
   const roleRaw = String(payload?.role || payload?.userRole || "").toUpperCase();
 
@@ -279,6 +284,34 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
     navigate("/giris", { replace: true });
   };
 
+  const exitAdminView = async () => {
+    const saved = (() => {
+      try {
+        return JSON.parse(sessionStorage.getItem("isgpanel:admin-view") || "null");
+      } catch {
+        return null;
+      }
+    })();
+    if (!saved?.originalToken) return;
+
+    try {
+      await fetch(`${API_BASE}/api/org/${saved.organizationId}/impersonate/end`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Yerel yönetici oturumu korunur; kayıt isteği ağ hatasında daha sonra tekrar denenemez.
+    }
+
+    window.__setActiveUserEmail?.(saved.originalActiveEmail);
+    localStorage.setItem("token", saved.originalToken);
+    localStorage.setItem("user", JSON.stringify(saved.originalUser));
+    localStorage.removeItem("isgpanel:selectedFirm");
+    sessionStorage.removeItem("isgpanel:admin-view");
+    window.dispatchEvent(new Event("token-changed"));
+    window.location.assign("/ticari/admin/kullanicilar");
+  };
+
   const normalizeText = (t) => (t || "").toLocaleUpperCase("tr-TR");
 
   const safeFirms = Array.isArray(firms) ? firms : [];
@@ -386,6 +419,20 @@ window.dispatchEvent(new Event("subscription:lock-changed"));
       </div>
 
       <div className="flex-1 flex flex-col w-full min-w-0">
+        {adminView && (
+          <div className="flex min-h-10 items-center justify-between gap-3 bg-amber-100 px-3 py-2 text-xs text-amber-950 border-b border-amber-200">
+            <span className="min-w-0 truncate">
+              Yönetici görünümündesiniz: <strong>{adminView.targetName || "Kullanıcı"}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={exitAdminView}
+              className="shrink-0 rounded border border-amber-500 bg-white px-2.5 py-1 font-medium text-amber-900 hover:bg-amber-50"
+            >
+              Yönetici Paneline Dön
+            </button>
+          </div>
+        )}
         <header className="h-16 md:h-14 bg-white shadow flex items-center justify-between px-2 md:px-4 border-b gap-2 md:gap-3">
           {/* SOL TARAF */}
           <div className="flex items-center gap-2 min-w-0">

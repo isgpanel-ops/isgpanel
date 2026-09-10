@@ -847,7 +847,7 @@ app.put("/api/acil-ekipleri/form/:firmaId", authMiddleware, async (req, res) => 
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/webhooks/payment", paymentWebhookRoutes);
 
-app.use("/api/org", orgRoutes);
+app.use("/api/org", authMiddleware, orgRoutes);
 app.use("/api/payment", paymentRoutes(pgPool));
 app.use("/api/billing", optionalAuth, billingRoutes);
 app.use("/api/subscription", subscriptionRoutes(pgPool));

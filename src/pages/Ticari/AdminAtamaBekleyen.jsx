@@ -137,14 +137,14 @@ export default function AdminAtamaBekleyen() {
     fetchUsers();
   }, [orgId, token]);
 
-  // 🔒 SADECE UZMANLAR (ticari_user)
+  // Uzman ve işyeri hekimi aynı atama akışında seçilebilir.
   const kullanicilar = useMemo(
     () =>
       (users || []).filter((u) => {
         const role = (u.role || "").toString().toLowerCase().trim();
         if (!role) return false;
         if (role.includes("admin") || u.isAdmin) return false;
-        return role === "ticari_user";
+        return ["ticari_user", "isyeri_hekimi"].includes(role);
       }),
     [users]
   );
@@ -282,6 +282,7 @@ export default function AdminAtamaBekleyen() {
         userId: selectedUserForSingle,
         firmIds: [singleAssignFirmId],
       });
+      await fetchFirms();
 
       // ✅ AdminFirmalar ile aynı bilgilendirme
       alert("Atama yapıldı. Kullanıcı panelinde firmalar görünecek.");
@@ -322,6 +323,7 @@ export default function AdminAtamaBekleyen() {
         userId: selectedUserForBulk,
         firmIds: selectedFirms,
       });
+      await fetchFirms();
 
       // ✅ AdminFirmalar ile aynı bilgilendirme
       alert("Toplu atama yapıldı. Kullanıcı panelinde firmalar görünecek.");
@@ -344,8 +346,7 @@ export default function AdminAtamaBekleyen() {
           <div>
             <h2 className="text-xl font-bold text-[#042f4b] mb-1">Atama Bekleyen Firmalar</h2>
             <p className="text-slate-500 text-xs">
-              Uzman ataması yapılmamış (veya atanmış uzmanı kalmamış) firmalar.
-              Buradan ilgili uzmanlara atama yapabilirsiniz.
+              Uzman veya hekim ataması eksik olan firmalar. Her iki atama tamamlanınca firma bu listeden çıkar.
             </p>
 
             {!!firmsError && <p className="mt-1 text-[11px] text-rose-600">{firmsError}</p>}
@@ -426,6 +427,8 @@ export default function AdminAtamaBekleyen() {
                   <th className="py-2 px-3 text-left font-semibold border-b">Firma Adı</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">SGK Sicil No</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">Tehlike Sınıfı</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Uzman</th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">Hekim</th>
                   <th className="py-2 px-3 text-left font-semibold border-b">Durum</th>
                   <th className="py-2 px-3 text-right font-semibold border-b w-40">İşlemler</th>
                 </tr>
@@ -464,6 +467,9 @@ export default function AdminAtamaBekleyen() {
                         </span>
                       </td>
 
+                      <td className="py-1.5 px-3 align-middle">{f.atanmisUzmanAdi || <span className="text-amber-700">Atanmamış</span>}</td>
+                      <td className="py-1.5 px-3 align-middle">{f.atanmisHekimAdi || <span className="text-amber-700">Atanmamış</span>}</td>
+
                       <td className="py-1.5 px-3 align-middle">
                         <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200">
                           Atama Bekliyor
@@ -496,7 +502,7 @@ export default function AdminAtamaBekleyen() {
 
                 {paged.length === 0 && !firmsLoading && (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
+                    <td colSpan={9} className="py-6 text-center text-slate-500 text-xs">
                       Atama bekleyen firma bulunamadı.
                     </td>
                   </tr>

@@ -2,6 +2,7 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const AdminPanelAccessLog = require("../models/AdminPanelAccessLog");
 
 module.exports = async function auth(req, res, next) {
   try {
@@ -84,6 +85,50 @@ module.exports = async function auth(req, res, next) {
 
       demo: decoded.demo || false,
     };
+
+    // Yönetici görünümü: token hedef kullanıcıyı temsil eder; gerçek yönetici
+    // ayrı tutulur ve yalnızca aynı organizasyondaki aktif kullanıcılara geçebilir.
+    if (decoded.impersonation?.actorUserId) {
+      const actorId = String(decoded.impersonation.actorUserId);
+      const actor = await User.findById(actorId)
+        .select("_id organization role status email name")
+        .lean();
+
+      const isCorporateAdmin = ["ticari_admin", "admin"].includes(String(actor?.role || "").toLowerCase());
+      const sameOrganization =
+        actor?.organization &&
+        req.user.organizationId &&
+        String(actor.organization) === String(req.user.organizationId);
+
+      if (!actor || !isCorporateAdmin || !sameOrganization || String(actor.status || "").toLowerCase() !== "aktif") {
+        return res.status(403).json({ message: "Yönetici görünümü yetkisi geçersiz." });
+      }
+
+      req.actor = {
+        _id: String(actor._id),
+        id: String(actor._id),
+        role: actor.role,
+        organizationId: String(actor.organization),
+        email: actor.email || "",
+        name: actor.name || "",
+      };
+      req.impersonation = decoded.impersonation;
+
+      if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+        res.once("finish", () => {
+          AdminPanelAccessLog.create({
+            organization: actor.organization,
+            actorUser: actor._id,
+            viewedUser: req.user._id,
+            action: "mutation",
+            method: req.method,
+            path: req.originalUrl || req.url || "",
+            statusCode: res.statusCode,
+            ip: req.ip || "",
+          }).catch((logErr) => console.error("ADMIN VIEW AUDIT ERROR:", logErr.message));
+        });
+      }
+    }
 
     if (req.user.organizationId) {
       req.user.organizationId = String(req.user.organizationId);

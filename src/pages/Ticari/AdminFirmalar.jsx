@@ -590,14 +590,14 @@ export default function AdminFirmalar() {
     fetchUsers();
   }, [orgId, token]);
 
-  // ğŸ”’ SADECE ticari_user görünür (admin rolleri listede çıkmasın)
+  // Atama listesinde uzman ve işyeri hekimi birlikte görünür.
   const kullanicilar = useMemo(
     () =>
       (users || []).filter((u) => {
         const role = (u.role || "").toString().toLowerCase().trim();
         if (!role) return false;
         if (role.includes("admin")) return false;
-        return role === "ticari_user";
+        return ["ticari_user", "isyeri_hekimi"].includes(role);
       }),
     [users]
   );
@@ -622,7 +622,7 @@ export default function AdminFirmalar() {
       setFirmsLoading(true);
       setFirmsError("");
 
-      const res = await axios.get(`${API_BASE}/api/firma`, {
+      const res = await axios.get(`${API_BASE}/api/assignments/admin/firms-with-assignees`, {
         headers: { Authorization: token ? `Bearer ${token}` : "" },
       });
 
@@ -651,7 +651,11 @@ export default function AdminFirmalar() {
       (prev || []).map((f) => {
         const fid = String(f._id || f.id || "");
         if (!ids.has(fid)) return f;
-        return { ...f, atanmisKullanici: userId };
+        const assignedUser = (users || []).find((u) => String(u._id || u.id) === String(userId));
+        const isHekim = assignedUser?.role === "isyeri_hekimi";
+        return isHekim
+          ? { ...f, atanmisHekim: userId, atanmisHekimAdi: userLabel(assignedUser) }
+          : { ...f, atanmisKullanici: userId, atanmisUzman: userId, atanmisUzmanAdi: userLabel(assignedUser) };
       })
     );
   };
@@ -1237,7 +1241,10 @@ export default function AdminFirmalar() {
                     Tehlike Sınıfı
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
-                    Atanmış Kullanıcı
+                    Uzman
+                  </th>
+                  <th className="py-2 px-3 text-left font-semibold border-b">
+                    Hekim
                   </th>
                   <th className="py-2 px-3 text-left font-semibold border-b">
                     Durum
@@ -1256,6 +1263,7 @@ export default function AdminFirmalar() {
                   const atanmisEtiket = atanmisId
                     ? upTR(userNameById.get(atanmisId) || "")
                     : null;
+                  const hekimEtiket = upTR(f.atanmisHekimAdi || "");
 
                   const durum = f.durum || (atanmisId ? "Aktif" : "Askıda");
                   const durumClass =
@@ -1290,6 +1298,14 @@ export default function AdminFirmalar() {
                         <span className="text-[11px] font-medium text-slate-800">
                           {f.firmaAdi}
                         </span>
+                      </td>
+
+                      <td className="py-1.5 px-3">
+                        {hekimEtiket ? (
+                          <span className="px-2 py-1 rounded-full bg-sky-50 text-sky-700 text-[10px] border border-sky-200">{hekimEtiket}</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] border border-amber-200">ATANMAMIŞ</span>
+                        )}
                       </td>
 
                       <td className="py-1.5 px-3">

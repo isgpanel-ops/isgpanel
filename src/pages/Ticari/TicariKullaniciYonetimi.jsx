@@ -188,6 +188,53 @@ const [savingEdit, setSavingEdit] = useState(false);
     setConfirmOpen(true);
   };
 
+  const handleOpenUserPanel = (targetUser) => {
+    if (!orgId || isAdminRole(targetUser)) return;
+
+    openConfirm({
+      title: "Kullanıcı Paneline Geç",
+      message: `${upTR(targetUser.name || "")} kullanıcısının paneli yönetici görünümünde açılacak. Yapılan işlemler kayıt altına alınır.`,
+      confirmText: "Panele Git",
+      cancelText: "İptal",
+      variant: "warning",
+      onConfirm: async () => {
+        try {
+          setError("");
+          const targetId = targetUser._id || targetUser.id;
+          const res = await axios.post(
+            `${API_BASE}/api/org/${orgId}/impersonate/${targetId}`,
+            {},
+            { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+          );
+
+          const viewUser = res.data.user;
+          sessionStorage.setItem(
+            "isgpanel:admin-view",
+            JSON.stringify({
+              originalToken: token,
+              originalUser: user,
+              originalActiveEmail: sessionStorage.getItem("activeUserEmail") || "",
+              organizationId: orgId,
+            })
+          );
+
+          window.__setActiveUserEmail?.(viewUser.email);
+          localStorage.setItem("token", res.data.token);
+          localStorage.setItem("user", JSON.stringify(viewUser));
+          localStorage.removeItem("isgpanel:selectedFirm");
+          window.dispatchEvent(new Event("token-changed"));
+
+          const targetPath = viewUser.role === "isyeri_hekimi" ? "/isyeri-hekimi" : "/panel";
+          window.location.assign(targetPath);
+        } catch (err) {
+          const message = err.response?.data?.message || "Kullanıcı paneli açılamadı.";
+          setError(message);
+          openInfo("Hata", message);
+        }
+      },
+    });
+  };
+
   /* fetch */
   useEffect(() => {
     if (!orgId) {
@@ -430,14 +477,13 @@ const res = await axios.put(
     );
   }
 
-  /**  Koltuk hesabı: admin hariç */
+  /** Uzman ve hekim koltukları birbirinden bağımsızdır. */
   const uzmanSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "ticari_user").length;
-  
-const toplamKullanici = (users || []).filter((u) => !isAdminRole(u)).length;
-
-const maxKullanici = organization ? organization.userLimit : 0;
-
-const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
+  const hekimSayisi = (users || []).filter((u) => !isAdminRole(u) && u.role === "isyeri_hekimi").length;
+  const maxKullanici = Number(organization?.userLimit) || 0;
+  const hekimLimiti = Math.ceil(maxKullanici / 2);
+  const kalanKoltuk = Math.max(maxKullanici - uzmanSayisi, 0);
+  const kalanHekimKoltugu = Math.max(hekimLimiti - hekimSayisi, 0);
 
  
 
@@ -474,18 +520,21 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
     <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-4">
   <p>
     <span className="font-medium">Kullanıcı Limiti:</span>{" "}
-    {toplamKullanici} / {maxKullanici || 0}{" "}
+    {uzmanSayisi} / {maxKullanici || 0}{" "}
     {maxKullanici > 0 && (
       <span className="text-slate-500">(Kalan koltuk: {kalanKoltuk})</span>
     )}
   </p>
 
   <p>
-    <span className="font-medium">Uzman:</span> {uzmanSayisi}
+    <span className="font-medium">Uzman:</span> {uzmanSayisi} / {maxKullanici || 0}
   </p>
 
   <p>
-    <span className="font-medium">Hekim:</span> Yakında
+    <span className="font-medium">Hekim:</span> {hekimSayisi} / {hekimLimiti}
+    {hekimLimiti > 0 && (
+      <span className="text-slate-500">(Kalan koltuk: {kalanHekimKoltugu})</span>
+    )}
   </p>
 
   <p>
@@ -568,6 +617,14 @@ const kalanKoltuk = Math.max(maxKullanici - toplamKullanici, 0);
                           <td className="py-1.5 px-3">{u.createdAt ? formatTR(u.createdAt) : "-"}</td>
                           <td className="py-1.5 px-3">
                             <div className="flex justify-end gap-1">
+                              {!isAdm && (
+                                <button
+                                  className={`${btnBase} bg-[#0a2b45] text-white hover:bg-[#07304e]`}
+                                  onClick={() => handleOpenUserPanel(u)}
+                                >
+                                  Panele Git
+                                </button>
+                              )}
                               <button
                                 className={`${btnBase} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
                                 onClick={() => openEditUser(u)}
