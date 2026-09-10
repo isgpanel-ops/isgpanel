@@ -98,6 +98,7 @@ export default function DenetimHazirla() {
   const { selectedFirm, firmalar, setSelectedFirm } = useFirmalar();
   const company = normalizeCompany(selectedFirm) || normalizeCompany(location.state?.company) || storedCompany();
   const isCommercialAdmin = location.pathname.startsWith("/ticari/admin");
+  const isHekimPanel = location.pathname.startsWith("/isyeri-hekimi");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
@@ -131,10 +132,13 @@ export default function DenetimHazirla() {
         const res = await fetch(`${AUDIT_API_BASE}/audit-packages/prepare?${params}`, { headers: headers() });
         const data = await readApiJson(res, "Belgeler alınamadı.");
         if (ignore) return;
-        setCategories(data.categories || []);
+        const availableCategories = isHekimPanel
+          ? (data.categories || []).filter((category) => /ek\s*-?\s*2|tetkik/i.test(category.name || category.label || ""))
+          : (data.categories || []);
+        setCategories(availableCategories);
         setPackages(data.packages || []);
         const defaults = new Set();
-        (data.categories || []).forEach((cat) => {
+        availableCategories.forEach((cat) => {
           if (cat.selectedDefault) cat.documents.forEach((doc) => defaults.add(doc.id));
         });
         setSelectedDocs(defaults);
@@ -148,7 +152,7 @@ export default function DenetimHazirla() {
     return () => {
       ignore = true;
     };
-  }, [company?.id, company?.name]);
+  }, [company?.id, company?.name, isHekimPanel]);
 
   const docsById = useMemo(() => {
     const map = new Map();
